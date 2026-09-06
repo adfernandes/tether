@@ -372,6 +372,26 @@ namespace tether::bluetooth {
                 return le_->pending;
             }
 
+            bool telephony_present() const override {
+                auto device = lookup();
+                return device && monitor_.snapshot().find_telephony(device->path) != nullptr;
+            }
+
+            bool disconnect_classic(std::string& err) override {
+                auto device = lookup();
+                if (!device) {
+                    err = "device not present";
+                    return false;
+                }
+                // Only the per-bearer call: Device1.Disconnect() would take the
+                // LE half and the ANCS subscription riding on it.
+                if (!device->has_classic_bearer) {
+                    err = "no BR/EDR bearer";
+                    return false;
+                }
+                return call(device->path, IFACE_BEARER_BREDR, "Disconnect", err);
+            }
+
             bool solicitation_on_air() const override {
                 if (!ancs_solicitation_active())
                     return false;
@@ -1122,6 +1142,7 @@ namespace tether::bluetooth {
         if (wanted == calls_enabled)
             return;
         calls_enabled = wanted;
+        bearers->set_calls_enabled(wanted);
 
         std::shared_ptr<TelephonyClient> client;
         if (wanted)

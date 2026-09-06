@@ -61,6 +61,19 @@ namespace {
         // about an adapter that will not advertise clears this.
         bool on_air = true;
         bool solicitation_on_air() const override { return on_air; }
+
+        // Hands-free connected, as the bus shows it. Tests about the BR/EDR
+        // cycle clear this.
+        bool telephony = true;
+        int classic_disconnects = 0;
+
+        bool telephony_present() const override { return telephony; }
+
+        bool disconnect_classic(std::string&) override {
+            ++classic_disconnects;
+            classic = false;
+            return true;
+        }
     };
 
     class FakeProfiles : public ProfileOps {
@@ -902,4 +915,67 @@ TEST(BearerSupervisor, NamesTheHostWhenObexIsUpAndClassicKeepsRefusing) {
     EXPECT_NE(sup.status().reason.find("offers the iPhone no profile"), std::string::npos);
     EXPECT_EQ(sup.status().reason.find("keeps refusing"), std::string::npos)
         << "blamed the phone while it was serving messages and contacts";
+}
+
+// A phone-initiated reconnect brings BR/EDR up without hands-free, and nothing
+// in BlueZ retries it. One bearer cycle is the remedy, and it must stay one: the
+// drop it causes runs back through reset(), which is where a naive flag clears
+// and the cycle repeats forever.
+TEST(BearerSupervisor, CyclesClassicOnceWhenHandsFreeIsAbsent) {
+    FakeBearer ops;
+    ops.telephony = false;
+    BearerSupervisor sup(ops, true);
+    sup.set_calls_enabled(true);
+
+    sup.tick(0); // connects Classic
+    sup.tick(1);
+    EXPECT_EQ(ops.classic_disconnects, 0) << "cycled before the grace window elapsed";
+
+    sup.tick(1 + HFP_ABSENT_SECONDS - 1);
+    EXPECT_EQ(ops.classic_disconnects, 0);
+
+    sup.tick(1 + HFP_ABSENT_SECONDS);
+    EXPECT_EQ(ops.classic_disconnects, 1);
+
+    // The link the cycle dropped comes back, still with no hands-free.
+    sup.reset();
+    for (int64_t now = 1 + HFP_ABSENT_SECONDS; now <= 4 * HFP_ABSENT_SECONDS; ++now)
+        sup.tick(now);
+    EXPECT_EQ(ops.classic_disconnects, 1) << "hands-free never arrived, so the phone must be asked only once";
+}
+
+// Once hands-free is connected the cycle is armed again, so the next reconnect
+// that comes up without it is recovered too.
+TEST(BearerSupervisor, ArmsAnotherCycleAfterHandsFreeConnects) {
+    FakeBearer ops;
+    ops.telephony = false;
+    BearerSupervisor sup(ops, true);
+    sup.set_calls_enabled(true);
+
+    sup.tick(0);
+    sup.tick(1);
+    sup.tick(1 + HFP_ABSENT_SECONDS);
+    EXPECT_EQ(ops.classic_disconnects, 1);
+
+    ops.telephony = true;
+    sup.reset();
+    sup.tick(100); // reconnects Classic
+    sup.tick(101); // Classic up with hands-free on it: arms the next cycle
+
+    ops.telephony = false;
+    sup.tick(102);
+    sup.tick(102 + HFP_ABSENT_SECONDS);
+    EXPECT_EQ(ops.classic_disconnects, 2);
+}
+
+// Cycling BR/EDR costs the OBEX sessions on top of it, so it must never happen
+// for a feature the user has switched off.
+TEST(BearerSupervisor, NeverCyclesClassicWhenCallsAreDisabled) {
+    FakeBearer ops;
+    ops.telephony = false;
+    BearerSupervisor sup(ops, true);
+
+    for (int64_t now = 0; now <= 4 * HFP_ABSENT_SECONDS; ++now)
+        sup.tick(now);
+    EXPECT_EQ(ops.classic_disconnects, 0);
 }
