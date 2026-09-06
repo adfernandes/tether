@@ -14,6 +14,7 @@ namespace tether::bluetooth {
         constexpr const char* BLUEZ_NAME = "org.bluez";
         constexpr const char* IFACE_TELEPHONY = "org.bluez.Telephony1";
         constexpr const char* IFACE_CALL = "org.bluez.Call1";
+        constexpr const char* IFACE_PROPS = "org.freedesktop.DBus.Properties";
 
         constexpr int CALL_TIMEOUT_MS = 10000;
 
@@ -92,41 +93,96 @@ namespace tether::bluetooth {
         return j;
     }
 
-    TelephonyClient::TelephonyClient(BluezMonitor& monitor, std::string address)
-        : monitor_(&monitor), address_(std::move(address)) {}
+    namespace {
 
-    Telephony TelephonyClient::gateway() const {
-        const BluezObjects objects = monitor_->snapshot();
-        for (const auto& device : objects.devices) {
-            if (!iequals(device.address, address_))
-                continue;
-            if (const Telephony* found = objects.find_telephony(device.path))
-                return *found;
-        }
-        return {};
+        class BluezSource : public TelephonySource {
+        public:
+            BluezSource(BluezMonitor& monitor, std::string address)
+                : monitor_(&monitor), address_(std::move(address)) {}
+
+            TelephonyIds ids() const override {
+                return {"bluez", BLUEZ_NAME, IFACE_TELEPHONY, nullptr, IFACE_CALL, true, true};
+            }
+
+            GDBusConnection* connection() const override { return monitor_->connection(); }
+
+            TelephonySnapshot snapshot() const override {
+                const BluezObjects objects = monitor_->snapshot();
+                for (const auto& device : objects.devices) {
+                    if (!iequals(device.address, address_))
+                        continue;
+                    if (const Telephony* found = objects.find_telephony(device.path))
+                        return {*found, objects.calls_for(found->path), {}};
+                }
+                return {};
+            }
+
+        private:
+            BluezMonitor* monitor_;
+            std::string address_;
+        };
+
+    } // namespace
+
+    std::string dial_argument(const TelephonyIds& ids, const std::string& number) {
+        return ids.dial_uri ? "tel:" + number : number;
     }
 
-    bool TelephonyClient::available() const { return gateway().ready(); }
+    std::unique_ptr<TelephonySource> make_bluez_source(BluezMonitor& monitor, std::string address) {
+        return std::make_unique<BluezSource>(monitor, std::move(address));
+    }
+
+    std::unique_ptr<TelephonyClient> make_telephony_client(BluezMonitor& monitor, std::string address) {
+        std::vector<std::unique_ptr<TelephonySource>> sources;
+        sources.push_back(make_bluez_source(monitor, address));
+        sources.push_back(make_pipewire_source(address));
+        return std::make_unique<TelephonyClient>(std::move(sources), std::move(address));
+    }
+
+    TelephonyClient::TelephonyClient(std::vector<std::unique_ptr<TelephonySource>> sources, std::string address)
+        : sources_(std::move(sources)), address_(std::move(address)) {}
+
+    std::pair<TelephonySource*, TelephonySnapshot> TelephonyClient::pick() const {
+        for (const auto& source : sources_) {
+            TelephonySnapshot snap = source->snapshot();
+            if (!snap.gateway.path.empty())
+                return {source.get(), std::move(snap)};
+        }
+        return {nullptr, {}};
+    }
+
+    bool TelephonyClient::available() const { return pick().second.gateway.ready(); }
+
+    bool TelephonyClient::present() const { return pick().first != nullptr; }
 
     nlohmann::json TelephonyClient::status() const {
-        const Telephony gw = gateway();
-        nlohmann::json j = to_json(gw);
+        const auto [source, snap] = pick();
+        nlohmann::json j = to_json(snap.gateway);
         j["address"] = address_;
-        j["calls"] = monitor_->snapshot().calls_for(gw.path).size();
-        if (gw.path.empty())
+        j["calls"] = snap.calls.size();
+        j["backend"] = source ? source->ids().name : "";
+        j["indicators"] = !source || source->ids().indicators;
+        j["audio"] = snap.audio_state;
+        if (!source)
             j["reason"] = _("The iPhone has not connected Hands-Free to this computer.");
-        else if (!gw.ready())
+        else if (!snap.gateway.ready())
             j["reason"] = _("Connecting to the iPhone's Hands-Free service.");
+        else if (source->ids().transport_iface)
+            j["reason"] = _("PipeWire is handling Hands-Free, so the call audio can play on this computer.");
         else
             j["reason"] = _("Calls are controlled here; the audio plays on the iPhone.");
         return j;
     }
 
-    nlohmann::json TelephonyClient::calls() const { return to_json(monitor_->snapshot().calls_for(gateway().path)); }
+    nlohmann::json TelephonyClient::calls() const { return to_json(pick().second.calls); }
 
-    bool TelephonyClient::invoke(
-        const std::string& path, const char* iface, const char* method, GVariant* args, std::string& err) {
-        GDBusConnection* conn = monitor_->connection();
+    bool TelephonyClient::invoke(TelephonySource& source,
+                                 const std::string& path,
+                                 const char* iface,
+                                 const char* method,
+                                 GVariant* args,
+                                 std::string& err) {
+        GDBusConnection* conn = source.connection();
         if (!conn || path.empty()) {
             // Consumes the floating reference the caller built.
             if (args)
@@ -137,7 +193,7 @@ namespace tether::bluetooth {
 
         GError* error = nullptr;
         GVariant* reply = g_dbus_connection_call_sync(conn,
-                                                      BLUEZ_NAME,
+                                                      source.ids().bus,
                                                       path.c_str(),
                                                       iface,
                                                       method,
@@ -163,13 +219,27 @@ namespace tether::bluetooth {
             err = _("Not a dialable number.");
             return false;
         }
-        const std::string uri = "tel:" + dialable;
-        return invoke(gateway().path, IFACE_TELEPHONY, "Dial", g_variant_new("(s)", uri.c_str()), err);
+        const auto [source, snap] = pick();
+        if (!source) {
+            err = _("The iPhone has not connected Hands-Free to this computer.");
+            return false;
+        }
+        const std::string argument = dial_argument(source->ids(), dialable);
+        return invoke(*source,
+                      snap.gateway.path,
+                      source->ids().gateway_iface,
+                      "Dial",
+                      g_variant_new("(s)", argument.c_str()),
+                      err);
     }
 
     bool TelephonyClient::call_action(const std::string& path, const std::string& action, std::string& err) {
-        const Telephony gw = gateway();
-        const std::vector<Call> live = monitor_->snapshot().calls_for(gw.path);
+        const auto [source, snap] = pick();
+        if (!source) {
+            err = _("The iPhone has not connected Hands-Free to this computer.");
+            return false;
+        }
+        const std::vector<Call>& live = snap.calls;
 
         if (action == "answer" || action == "hangup") {
             std::string target = path;
@@ -183,7 +253,25 @@ namespace tether::bluetooth {
                 err = _("That call is no longer active.");
                 return false;
             }
-            return invoke(target, IFACE_CALL, action == "answer" ? "Answer" : "Hangup", nullptr, err);
+            return invoke(
+                *source, target, source->ids().call_iface, action == "answer" ? "Answer" : "Hangup", nullptr, err);
+        }
+
+        if (action == "audio_here" || action == "audio_phone") {
+            const char* transport = source->ids().transport_iface;
+            if (!transport) {
+                err = _("This computer is not carrying the call audio; it plays on the iPhone.");
+                return false;
+            }
+            const bool to_phone = action == "audio_phone";
+            if (!invoke(*source,
+                        snap.gateway.path,
+                        IFACE_PROPS,
+                        "Set",
+                        g_variant_new("(ssv)", transport, "RejectSCO", g_variant_new_boolean(to_phone)),
+                        err))
+                return false;
+            return to_phone || invoke(*source, snap.gateway.path, transport, "Activate", nullptr, err);
         }
 
         static const std::pair<const char*, const char*> gateway_actions[] = {
@@ -196,7 +284,7 @@ namespace tether::bluetooth {
         };
         for (const auto& [name, method] : gateway_actions)
             if (action == name)
-                return invoke(gw.path, IFACE_TELEPHONY, method, nullptr, err);
+                return invoke(*source, snap.gateway.path, source->ids().gateway_iface, method, nullptr, err);
 
         err = _("Unknown call action.");
         return false;
@@ -209,7 +297,17 @@ namespace tether::bluetooth {
             err = _("Not a DTMF sequence.");
             return false;
         }
-        return invoke(gateway().path, IFACE_TELEPHONY, "SendTones", g_variant_new("(s)", tones.c_str()), err);
+        const auto [source, snap] = pick();
+        if (!source) {
+            err = _("The iPhone has not connected Hands-Free to this computer.");
+            return false;
+        }
+        return invoke(*source,
+                      snap.gateway.path,
+                      source->ids().gateway_iface,
+                      "SendTones",
+                      g_variant_new("(s)", tones.c_str()),
+                      err);
     }
 
 } // namespace tether::bluetooth

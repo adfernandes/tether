@@ -30,8 +30,8 @@ namespace tether::bluetooth {
         bool ancs_content_enabled = true;
         // Group replies are off until deliberately enabled
         bool group_messages_enabled = false;
-        // Call control over HFP. Needs the hfp_hf role in bluez5.roles and
-        // PipeWire's telephony D-Bus service, neither of which Tether installs.
+        // Call control over HFP, through whichever stack owns the profile:
+        // BlueZ's own hfp, or PipeWire's, which also works with call audio.
         bool calls_enabled = false;
         // When off, supervision runs against no device, so the daemon stops re-dialling
         bool enabled = true;

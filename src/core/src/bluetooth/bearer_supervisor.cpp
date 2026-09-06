@@ -78,8 +78,12 @@ namespace tether::bluetooth {
 
     void BearerSupervisor::set_ancs_enabled(bool enabled) { ancs_enabled_ = enabled; }
 
+    void BearerSupervisor::set_calls_enabled(bool enabled) { calls_enabled_ = enabled; }
+
     void BearerSupervisor::reset() {
+        // hfp_cycle_spent_ deliberately survives
         classic_failures_ = 0;
+        telephony_absent_since_ = -1;
         le_down_since_ = -1;
         solicited_since_le_down_ = false;
         classic_connected_since_ = -1;
@@ -186,7 +190,22 @@ namespace tether::bluetooth {
             return !(status_ == previous);
         }
 
-        // Classic is up. LE is only worth attempting once the ACL has settled.
+        // Classic is up.
+        if (calls_enabled_ && !ops_.telephony_present()) {
+            if (telephony_absent_since_ < 0)
+                telephony_absent_since_ = now;
+            if (!hfp_cycle_spent_ && now - telephony_absent_since_ >= HFP_ABSENT_SECONDS) {
+                hfp_cycle_spent_ = true;
+                std::string err;
+                if (!ops_.disconnect_classic(err))
+                    debug::log(WARN, "bluetooth: BR/EDR cycle for hands-free failed ({})", err);
+            }
+        } else {
+            telephony_absent_since_ = -1;
+            hfp_cycle_spent_ = false;
+        }
+
+        // LE is only worth attempting once the ACL has settled.
         if (!ancs_enabled_) {
             status_.reason = _("Connected. Notification mirroring is disabled.");
             return !(status_ == previous);

@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: tether\n"
 "Report-Msgid-Bugs-To: zack@bartel.com\n"
-"POT-Creation-Date: 2026-09-05 13:35-0700\n"
+"POT-Creation-Date: 2026-09-06 13:50-0700\n"
 "PO-Revision-Date: 2026-08-22\n"
 "Last-Translator: Tether project\n"
 "Language-Team: German\n"
@@ -180,6 +180,12 @@ msgid ""
 msgstr ""
 "Anrufsteuerung ein- oder ausschalten. Anrufe laufen über Bluetooth Hands-"
 "Free; der Ton bleibt auf dem iPhone."
+
+#: src/cli/main.cpp
+msgid ""
+"Play call audio on this computer, or leave it on the iPhone. Needs PipeWire "
+"to be the stack holding Hands-Free; off applies from the next call."
+msgstr ""
 
 #: src/cli/main.cpp
 msgid "Print a redacted Bluetooth report for a bug report."
@@ -1166,7 +1172,12 @@ msgstr "Das iPhone hat Hands-Free nicht mit diesem Computer verbunden."
 msgid "Connecting to the iPhone's Hands-Free service."
 msgstr "Verbindung zum Hands-Free-Dienst des iPhones wird aufgebaut."
 
-#: src/core/src/bluetooth/telephony.cpp src/gtk/calls_view.cpp
+#: src/core/src/bluetooth/telephony.cpp
+msgid ""
+"PipeWire is handling Hands-Free, so the call audio can play on this computer."
+msgstr ""
+
+#: src/core/src/bluetooth/telephony.cpp
 msgid "Calls are controlled here; the audio plays on the iPhone."
 msgstr ""
 "Anrufe werden hier gesteuert; der Ton wird auf dem iPhone wiedergegeben."
@@ -1182,6 +1193,12 @@ msgstr "Kein Anruf angegeben."
 #: src/core/src/bluetooth/telephony.cpp
 msgid "That call is no longer active."
 msgstr "Dieser Anruf ist nicht mehr aktiv."
+
+#: src/core/src/bluetooth/telephony.cpp
+#, fuzzy
+msgid "This computer is not carrying the call audio; it plays on the iPhone."
+msgstr ""
+"Anrufe werden hier gesteuert; der Ton wird auf dem iPhone wiedergegeben."
 
 #: src/core/src/bluetooth/telephony.cpp
 msgid "Unknown call action."
@@ -1308,6 +1325,11 @@ msgstr "Unbekannter Anrufer"
 #: src/gtk/calls_view.cpp
 msgid "Answer"
 msgstr "Annehmen"
+
+#: src/gtk/calls_view.cpp
+#, fuzzy
+msgid "Audio here"
+msgstr "Audio hierher holen"
 
 #: src/gtk/calls_view.cpp
 msgid "Decline"
@@ -2096,9 +2118,6 @@ msgstr ""
 
 #~ msgid "Call audio moved to this computer."
 #~ msgstr "Anrufaudio auf diesen Computer verlegt."
-
-#~ msgid "Take audio here"
-#~ msgstr "Audio hierher holen"
 
 #~ msgid ""
 #~ "Play the call through this computer's speakers and microphone. Handing it "

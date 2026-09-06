@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: tether\n"
 "Report-Msgid-Bugs-To: zack@bartel.com\n"
-"POT-Creation-Date: 2026-09-05 13:35-0700\n"
+"POT-Creation-Date: 2026-09-06 13:50-0700\n"
 "PO-Revision-Date: 2026-08-23\n"
 "Last-Translator: Tether project\n"
 "Language-Team: Simplified Chinese\n"
@@ -173,6 +173,12 @@ msgid ""
 "Turn call control on or off. Calls run over Bluetooth Hands-Free; the audio "
 "stays on the iPhone."
 msgstr "开启或关闭通话控制。通话通过蓝牙免提进行，音频保留在 iPhone 上。"
+
+#: src/cli/main.cpp
+msgid ""
+"Play call audio on this computer, or leave it on the iPhone. Needs PipeWire "
+"to be the stack holding Hands-Free; off applies from the next call."
+msgstr ""
 
 #: src/cli/main.cpp
 msgid "Print a redacted Bluetooth report for a bug report."
@@ -1090,7 +1096,12 @@ msgstr "iPhone 尚未与本机建立免提连接。"
 msgid "Connecting to the iPhone's Hands-Free service."
 msgstr "正在连接 iPhone 的免提服务。"
 
-#: src/core/src/bluetooth/telephony.cpp src/gtk/calls_view.cpp
+#: src/core/src/bluetooth/telephony.cpp
+msgid ""
+"PipeWire is handling Hands-Free, so the call audio can play on this computer."
+msgstr ""
+
+#: src/core/src/bluetooth/telephony.cpp
 msgid "Calls are controlled here; the audio plays on the iPhone."
 msgstr "通话在此控制，音频在 iPhone 上播放。"
 
@@ -1105,6 +1116,11 @@ msgstr "未指定通话。"
 #: src/core/src/bluetooth/telephony.cpp
 msgid "That call is no longer active."
 msgstr "该通话已不再有效。"
+
+#: src/core/src/bluetooth/telephony.cpp
+#, fuzzy
+msgid "This computer is not carrying the call audio; it plays on the iPhone."
+msgstr "通话在此控制，音频在 iPhone 上播放。"
 
 #: src/core/src/bluetooth/telephony.cpp
 msgid "Unknown call action."
@@ -1229,6 +1245,11 @@ msgstr "未知来电者"
 #: src/gtk/calls_view.cpp
 msgid "Answer"
 msgstr "接听"
+
+#: src/gtk/calls_view.cpp
+#, fuzzy
+msgid "Audio here"
+msgstr "将音频转到本机"
 
 #: src/gtk/calls_view.cpp
 msgid "Decline"
@@ -1972,9 +1993,6 @@ msgstr "配对设备并通过网络同步剪贴板"
 
 #~ msgid "Call audio moved to this computer."
 #~ msgstr "通话音频已转到本机。"
-
-#~ msgid "Take audio here"
-#~ msgstr "将音频转到本机"
 
 #~ msgid ""
 #~ "Play the call through this computer's speakers and microphone. Handing it "

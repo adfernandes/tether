@@ -17,6 +17,7 @@
 #include <chrono>
 #include <condition_variable>
 #include <ctime>
+#include <functional>
 #include <gio/gio.h>
 #include <mutex>
 #include <thread>
@@ -372,6 +373,30 @@ namespace tether::bluetooth {
                 return le_->pending;
             }
 
+            void set_telephony_probe(std::function<bool()> probe) { telephony_probe_ = std::move(probe); }
+
+            bool telephony_present() const override {
+                if (telephony_probe_)
+                    return telephony_probe_();
+                auto device = lookup();
+                return device && monitor_.snapshot().find_telephony(device->path) != nullptr;
+            }
+
+            bool disconnect_classic(std::string& err) override {
+                auto device = lookup();
+                if (!device) {
+                    err = "device not present";
+                    return false;
+                }
+                // Only the per-bearer call: Device1.Disconnect() would take the
+                // LE half and the ANCS subscription riding on it.
+                if (!device->has_classic_bearer) {
+                    err = "no BR/EDR bearer";
+                    return false;
+                }
+                return call(device->path, IFACE_BEARER_BREDR, "Disconnect", err);
+            }
+
             bool solicitation_on_air() const override {
                 if (!ancs_solicitation_active())
                     return false;
@@ -501,6 +526,7 @@ namespace tether::bluetooth {
 
             BluezMonitor& monitor_;
             std::string address_;
+            std::function<bool()> telephony_probe_;
         };
 
         // OBEX sessions live on the session bus, not the system bus.
@@ -1122,10 +1148,11 @@ namespace tether::bluetooth {
         if (wanted == calls_enabled)
             return;
         calls_enabled = wanted;
+        bearers->set_calls_enabled(wanted);
 
         std::shared_ptr<TelephonyClient> client;
         if (wanted)
-            client = std::make_shared<TelephonyClient>(*monitor, address);
+            client = make_telephony_client(*monitor, address);
         {
             std::lock_guard<std::mutex> lock(telephony_mutex);
             telephony = std::move(client);
@@ -1256,6 +1283,10 @@ namespace tether::bluetooth {
             }
         }
         state_->bearer_ops = std::make_unique<BluezBearerOps>(*state_->monitor, address);
+        state_->bearer_ops->set_telephony_probe([state = state_.get()] {
+            auto client = state->calls_client();
+            return client && client->present();
+        });
         state_->profile_ops = std::make_unique<ObexProfileOps>(address);
         state_->bearers = std::make_unique<BearerSupervisor>(*state_->bearer_ops, ancs_effective);
         state_->profiles = std::make_unique<ProfileSupervisor>(*state_->profile_ops);

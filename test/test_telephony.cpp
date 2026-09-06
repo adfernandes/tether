@@ -250,3 +250,195 @@ TEST(Telephony, SerializesTheGatewayForClients) {
     EXPECT_EQ(j["battery"], 4);
     EXPECT_FALSE(j["roaming"]);
 }
+
+namespace {
+
+    // Recorded from pipewire 1.6.8 during a live call. The root manager reports
+    // the gateways alone -- no calls, even with one active.
+    constexpr const char* PIPEWIRE_ROOT = R"({
+      '/org/pipewire/Telephony/ag1': {
+        'org.pipewire.Telephony.AudioGateway1': {
+          'Address': <'60:57:C8:30:6A:F7'>,
+          'SpeakerVolume': <byte 15>,
+          'MicrophoneVolume': <byte 15>
+        },
+        'org.pipewire.Telephony.AudioGatewayTransport1': {
+          'Codec': <byte 2>, 'State': <'active'>, 'RejectSCO': <false>
+        }
+      },
+      '/org/pipewire/Telephony/ag2': {
+        'org.pipewire.Telephony.AudioGateway1': { 'Address': <'AA:BB:CC:DD:EE:FF'> }
+      }
+    })";
+
+    // ...and each gateway keeps its calls in an object manager of its own, whose
+    // reply carries no gateway at all. Recorded from the same call.
+    constexpr const char* PIPEWIRE_GATEWAY_CALLS = R"({
+      '/org/pipewire/Telephony/ag1/call1': {
+        'org.pipewire.Telephony.Call1': {
+          'LineIdentification': <'18002662278'>,
+          'IncomingLine': <''>,
+          'Name': <''>,
+          'Multiparty': <false>,
+          'State': <'active'>
+        }
+      },
+      '/org/pipewire/Telephony/ag2/call1': {
+        'org.pipewire.Telephony.Call1': { 'LineIdentification': <'+15555559999'>, 'State': <'incoming'> }
+      }
+    })";
+
+    // A source under the test's control, so TelephonyClient can be driven with
+    // no bus at all.
+    class FakeSource : public TelephonySource {
+    public:
+        TelephonySnapshot snap;
+        TelephonyIds identity{"fake", "org.example", "org.example.Gateway1", nullptr, "org.example.Call1", true, true};
+
+        TelephonyIds ids() const override { return identity; }
+        // Null stands for "reachable but nothing to talk to", which is what
+        // every invoke() in these tests should refuse on.
+        GDBusConnection* connection() const override { return nullptr; }
+        TelephonySnapshot snapshot() const override { return snap; }
+    };
+
+    std::unique_ptr<FakeSource> gateway_source(const char* path, const char* state = "connected") {
+        auto source = std::make_unique<FakeSource>();
+        source->snap.gateway.path = path;
+        source->snap.gateway.state = state;
+        return source;
+    }
+
+    std::unique_ptr<TelephonyClient> client_of(std::vector<std::unique_ptr<TelephonySource>> sources) {
+        return std::make_unique<TelephonyClient>(std::move(sources), "60:57:C8:30:6A:F7");
+    }
+
+} // namespace
+
+TEST(PipewireTelephony, MatchesTheGatewayByAddress) {
+    Payload payload(PIPEWIRE_ROOT);
+    const TelephonySnapshot snap = parse_pipewire_telephony(payload.v, "60:57:c8:30:6a:f7");
+
+    EXPECT_EQ(snap.gateway.path, "/org/pipewire/Telephony/ag1") << "address match must be case-insensitive";
+    EXPECT_TRUE(snap.gateway.ready()) << "a registered gateway means the service level connection is up";
+    EXPECT_EQ(snap.audio_state, "active");
+}
+
+// The reply that carries the gateway carries no calls, so reading the call list
+// from it is how the Hang up button goes missing.
+TEST(PipewireTelephony, RootManagerCarriesNoCalls) {
+    Payload payload(PIPEWIRE_ROOT);
+    const TelephonySnapshot snap = parse_pipewire_telephony(payload.v, "60:57:C8:30:6A:F7");
+    EXPECT_TRUE(snap.calls.empty());
+}
+
+// The gateway's own manager has the calls and no gateway to match an address
+// against, so they are collected by parentage instead.
+TEST(PipewireTelephony, ScopesCallsToTheirOwnGateway) {
+    Payload payload(PIPEWIRE_GATEWAY_CALLS);
+    const std::vector<Call> calls = parse_pipewire_calls(payload.v, "/org/pipewire/Telephony/ag1");
+
+    ASSERT_EQ(calls.size(), 1u) << "the other phone's call must not appear here";
+    EXPECT_EQ(calls.front().number, "18002662278");
+    EXPECT_TRUE(calls.front().connected());
+    EXPECT_EQ(calls.front().path, "/org/pipewire/Telephony/ag1/call1");
+    EXPECT_EQ(calls.front().telephony_path, "/org/pipewire/Telephony/ag1");
+}
+
+TEST(PipewireTelephony, CallsNeedAGatewayToBelongTo) {
+    Payload payload(PIPEWIRE_GATEWAY_CALLS);
+    EXPECT_TRUE(parse_pipewire_calls(payload.v, "").empty());
+    EXPECT_TRUE(parse_pipewire_calls(payload.v, "/org/pipewire/Telephony/ag9").empty());
+}
+
+// A phone PipeWire is not serving must read as absent, never as "the only
+// gateway there is" -- that would answer calls on someone else's phone.
+TEST(PipewireTelephony, UnknownAddressYieldsNoGateway) {
+    Payload payload(PIPEWIRE_ROOT);
+    const TelephonySnapshot snap = parse_pipewire_telephony(payload.v, "11:22:33:44:55:66");
+
+    EXPECT_TRUE(snap.gateway.path.empty());
+    EXPECT_TRUE(snap.calls.empty());
+    EXPECT_TRUE(snap.audio_state.empty());
+}
+
+// The indicators BlueZ reports have no PipeWire equivalent. They must stay at
+// their defaults rather than being invented.
+TEST(PipewireTelephony, ReportsNoCellularIndicators) {
+    Payload payload(PIPEWIRE_ROOT);
+    const TelephonySnapshot snap = parse_pipewire_telephony(payload.v, "60:57:C8:30:6A:F7");
+
+    EXPECT_TRUE(snap.gateway.operator_name.empty());
+    EXPECT_EQ(snap.gateway.signal, 0);
+    EXPECT_EQ(snap.gateway.battery, 0);
+    EXPECT_FALSE(snap.gateway.service);
+}
+
+TEST(PipewireTelephony, EmptyPayloadIsNotAFailure) {
+    Payload payload("@a{oa{sa{sv}}} {}");
+    const TelephonySnapshot snap = parse_pipewire_telephony(payload.v, "60:57:C8:30:6A:F7");
+    EXPECT_TRUE(snap.gateway.path.empty());
+}
+
+// Order in the source vector is the whole selection policy: BlueZ carries the
+// cellular indicators, so it wins wherever it has the profile.
+TEST(TelephonyClientSources, PrefersTheFirstSourceWithAGateway) {
+    std::vector<std::unique_ptr<TelephonySource>> sources;
+    sources.push_back(gateway_source("/org/bluez/hci0/dev_X/telephony0"));
+    sources.push_back(gateway_source("/org/pipewire/Telephony/ag0"));
+    const auto client = client_of(std::move(sources));
+
+    EXPECT_EQ(client->status().value("path", ""), "/org/bluez/hci0/dev_X/telephony0");
+    EXPECT_TRUE(client->available());
+}
+
+TEST(TelephonyClientSources, FallsThroughToTheNextSource) {
+    std::vector<std::unique_ptr<TelephonySource>> sources;
+    sources.push_back(std::make_unique<FakeSource>());
+    auto pipewire = gateway_source("/org/pipewire/Telephony/ag0");
+    pipewire->identity = {"pipewire", "org.pipewire.Telephony", "g", "t", "c", false, false};
+    sources.push_back(std::move(pipewire));
+    const auto client = client_of(std::move(sources));
+
+    const nlohmann::json status = client->status();
+    EXPECT_EQ(status.value("backend", ""), "pipewire");
+    EXPECT_FALSE(status.value("indicators", true)) << "PipeWire reports no indicators, and must say so";
+}
+
+// With no source serving, the payload must read exactly as it did before a
+// second stack existed.
+TEST(TelephonyClientSources, NoSourceReadsAsUnavailable) {
+    std::vector<std::unique_ptr<TelephonySource>> sources;
+    sources.push_back(std::make_unique<FakeSource>());
+    const auto client = client_of(std::move(sources));
+
+    const nlohmann::json status = client->status();
+    EXPECT_FALSE(client->available());
+    EXPECT_FALSE(status.value("available", true));
+    EXPECT_EQ(status.value("backend", "unset"), "");
+    EXPECT_TRUE(status.value("indicators", false)) << "an absent gateway must not claim indicators are missing";
+    EXPECT_TRUE(client->calls().empty());
+}
+
+// Moving the audio is only meaningful where the stack carries it. BlueZ opens
+// no voice link at all, and must say that rather than "unknown action".
+TEST(TelephonyClientSources, AudioActionIsRefusedWithoutATransport) {
+    std::vector<std::unique_ptr<TelephonySource>> sources;
+    sources.push_back(gateway_source("/org/bluez/hci0/dev_X/telephony0"));
+    const auto client = client_of(std::move(sources));
+
+    std::string err;
+    EXPECT_FALSE(client->call_action("", "audio_here", err));
+    EXPECT_NE(err.find("iPhone"), std::string::npos);
+    EXPECT_EQ(err.find("Unknown"), std::string::npos);
+}
+
+// The one place a silent wire-format bug could hide: BlueZ's Dial takes a URI,
+// PipeWire's takes the bare number and builds the AT command itself.
+TEST(TelephonyClientSources, DialArgumentMatchesTheStack) {
+    const TelephonyIds bluez{"bluez", "org.bluez", "g", nullptr, "c", true, true};
+    const TelephonyIds pipewire{"pipewire", "org.pipewire.Telephony", "g", "t", "c", false, false};
+
+    EXPECT_EQ(dial_argument(bluez, "+15555550123"), "tel:+15555550123");
+    EXPECT_EQ(dial_argument(pipewire, "+15555550123"), "+15555550123");
+}

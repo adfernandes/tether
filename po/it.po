@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: tether\n"
 "Report-Msgid-Bugs-To: zack@bartel.com\n"
-"POT-Creation-Date: 2026-09-05 13:35-0700\n"
+"POT-Creation-Date: 2026-09-06 13:50-0700\n"
 "PO-Revision-Date: 2026-08-23\n"
 "Last-Translator: Tether project\n"
 "Language-Team: Italian\n"
@@ -181,6 +181,12 @@ msgid ""
 msgstr ""
 "Attivare o disattivare il controllo delle chiamate. Le chiamate usano il "
 "vivavoce Bluetooth; l'audio resta sull'iPhone."
+
+#: src/cli/main.cpp
+msgid ""
+"Play call audio on this computer, or leave it on the iPhone. Needs PipeWire "
+"to be the stack holding Hands-Free; off applies from the next call."
+msgstr ""
 
 #: src/cli/main.cpp
 msgid "Print a redacted Bluetooth report for a bug report."
@@ -1157,7 +1163,12 @@ msgstr "L'iPhone non ha collegato il vivavoce a questo computer."
 msgid "Connecting to the iPhone's Hands-Free service."
 msgstr "Connessione al servizio vivavoce dell'iPhone."
 
-#: src/core/src/bluetooth/telephony.cpp src/gtk/calls_view.cpp
+#: src/core/src/bluetooth/telephony.cpp
+msgid ""
+"PipeWire is handling Hands-Free, so the call audio can play on this computer."
+msgstr ""
+
+#: src/core/src/bluetooth/telephony.cpp
 msgid "Calls are controlled here; the audio plays on the iPhone."
 msgstr "Le chiamate si controllano qui; l'audio viene riprodotto sull'iPhone."
 
@@ -1172,6 +1183,11 @@ msgstr "Nessuna chiamata indicata."
 #: src/core/src/bluetooth/telephony.cpp
 msgid "That call is no longer active."
 msgstr "Quella chiamata non è più attiva."
+
+#: src/core/src/bluetooth/telephony.cpp
+#, fuzzy
+msgid "This computer is not carrying the call audio; it plays on the iPhone."
+msgstr "Le chiamate si controllano qui; l'audio viene riprodotto sull'iPhone."
 
 #: src/core/src/bluetooth/telephony.cpp
 msgid "Unknown call action."
@@ -1297,6 +1313,11 @@ msgstr "Chiamante sconosciuto"
 #: src/gtk/calls_view.cpp
 msgid "Answer"
 msgstr "Rispondi"
+
+#: src/gtk/calls_view.cpp
+#, fuzzy
+msgid "Audio here"
+msgstr "Porta l'audio qui"
 
 #: src/gtk/calls_view.cpp
 msgid "Decline"
@@ -2083,9 +2104,6 @@ msgstr "Accoppia dispositivi e sincronizza gli appunti sulla rete"
 
 #~ msgid "Call audio moved to this computer."
 #~ msgstr "Audio della chiamata spostato su questo computer."
-
-#~ msgid "Take audio here"
-#~ msgstr "Porta l'audio qui"
 
 #~ msgid ""
 #~ "Play the call through this computer's speakers and microphone. Handing it "

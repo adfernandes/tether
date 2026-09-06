@@ -27,6 +27,10 @@ namespace tether::bluetooth {
     // so a blip must not reset discovery, while a genuine loss still clears.
     inline constexpr int ANCS_BEARER_GRACE_SECONDS = 30;
 
+    // How long BR/EDR may be up with no hands-free profile before the bearer is
+    // cycled once to make BlueZ connect it.
+    inline constexpr int HFP_ABSENT_SECONDS = 20;
+
     // How long an LE link may read connected while the phone offers no ANCS
     // service before the solicitation goes back on air over it. Long enough for
     // GATT discovery on a freshly opened link, which runs to about a minute.
@@ -59,6 +63,11 @@ namespace tether::bluetooth {
         virtual bool le_connect_outstanding() const = 0;
         // Whether the ANCS solicitation is registered AND BlueZ is advertising.
         virtual bool solicitation_on_air() const = 0;
+
+        // Whether BlueZ exports a telephony object for the device.
+        virtual bool telephony_present() const = 0;
+        // Drops the BR/EDR bearer on its own, leaving LE up. Never Device1.Disconnect().
+        virtual bool disconnect_classic(std::string& err) = 0;
     };
 
     struct BearerStatus {
@@ -105,15 +114,19 @@ namespace tether::bluetooth {
         void reset();
 
         void set_ancs_enabled(bool enabled);
+        void set_calls_enabled(bool enabled);
         const BearerStatus& status() const { return status_; }
 
     private:
         BearerOps& ops_;
         bool ancs_enabled_ = true;
+        bool calls_enabled_ = false;
 
         BearerStatus status_;
         int classic_failures_ = 0;
         bool le_dial_spent_ = false;
+        bool hfp_cycle_spent_ = false;
+        int64_t telephony_absent_since_ = -1;
         int64_t classic_connected_since_ = -1;
         int64_t le_down_since_ = -1;
         // Whether the solicitation has been observed on air since LE went down.

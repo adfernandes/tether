@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: tether\n"
 "Report-Msgid-Bugs-To: zack@bartel.com\n"
-"POT-Creation-Date: 2026-09-05 13:35-0700\n"
+"POT-Creation-Date: 2026-09-06 13:50-0700\n"
 "PO-Revision-Date: 2026-08-23\n"
 "Last-Translator: Tether project\n"
 "Language-Team: Korean\n"
@@ -178,6 +178,12 @@ msgid ""
 msgstr ""
 "통화 제어를 켜거나 끕니다. 통화는 Bluetooth 핸즈프리를 사용하며 오디오는 "
 "iPhone에 남습니다."
+
+#: src/cli/main.cpp
+msgid ""
+"Play call audio on this computer, or leave it on the iPhone. Needs PipeWire "
+"to be the stack holding Hands-Free; off applies from the next call."
+msgstr ""
 
 #: src/cli/main.cpp
 msgid "Print a redacted Bluetooth report for a bug report."
@@ -1119,7 +1125,12 @@ msgstr "iPhone이 이 컴퓨터에 핸즈프리를 연결하지 않았습니다.
 msgid "Connecting to the iPhone's Hands-Free service."
 msgstr "iPhone의 핸즈프리 서비스에 연결하는 중입니다."
 
-#: src/core/src/bluetooth/telephony.cpp src/gtk/calls_view.cpp
+#: src/core/src/bluetooth/telephony.cpp
+msgid ""
+"PipeWire is handling Hands-Free, so the call audio can play on this computer."
+msgstr ""
+
+#: src/core/src/bluetooth/telephony.cpp
 msgid "Calls are controlled here; the audio plays on the iPhone."
 msgstr "통화는 여기서 제어하고 오디오는 iPhone에서 재생됩니다."
 
@@ -1134,6 +1145,11 @@ msgstr "통화를 지정하지 않았습니다."
 #: src/core/src/bluetooth/telephony.cpp
 msgid "That call is no longer active."
 msgstr "그 통화는 더 이상 활성 상태가 아닙니다."
+
+#: src/core/src/bluetooth/telephony.cpp
+#, fuzzy
+msgid "This computer is not carrying the call audio; it plays on the iPhone."
+msgstr "통화는 여기서 제어하고 오디오는 iPhone에서 재생됩니다."
 
 #: src/core/src/bluetooth/telephony.cpp
 msgid "Unknown call action."
@@ -1259,6 +1275,11 @@ msgstr "알 수 없는 발신자"
 #: src/gtk/calls_view.cpp
 msgid "Answer"
 msgstr "받기"
+
+#: src/gtk/calls_view.cpp
+#, fuzzy
+msgid "Audio here"
+msgstr "오디오 가져오기"
 
 #: src/gtk/calls_view.cpp
 msgid "Decline"
@@ -2017,9 +2038,6 @@ msgstr "기기를 페어링하고 네트워크를 통해 클립보드를 동기�
 
 #~ msgid "Call audio moved to this computer."
 #~ msgstr "통화 오디오를 이 컴퓨터로 옮겼습니다."
-
-#~ msgid "Take audio here"
-#~ msgstr "오디오 가져오기"
 
 #~ msgid ""
 #~ "Play the call through this computer's speakers and microphone. Handing it "

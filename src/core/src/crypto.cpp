@@ -27,6 +27,25 @@ namespace tether {
             SSL_CTX_free(client_ctx_);
     }
 
+    void Crypto::reset_for_tests() {
+        std::lock_guard<std::mutex> lock(hosts_mutex_);
+        if (server_ctx_) {
+            SSL_CTX_free(server_ctx_);
+            server_ctx_ = nullptr;
+        }
+        if (client_ctx_) {
+            SSL_CTX_free(client_ctx_);
+            client_ctx_ = nullptr;
+        }
+        known_hosts_.clear();
+        hosts_mtime_ = {};
+        hosts_loaded_ = false;
+        cert_path_.clear();
+        key_path_.clear();
+        hosts_path_.clear();
+        my_fingerprint_.clear();
+    }
+
     SSL_CTX* Crypto::get_server_context() { return server_ctx_; }
     SSL_CTX* Crypto::get_client_context() { return client_ctx_; }
 

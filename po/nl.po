@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: tether\n"
 "Report-Msgid-Bugs-To: zack@bartel.com\n"
-"POT-Creation-Date: 2026-09-05 13:35-0700\n"
+"POT-Creation-Date: 2026-09-06 13:50-0700\n"
 "PO-Revision-Date: 2026-08-23\n"
 "Last-Translator: Tether project\n"
 "Language-Team: Dutch\n"
@@ -180,6 +180,12 @@ msgid ""
 msgstr ""
 "Oproepbediening in- of uitschakelen. Oproepen lopen via Bluetooth-handsfree; "
 "het geluid blijft op de iPhone."
+
+#: src/cli/main.cpp
+msgid ""
+"Play call audio on this computer, or leave it on the iPhone. Needs PipeWire "
+"to be the stack holding Hands-Free; off applies from the next call."
+msgstr ""
 
 #: src/cli/main.cpp
 msgid "Print a redacted Bluetooth report for a bug report."
@@ -1151,7 +1157,12 @@ msgstr "De iPhone heeft handsfree niet met deze computer verbonden."
 msgid "Connecting to the iPhone's Hands-Free service."
 msgstr "Verbinden met de handsfree-dienst van de iPhone."
 
-#: src/core/src/bluetooth/telephony.cpp src/gtk/calls_view.cpp
+#: src/core/src/bluetooth/telephony.cpp
+msgid ""
+"PipeWire is handling Hands-Free, so the call audio can play on this computer."
+msgstr ""
+
+#: src/core/src/bluetooth/telephony.cpp
 msgid "Calls are controlled here; the audio plays on the iPhone."
 msgstr "Oproepen worden hier bediend; het geluid speelt op de iPhone."
 
@@ -1166,6 +1177,11 @@ msgstr "Geen oproep opgegeven."
 #: src/core/src/bluetooth/telephony.cpp
 msgid "That call is no longer active."
 msgstr "Die oproep is niet meer actief."
+
+#: src/core/src/bluetooth/telephony.cpp
+#, fuzzy
+msgid "This computer is not carrying the call audio; it plays on the iPhone."
+msgstr "Oproepen worden hier bediend; het geluid speelt op de iPhone."
 
 #: src/core/src/bluetooth/telephony.cpp
 msgid "Unknown call action."
@@ -1292,6 +1308,11 @@ msgstr "Onbekende beller"
 #: src/gtk/calls_view.cpp
 msgid "Answer"
 msgstr "Beantwoorden"
+
+#: src/gtk/calls_view.cpp
+#, fuzzy
+msgid "Audio here"
+msgstr "Audio hierheen halen"
 
 #: src/gtk/calls_view.cpp
 msgid "Decline"
@@ -2069,9 +2090,6 @@ msgstr "Apparaten koppelen en het klembord over het netwerk synchroniseren"
 
 #~ msgid "Call audio moved to this computer."
 #~ msgstr "Oproepaudio naar deze computer verplaatst."
-
-#~ msgid "Take audio here"
-#~ msgstr "Audio hierheen halen"
 
 #~ msgid ""
 #~ "Play the call through this computer's speakers and microphone. Handing it "
