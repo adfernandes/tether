@@ -184,6 +184,8 @@ msgid ""
 "Play call audio on this computer, or leave it on the iPhone. Needs PipeWire "
 "to be the stack holding Hands-Free; off applies from the next call."
 msgstr ""
+"통화 오디오를 이 컴퓨터에서 재생하거나 iPhone에 그대로 둡니다. PipeWire가 핸"
+"즈프리를 처리하고 있어야 하며, off는 다음 통화부터 적용됩니다."
 
 #: src/cli/main.cpp
 msgid "Print a redacted Bluetooth report for a bug report."
@@ -1129,6 +1131,8 @@ msgstr "iPhone의 핸즈프리 서비스에 연결하는 중입니다."
 msgid ""
 "PipeWire is handling Hands-Free, so the call audio can play on this computer."
 msgstr ""
+"PipeWire가 핸즈프리를 처리하고 있으므로 통화 오디오를 이 컴퓨터에서 재생할 "
+"수 있습니다."
 
 #: src/core/src/bluetooth/telephony.cpp
 msgid "Calls are controlled here; the audio plays on the iPhone."
@@ -1147,9 +1151,9 @@ msgid "That call is no longer active."
 msgstr "그 통화는 더 이상 활성 상태가 아닙니다."
 
 #: src/core/src/bluetooth/telephony.cpp
-#, fuzzy
 msgid "This computer is not carrying the call audio; it plays on the iPhone."
-msgstr "통화는 여기서 제어하고 오디오는 iPhone에서 재생됩니다."
+msgstr ""
+"이 컴퓨터는 통화 오디오를 전달하지 않습니다. 오디오는 iPhone에서 재생됩니다."
 
 #: src/core/src/bluetooth/telephony.cpp
 msgid "Unknown call action."
@@ -1277,7 +1281,6 @@ msgid "Answer"
 msgstr "받기"
 
 #: src/gtk/calls_view.cpp
-#, fuzzy
 msgid "Audio here"
 msgstr "오디오 가져오기"
 

@@ -186,6 +186,9 @@ msgid ""
 "Play call audio on this computer, or leave it on the iPhone. Needs PipeWire "
 "to be the stack holding Hands-Free; off applies from the next call."
 msgstr ""
+"Reproducir el audio de la llamada en este equipo o dejarlo en el iPhone. "
+"Requiere que sea PipeWire quien gestione el manos libres; off se aplica a "
+"partir de la próxima llamada."
 
 #: src/cli/main.cpp
 msgid "Print a redacted Bluetooth report for a bug report."
@@ -1167,6 +1170,8 @@ msgstr "Conectando con el servicio manos libres del iPhone."
 msgid ""
 "PipeWire is handling Hands-Free, so the call audio can play on this computer."
 msgstr ""
+"PipeWire gestiona el manos libres, así que el audio de la llamada puede "
+"reproducirse en este equipo."
 
 #: src/core/src/bluetooth/telephony.cpp
 msgid "Calls are controlled here; the audio plays on the iPhone."
@@ -1185,9 +1190,9 @@ msgid "That call is no longer active."
 msgstr "Esa llamada ya no está activa."
 
 #: src/core/src/bluetooth/telephony.cpp
-#, fuzzy
 msgid "This computer is not carrying the call audio; it plays on the iPhone."
-msgstr "Las llamadas se controlan aquí; el audio se reproduce en el iPhone."
+msgstr ""
+"Este equipo no transporta el audio de la llamada; se reproduce en el iPhone."
 
 #: src/core/src/bluetooth/telephony.cpp
 msgid "Unknown call action."
@@ -1317,7 +1322,6 @@ msgid "Answer"
 msgstr "Responder"
 
 #: src/gtk/calls_view.cpp
-#, fuzzy
 msgid "Audio here"
 msgstr "Traer el audio aquí"
 
