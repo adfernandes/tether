@@ -27,6 +27,8 @@ namespace tether {
         static std::string get_peer_fingerprint(SSL* ssl);
         static std::string generate_fingerprint(X509* cert);
 
+        void reset_for_tests();
+
     private:
         Crypto() = default;
         ~Crypto();

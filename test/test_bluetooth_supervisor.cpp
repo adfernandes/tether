@@ -979,3 +979,17 @@ TEST(BearerSupervisor, NeverCyclesClassicWhenCallsAreDisabled) {
         sup.tick(now);
     EXPECT_EQ(ops.classic_disconnects, 0);
 }
+
+// When PipeWire owns hands-free, a telephony object exists on its bus and the
+// link is healthy. Cycling BR/EDR would drop the OBEX sessions to recover
+// something that is not missing.
+TEST(BearerSupervisor, NeverCyclesClassicWhileHandsFreeIsPresent) {
+    FakeBearer ops;
+    ops.telephony = true;
+    BearerSupervisor sup(ops, true);
+    sup.set_calls_enabled(true);
+
+    for (int64_t now = 0; now <= 4 * HFP_ABSENT_SECONDS; ++now)
+        sup.tick(now);
+    EXPECT_EQ(ops.classic_disconnects, 0);
+}

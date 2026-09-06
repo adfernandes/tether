@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: tether\n"
 "Report-Msgid-Bugs-To: zack@bartel.com\n"
-"POT-Creation-Date: 2026-09-05 13:35-0700\n"
+"POT-Creation-Date: 2026-09-06 13:50-0700\n"
 "PO-Revision-Date: 2026-08-23\n"
 "Last-Translator: Tether project\n"
 "Language-Team: Brazilian Portuguese\n"
@@ -180,6 +180,12 @@ msgid ""
 msgstr ""
 "Ativar ou desativar o controle de chamadas. As chamadas usam o viva-voz "
 "Bluetooth; o áudio fica no iPhone."
+
+#: src/cli/main.cpp
+msgid ""
+"Play call audio on this computer, or leave it on the iPhone. Needs PipeWire "
+"to be the stack holding Hands-Free; off applies from the next call."
+msgstr ""
 
 #: src/cli/main.cpp
 msgid "Print a redacted Bluetooth report for a bug report."
@@ -1152,7 +1158,12 @@ msgstr "O iPhone não conectou o viva-voz a este computador."
 msgid "Connecting to the iPhone's Hands-Free service."
 msgstr "Conectando ao serviço viva-voz do iPhone."
 
-#: src/core/src/bluetooth/telephony.cpp src/gtk/calls_view.cpp
+#: src/core/src/bluetooth/telephony.cpp
+msgid ""
+"PipeWire is handling Hands-Free, so the call audio can play on this computer."
+msgstr ""
+
+#: src/core/src/bluetooth/telephony.cpp
 msgid "Calls are controlled here; the audio plays on the iPhone."
 msgstr "As chamadas são controladas aqui; o áudio toca no iPhone."
 
@@ -1167,6 +1178,11 @@ msgstr "Nenhuma chamada indicada."
 #: src/core/src/bluetooth/telephony.cpp
 msgid "That call is no longer active."
 msgstr "Essa chamada não está mais ativa."
+
+#: src/core/src/bluetooth/telephony.cpp
+#, fuzzy
+msgid "This computer is not carrying the call audio; it plays on the iPhone."
+msgstr "As chamadas são controladas aqui; o áudio toca no iPhone."
 
 #: src/core/src/bluetooth/telephony.cpp
 msgid "Unknown call action."
@@ -1293,6 +1309,11 @@ msgstr "Chamador desconhecido"
 #: src/gtk/calls_view.cpp
 msgid "Answer"
 msgstr "Atender"
+
+#: src/gtk/calls_view.cpp
+#, fuzzy
+msgid "Audio here"
+msgstr "Trazer o áudio para cá"
 
 #: src/gtk/calls_view.cpp
 msgid "Decline"
@@ -2069,9 +2090,6 @@ msgstr "Pareie dispositivos e sincronize a área de transferência pela rede"
 
 #~ msgid "Call audio moved to this computer."
 #~ msgstr "Áudio da chamada movido para este computador."
-
-#~ msgid "Take audio here"
-#~ msgstr "Trazer o áudio para cá"
 
 #~ msgid ""
 #~ "Play the call through this computer's speakers and microphone. Handing it "

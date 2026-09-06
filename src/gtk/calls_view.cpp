@@ -19,6 +19,7 @@ namespace tether::ui {
             GtkWidget* network_label = nullptr;
             bool visible = false;
             bool available = false;
+            bool audio_routable = false;
         };
 
         CallsState g_calls;
@@ -45,6 +46,8 @@ namespace tether::ui {
         }
 
         void on_answer_clicked(GtkButton* button, gpointer) { send_action("answer", button_path(button)); }
+
+        void on_audio_here_clicked(GtkButton*, gpointer) { send_action("audio_here", ""); }
 
         void on_hangup_clicked(GtkButton* button, gpointer) { send_action("hangup", button_path(button)); }
 
@@ -86,6 +89,8 @@ namespace tether::ui {
         // What HFP reports about the phone's cellular link.
         std::string network_text(const nlohmann::json& calls) {
             if (!calls.is_object())
+                return {};
+            if (!calls.value("indicators", true))
                 return {};
             std::string out = calls.value("operator", "");
             if (!calls.value("service", false))
@@ -135,9 +140,6 @@ namespace tether::ui {
             if (!name.empty() && !number.empty())
                 secondary += secondary.empty() ? number : "  -  " + number;
 
-            if (call.value("connected", false))
-                secondary += std::string("\n") + _("Calls are controlled here; the audio plays on the iPhone.");
-
             GtkWidget* secondary_label = gtk_label_new(secondary.c_str());
             gtk_label_set_xalign(GTK_LABEL(secondary_label), 0.0);
             gtk_style_context_add_class(gtk_widget_get_style_context(secondary_label), "muted");
@@ -151,6 +153,13 @@ namespace tether::ui {
                 g_signal_connect(answer, "clicked", G_CALLBACK(on_answer_clicked), nullptr);
                 gtk_widget_set_valign(answer, GTK_ALIGN_CENTER);
                 gtk_box_pack_start(GTK_BOX(box), answer, FALSE, FALSE, 0);
+            }
+
+            if (call.value("connected", false) && g_calls.audio_routable) {
+                GtkWidget* audio = gtk_button_new_with_label(_("Audio here"));
+                g_signal_connect(audio, "clicked", G_CALLBACK(on_audio_here_clicked), nullptr);
+                gtk_widget_set_valign(audio, GTK_ALIGN_CENTER);
+                gtk_box_pack_start(GTK_BOX(box), audio, FALSE, FALSE, 0);
             }
 
             if (state != "disconnected") {
@@ -209,6 +218,8 @@ namespace tether::ui {
             set_text(g_calls.network_label, g_calls.available ? network_text(calls) : "");
 
             const std::string reason = calls.is_object() ? calls.value("reason", "") : "";
+            const std::string audio = calls.is_object() ? calls.value("audio", "") : "";
+            g_calls.audio_routable = !audio.empty() && audio != "active";
             set_text(g_calls.status_label,
                      g_calls.available
                          ? std::string(_("No calls.")) + (reason.empty() ? "" : "\n" + reason)

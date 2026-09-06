@@ -143,10 +143,16 @@ Answer the ringing call.
 End every call.
 .TP
 \fB\-\-bt-calls-enable\fR \fIon\fR|\fIoff\fR
-Turn call control on or off. Off by default. Calls run over BlueZ's own hands-free
-profile, which needs \fBbluetoothd --experimental\fR -- the same flag notification
-mirroring requires. Control only: the call audio stays on the iPhone. See
-\fIdocs/BLUETOOTH.md\fR.
+Turn call control on or off. Off by default. Calls run over whichever stack holds the
+hands-free profile: BlueZ's own, which needs \fBbluetoothd --experimental\fR -- the same
+flag notification mirroring requires -- and carries no audio, or PipeWire's, which carries
+the call audio as well. Neither is installed by Tether and call control is unavailable,
+not broken, when there is no stack holding the profile. See \fIdocs/BLUETOOTH.md\fR.
+.TP
+\fB\-\-bt-call-audio\fR \fIon\fR|\fIoff\fR
+Play call audio on this computer, or leave it on the iPhone. Only PipeWire carries the
+voice link, so this reports a refusal when BlueZ holds the profile. \fIoff\fR gates the
+next voice link rather than moving a call already in progress.
 .TP
 \fB\-\-bt-adapter\fR \fIhciN\fR|\fIauto\fR
 Choose which Bluetooth controller to use, by \fIhciN\fR or by address. Defaults to

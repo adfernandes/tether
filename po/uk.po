@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: tether\n"
 "Report-Msgid-Bugs-To: zack@bartel.com\n"
-"POT-Creation-Date: 2026-09-05 13:35-0700\n"
+"POT-Creation-Date: 2026-09-06 13:50-0700\n"
 "PO-Revision-Date: 2026-08-23\n"
 "Last-Translator: Tether project\n"
 "Language-Team: Ukrainian\n"
@@ -181,6 +181,12 @@ msgid ""
 msgstr ""
 "Увімкнути або вимкнути керування викликами. Виклики йдуть через Bluetooth "
 "Hands-Free; звук залишається на iPhone."
+
+#: src/cli/main.cpp
+msgid ""
+"Play call audio on this computer, or leave it on the iPhone. Needs PipeWire "
+"to be the stack holding Hands-Free; off applies from the next call."
+msgstr ""
 
 #: src/cli/main.cpp
 msgid "Print a redacted Bluetooth report for a bug report."
@@ -1150,7 +1156,12 @@ msgstr "iPhone не підключив Hands-Free до цього комп’ю�
 msgid "Connecting to the iPhone's Hands-Free service."
 msgstr "Підключення до служби Hands-Free на iPhone."
 
-#: src/core/src/bluetooth/telephony.cpp src/gtk/calls_view.cpp
+#: src/core/src/bluetooth/telephony.cpp
+msgid ""
+"PipeWire is handling Hands-Free, so the call audio can play on this computer."
+msgstr ""
+
+#: src/core/src/bluetooth/telephony.cpp
 msgid "Calls are controlled here; the audio plays on the iPhone."
 msgstr "Викликами керують звідси; звук відтворюється на iPhone."
 
@@ -1165,6 +1176,11 @@ msgstr "Виклик не вказано."
 #: src/core/src/bluetooth/telephony.cpp
 msgid "That call is no longer active."
 msgstr "Цей виклик уже не активний."
+
+#: src/core/src/bluetooth/telephony.cpp
+#, fuzzy
+msgid "This computer is not carrying the call audio; it plays on the iPhone."
+msgstr "Викликами керують звідси; звук відтворюється на iPhone."
 
 #: src/core/src/bluetooth/telephony.cpp
 msgid "Unknown call action."
@@ -1291,6 +1307,11 @@ msgstr "Невідомий абонент"
 #: src/gtk/calls_view.cpp
 msgid "Answer"
 msgstr "Відповісти"
+
+#: src/gtk/calls_view.cpp
+#, fuzzy
+msgid "Audio here"
+msgstr "Перевести звук сюди"
 
 #: src/gtk/calls_view.cpp
 msgid "Decline"
@@ -2069,9 +2090,6 @@ msgstr "Створюйте пари пристроїв і синхронізуй
 
 #~ msgid "Call audio moved to this computer."
 #~ msgstr "Звук виклику переведено на цей комп’ютер."
-
-#~ msgid "Take audio here"
-#~ msgstr "Перевести звук сюди"
 
 #~ msgid ""
 #~ "Play the call through this computer's speakers and microphone. Handing it "

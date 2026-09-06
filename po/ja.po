@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: tether\n"
 "Report-Msgid-Bugs-To: zack@bartel.com\n"
-"POT-Creation-Date: 2026-09-05 13:35-0700\n"
+"POT-Creation-Date: 2026-09-06 13:50-0700\n"
 "PO-Revision-Date: 2026-08-23\n"
 "Last-Translator: Tether project\n"
 "Language-Team: Japanese\n"
@@ -179,6 +179,12 @@ msgid ""
 msgstr ""
 "通話操作をオンまたはオフにします。通話は Bluetooth ハンズフリー経由で、音声"
 "は iPhone に残ります。"
+
+#: src/cli/main.cpp
+msgid ""
+"Play call audio on this computer, or leave it on the iPhone. Needs PipeWire "
+"to be the stack holding Hands-Free; off applies from the next call."
+msgstr ""
 
 #: src/cli/main.cpp
 msgid "Print a redacted Bluetooth report for a bug report."
@@ -1131,7 +1137,12 @@ msgstr "iPhone がこのコンピューターにハンズフリーを接続し�
 msgid "Connecting to the iPhone's Hands-Free service."
 msgstr "iPhone のハンズフリーサービスに接続しています。"
 
-#: src/core/src/bluetooth/telephony.cpp src/gtk/calls_view.cpp
+#: src/core/src/bluetooth/telephony.cpp
+msgid ""
+"PipeWire is handling Hands-Free, so the call audio can play on this computer."
+msgstr ""
+
+#: src/core/src/bluetooth/telephony.cpp
 msgid "Calls are controlled here; the audio plays on the iPhone."
 msgstr "通話はここで操作し、音声は iPhone で再生されます。"
 
@@ -1146,6 +1157,11 @@ msgstr "通話が指定されていません。"
 #: src/core/src/bluetooth/telephony.cpp
 msgid "That call is no longer active."
 msgstr "その通話はもう有効ではありません。"
+
+#: src/core/src/bluetooth/telephony.cpp
+#, fuzzy
+msgid "This computer is not carrying the call audio; it plays on the iPhone."
+msgstr "通話はここで操作し、音声は iPhone で再生されます。"
 
 #: src/core/src/bluetooth/telephony.cpp
 msgid "Unknown call action."
@@ -1272,6 +1288,11 @@ msgstr "不明な発信者"
 #: src/gtk/calls_view.cpp
 msgid "Answer"
 msgstr "応答"
+
+#: src/gtk/calls_view.cpp
+#, fuzzy
+msgid "Audio here"
+msgstr "音声をここに移す"
 
 #: src/gtk/calls_view.cpp
 msgid "Decline"
@@ -2043,9 +2064,6 @@ msgstr "デバイスをペアリングし、ネットワーク越しにクリッ
 
 #~ msgid "Call audio moved to this computer."
 #~ msgstr "通話音声をこのコンピューターに移しました。"
-
-#~ msgid "Take audio here"
-#~ msgstr "音声をここに移す"
 
 #~ msgid ""
 #~ "Play the call through this computer's speakers and microphone. Handing it "

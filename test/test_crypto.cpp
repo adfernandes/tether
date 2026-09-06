@@ -1,10 +1,10 @@
-#include <gtest/gtest.h>
-#include <tether/crypto.hpp>
-#include <filesystem>
 #include <cstdlib>
+#include <filesystem>
 #include <fstream>
-#include <sstream>
+#include <gtest/gtest.h>
 #include <iostream>
+#include <sstream>
+#include <tether/crypto.hpp>
 #include <unistd.h>
 
 class CryptoTest : public ::testing::Test {
@@ -13,11 +13,14 @@ protected:
         setenv("HOME", home_.c_str(), 1);
         std::filesystem::remove_all(home_);
         std::filesystem::create_directories(home_);
+        // Crypto caches its contexts and paths, and init() short-circuits on them.
+        // Without this every test after the first runs against a config directory
+        // that SetUp deleted: the writes fail and the assertions that read from
+        // disk pass against nothing.
+        tether::Crypto::instance().reset_for_tests();
     }
 
-    void TearDown() override {
-        std::filesystem::remove_all(home_);
-    }
+    void TearDown() override { std::filesystem::remove_all(home_); }
 
     const std::filesystem::path home_ =
         std::filesystem::temp_directory_path() / ("tether-tests-" + std::to_string(getpid()));
@@ -79,7 +82,9 @@ TEST_F(CryptoTest, RemoveKnownHost) {
     // Idempotent, and the removal survives a reload from disk.
     EXPECT_FALSE(tether::Crypto::instance().remove_known_host("doomed_fp"));
 
-    std::ifstream iff(home_ / ".config/tether/known_hosts.json");
+    const auto hosts = home_ / ".config/tether/known_hosts.json";
+    ASSERT_TRUE(std::filesystem::exists(hosts)) << "nothing was written, so the check below proves nothing";
+    std::ifstream iff(hosts);
     std::stringstream on_disk;
     on_disk << iff.rdbuf();
     EXPECT_EQ(on_disk.str().find("doomed_fp"), std::string::npos);

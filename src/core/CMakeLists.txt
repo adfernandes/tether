@@ -34,6 +34,7 @@ add_library(tether STATIC
     src/bluetooth/ancs/client.cpp
     src/bluetooth/groups.cpp
     src/bluetooth/telephony.cpp
+    src/bluetooth/telephony_pipewire.cpp
     src/bluetooth/connection.cpp
     src/bluetooth/diagnostics.cpp
     src/wayland.cpp

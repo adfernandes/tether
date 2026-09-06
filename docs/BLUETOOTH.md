@@ -269,8 +269,10 @@ PipeWire's `bluez5` plugin implements the same profile in the HF role and publis
 `org.pipewire.Telephony`, and it *can* carry the audio (`AudioGatewayTransport1.Activate()`,
 with `bluez5.telephony.default-reject-sco` to keep it on the phone until asked).
 
-It cannot be used at the same time. Both register for UUID `0000111e`, and which one
-gets the link depends on who opens it.
+The two cannot own the profile at the same time. Both register for UUID `0000111e`, and
+which one gets the link depends on who opens it. Tether reads both, so which one wins
+decides where the call audio plays, not whether call control works -- see "Either stack
+can serve the calls" below.
 
 A connect from this side routes into BlueZ's built-in profile and fails there:
 
@@ -311,6 +313,35 @@ requires for `org.bluez.Bearer.LE1`, already detects, and already prints the fix
 Users who want the audio on the desktop can still have it, at the cost of Tether's call
 control -- see below.
 
+### Either stack can serve the calls
+
+`TelephonyClient` holds a list of `TelephonySource`s and uses the first one serving the
+phone: BlueZ, then PipeWire. So the machine keeps call control whichever stack ends up
+with `0000111e`, and the four objections above stop applying to Tether:
+
+- No new dependency. PipeWire is reached over its D-Bus API on the session bus, and
+  `gio-2.0` was already linked. Nothing changes in the package or the build.
+- No new requirement. A machine with no PipeWire finds no bus name, the source reports
+  nothing, and calls read exactly as they did before -- unavailable, with the same
+  sentence. A working BlueZ setup never touches the session bus at all, because BlueZ is
+  consulted first and short-circuits.
+- CI is unaffected: the parser is a pure function over a recorded `GetManagedObjects`
+  payload, tested with no bus, like the BlueZ one beside it.
+
+What differs between the two sources is what they can report and carry:
+
+| | BlueZ | PipeWire |
+|---|---|---|
+| Call control | yes | yes |
+| Call audio | never | on this computer |
+| Carrier, signal, battery, roaming | yes | none of them |
+
+PipeWire's `AudioGateway1` carries no HFP indicators at all, so the payload marks them
+absent (`indicators: false`) rather than reporting their defaults, and both the CLI and
+the Calls page drop that line instead of claiming "No service" for a phone that has
+service. `--bt-call-audio on` calls `AudioGatewayTransport1.Activate()`; `off` sets
+`RejectSCO`, which gates the next voice link rather than tearing down one already up.
+
 ### Getting the call audio onto the desktop instead
 
 Possible, and it costs more than it first appears. Walked end to end on 2026-09-04, so
@@ -318,8 +349,10 @@ what follows is measured rather than reasoned.
 
 You give up two things:
 
-- **Tether's call control.** Handing the profile to PipeWire means BlueZ no longer owns
-  it, exports no `org.bluez.Telephony1`, and the Calls page goes empty.
+- **The HFP indicators.** Handing the profile to PipeWire means BlueZ no longer owns it
+  and exports no `org.bluez.Telephony1`. Call control itself survives -- Tether reads
+  PipeWire's API too -- but carrier, signal strength, battery and roaming have no
+  PipeWire equivalent and stop being reported.
 - **The phone's audio staying on the phone.** `a2dp_sink` turns out to be mandatory
   here, so music and system sounds move to the desktop as well. Everything
   "Keeping the phone's audio on the phone" below is written to avoid, you are opting
@@ -497,9 +530,9 @@ checks the daemon does not make.
 | Pairing bonds but the LE half never derives, on a machine with a USB dongle plugged in | Tether used the first powered controller, which is the dongle, not the built-in one | `tether --bt-status` marks the controller in use; `tether --bt-adapter <hciN>` picks another -- see 2026-09-01 |
 | The link reads down forever with `br-connection-unknown`, while messages, contacts and notifications all work | This computer offers the iPhone no BR/EDR profile to connect to, and BlueZ only reports a link up while some local profile is connected | Nothing. Tether no longer waits on that link -- see 2026-08-23 below. Call support does not change this: BlueZ's hands-free profile is not one of the local profiles BlueZ counts |
 | The iPhone's audio moves to the computer when Tether connects | The machine advertises itself as a Bluetooth speaker/headset, and iOS routes to it. Not caused by Tether beyond bringing the link up | See "Keeping the phone's audio on the phone" below |
-| `tether --bt-calls` reports call control off | PipeWire's default `bluez5.roles` includes `hfp_hf` and took the profile, the iPhone reconnected on its own and never opened hands-free, or `bluetoothd` is running without `--experimental` | Drop `hfp_hf` from `bluez5.roles` -- see "Calls". The daemon cycles the BR/EDR bearer once per outage for the second cause; confirm with `busctl --system tree org.bluez \| grep telephony` |
+| `tether --bt-calls` reports call control off | PipeWire took the profile *and* its telephony D-Bus service is off, the iPhone reconnected on its own and never opened hands-free, or `bluetoothd` is running without `--experimental` | Either give BlueZ the profile by dropping `hfp_hf` from `bluez5.roles`, or set `bluez5.telephony-dbus-service = true` and let Tether drive PipeWire's gateway -- see "Calls". The daemon cycles the BR/EDR bearer once per outage for the second cause; confirm with `busctl --system tree org.bluez \| grep telephony` and `busctl --user tree org.pipewire.Telephony` |
 | Calls work but the audio is on the iPhone | Working as designed. BlueZ signals the call and never opens the voice link, so there is nothing to route here | Nothing. `./scripts/bt-probe.sh --calls` during a call shows the evidence; "Getting the call audio onto the desktop instead" is the trade if you want it |
-| The Calls page is empty after configuring PipeWire for call audio | Expected. PipeWire owns the hands-free profile now, so BlueZ exports no `telephony0` for Tether to drive | Pick one: the revert steps under "Getting the call audio onto the desktop instead", or keep PipeWire and use an oFono-compatible dialer |
+| The Calls page is empty after configuring PipeWire for call audio | PipeWire's telephony D-Bus service is off, so neither stack exports anything Tether can read | Set `bluez5.telephony-dbus-service = true` and reconnect. With it on, Tether drives PipeWire's gateway directly and the Calls page works, minus carrier and signal |
 | Configured PipeWire for call audio and the machine is not in the iPhone's audio picker | `a2dp_sink` is missing from `bluez5.roles`. iOS only speaks hands-free to a machine it considers an audio destination | Add `a2dp_sink`, and accept that the phone's music comes here too -- see "Getting the call audio onto the desktop instead" |
 | `hfp_connect() unable to start connection` in the bluetoothd log | PipeWire's `hfp_hf` role and BlueZ's built-in profile are both claiming UUID `0000111e` | Remove `hfp_hf` from `bluez5.roles` -- see "Calls" and 2026-09-04 |
 

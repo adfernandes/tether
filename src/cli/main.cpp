@@ -216,6 +216,9 @@ static const Opt kOptions[] = {
     {"--bt-hangup", N_("Hang up every call.")},
     {"--bt-calls-enable <on|off>",
      N_("Turn call control on or off. Calls run over Bluetooth Hands-Free; the audio stays on the iPhone.")},
+    {"--bt-call-audio <on|off>",
+     N_("Play call audio on this computer, or leave it on the iPhone. Needs PipeWire to be the stack holding "
+        "Hands-Free; off applies from the next call.")},
     {"--bt-diagnostics", N_("Print a redacted Bluetooth report for a bug report.")},
     {"--install-extension-host",
      N_("Install the browser and mail extension's native messaging manifests for this user. Needed only for "
@@ -594,7 +597,8 @@ static int print_bt_connection(tether::Client& client) {
     // Null while call control is off, which is the common case.
     const nlohmann::json calls = resp.value("calls", nlohmann::json());
     std::string call_state = yn(calls.is_object() && calls.value("available", false));
-    if (calls.is_object() && calls.value("available", false)) {
+    // PipeWire's gateway reports no cellular indicators :(
+    if (calls.is_object() && calls.value("available", false) && calls.value("indicators", true)) {
         // Carrier and signal come from the phone over HFP.
         const std::string carrier = calls.value("operator", "");
         call_state += "  [" + (carrier.empty() ? std::string(_("no carrier")) : carrier) +
@@ -988,6 +992,10 @@ int main(int argc, char* argv[]) {
         } else if (arg == "--bt-hangup") {
             action = "bt_call_action";
             arg_val = "hangup_all";
+        } else if (arg == "--bt-call-audio") {
+            action = "bt_call_action";
+            const std::string value = i + 1 < argc ? argv[++i] : "";
+            arg_val = value == "off" ? "audio_phone" : "audio_here";
         } else if (arg == "--bt-call") {
             action = "bt_call";
             if (i + 1 < argc && argv[i + 1][0] != '-')

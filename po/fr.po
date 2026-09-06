@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: tether\n"
 "Report-Msgid-Bugs-To: zack@bartel.com\n"
-"POT-Creation-Date: 2026-09-05 13:35-0700\n"
+"POT-Creation-Date: 2026-09-06 13:50-0700\n"
 "PO-Revision-Date: 2026-08-22\n"
 "Last-Translator: Tether project\n"
 "Language-Team: French\n"
@@ -183,6 +183,12 @@ msgid ""
 msgstr ""
 "Activer ou désactiver la gestion des appels. Les appels passent par le mode "
 "mains libres Bluetooth ; l'audio reste sur l'iPhone."
+
+#: src/cli/main.cpp
+msgid ""
+"Play call audio on this computer, or leave it on the iPhone. Needs PipeWire "
+"to be the stack holding Hands-Free; off applies from the next call."
+msgstr ""
 
 #: src/cli/main.cpp
 msgid "Print a redacted Bluetooth report for a bug report."
@@ -1164,7 +1170,12 @@ msgstr "L'iPhone n'a pas connecté le mode mains libres à cet ordinateur."
 msgid "Connecting to the iPhone's Hands-Free service."
 msgstr "Connexion au service mains libres de l'iPhone."
 
-#: src/core/src/bluetooth/telephony.cpp src/gtk/calls_view.cpp
+#: src/core/src/bluetooth/telephony.cpp
+msgid ""
+"PipeWire is handling Hands-Free, so the call audio can play on this computer."
+msgstr ""
+
+#: src/core/src/bluetooth/telephony.cpp
 msgid "Calls are controlled here; the audio plays on the iPhone."
 msgstr "Les appels se pilotent ici ; l'audio est diffusé sur l'iPhone."
 
@@ -1179,6 +1190,11 @@ msgstr "Aucun appel indiqué."
 #: src/core/src/bluetooth/telephony.cpp
 msgid "That call is no longer active."
 msgstr "Cet appel n'est plus actif."
+
+#: src/core/src/bluetooth/telephony.cpp
+#, fuzzy
+msgid "This computer is not carrying the call audio; it plays on the iPhone."
+msgstr "Les appels se pilotent ici ; l'audio est diffusé sur l'iPhone."
 
 #: src/core/src/bluetooth/telephony.cpp
 msgid "Unknown call action."
@@ -1306,6 +1322,11 @@ msgstr "Appelant inconnu"
 #: src/gtk/calls_view.cpp
 msgid "Answer"
 msgstr "Répondre"
+
+#: src/gtk/calls_view.cpp
+#, fuzzy
+msgid "Audio here"
+msgstr "Prendre l'audio ici"
 
 #: src/gtk/calls_view.cpp
 msgid "Decline"
@@ -2091,9 +2112,6 @@ msgstr "Appairez des appareils et synchronisez le presse-papiers sur le réseau"
 
 #~ msgid "Call audio moved to this computer."
 #~ msgstr "Audio de l'appel transféré vers cet ordinateur."
-
-#~ msgid "Take audio here"
-#~ msgstr "Prendre l'audio ici"
 
 #~ msgid ""
 #~ "Play the call through this computer's speakers and microphone. Handing it "
