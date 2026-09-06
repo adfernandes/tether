@@ -90,6 +90,8 @@ namespace tether::bluetooth {
         g_variant_builder_add(&filter, "{sv}", "Format", g_variant_new_string("vcard30"));
         // MaxCount, not MAP's MaxListCount.
         g_variant_builder_add(&filter, "{sv}", "MaxCount", g_variant_new_uint16(static_cast<guint16>(max)));
+        // only what parse_vcards reads. kill PHOTO
+        g_variant_builder_add(&filter, "{sv}", "Fields", g_variant_new_parsed("['N','FN','TEL','EMAIL']"));
 
         GError* error = nullptr;
         GVariant* reply = g_dbus_connection_call_sync(state_->bus,

@@ -186,6 +186,9 @@ msgid ""
 "Play call audio on this computer, or leave it on the iPhone. Needs PipeWire "
 "to be the stack holding Hands-Free; off applies from the next call."
 msgstr ""
+"Anrufton auf diesem Computer wiedergeben oder auf dem iPhone belassen. "
+"Erfordert, dass PipeWire Hands-Free bereitstellt; off gilt ab dem nächsten "
+"Anruf."
 
 #: src/cli/main.cpp
 msgid "Print a redacted Bluetooth report for a bug report."
@@ -1176,6 +1179,8 @@ msgstr "Verbindung zum Hands-Free-Dienst des iPhones wird aufgebaut."
 msgid ""
 "PipeWire is handling Hands-Free, so the call audio can play on this computer."
 msgstr ""
+"PipeWire stellt Hands-Free bereit, daher kann der Anrufton auf diesem "
+"Computer wiedergegeben werden."
 
 #: src/core/src/bluetooth/telephony.cpp
 msgid "Calls are controlled here; the audio plays on the iPhone."
@@ -1195,10 +1200,10 @@ msgid "That call is no longer active."
 msgstr "Dieser Anruf ist nicht mehr aktiv."
 
 #: src/core/src/bluetooth/telephony.cpp
-#, fuzzy
 msgid "This computer is not carrying the call audio; it plays on the iPhone."
 msgstr ""
-"Anrufe werden hier gesteuert; der Ton wird auf dem iPhone wiedergegeben."
+"Dieser Computer überträgt den Anrufton nicht; er wird auf dem iPhone "
+"wiedergegeben."
 
 #: src/core/src/bluetooth/telephony.cpp
 msgid "Unknown call action."
@@ -1327,7 +1332,6 @@ msgid "Answer"
 msgstr "Annehmen"
 
 #: src/gtk/calls_view.cpp
-#, fuzzy
 msgid "Audio here"
 msgstr "Audio hierher holen"
 

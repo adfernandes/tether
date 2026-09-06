@@ -179,6 +179,8 @@ msgid ""
 "Play call audio on this computer, or leave it on the iPhone. Needs PipeWire "
 "to be the stack holding Hands-Free; off applies from the next call."
 msgstr ""
+"在本机播放通话音频，或将其留在 iPhone 上。需要由 PipeWire 承载免提；off 从下"
+"一通电话起生效。"
 
 #: src/cli/main.cpp
 msgid "Print a redacted Bluetooth report for a bug report."
@@ -1099,7 +1101,7 @@ msgstr "正在连接 iPhone 的免提服务。"
 #: src/core/src/bluetooth/telephony.cpp
 msgid ""
 "PipeWire is handling Hands-Free, so the call audio can play on this computer."
-msgstr ""
+msgstr "免提由 PipeWire 承载，因此通话音频可以在本机播放。"
 
 #: src/core/src/bluetooth/telephony.cpp
 msgid "Calls are controlled here; the audio plays on the iPhone."
@@ -1118,9 +1120,8 @@ msgid "That call is no longer active."
 msgstr "该通话已不再有效。"
 
 #: src/core/src/bluetooth/telephony.cpp
-#, fuzzy
 msgid "This computer is not carrying the call audio; it plays on the iPhone."
-msgstr "通话在此控制，音频在 iPhone 上播放。"
+msgstr "本机未承载通话音频；音频在 iPhone 上播放。"
 
 #: src/core/src/bluetooth/telephony.cpp
 msgid "Unknown call action."
@@ -1247,7 +1248,6 @@ msgid "Answer"
 msgstr "接听"
 
 #: src/gtk/calls_view.cpp
-#, fuzzy
 msgid "Audio here"
 msgstr "将音频转到本机"
 

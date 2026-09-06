@@ -1177,6 +1177,13 @@ iPhone was, exactly as on 2026-08-19.
 
 `Select("int", "pb")` followed by `PullAll` with `Format: vcard30` and `MaxCount` returned 456 contacts on the first attempt.
 
+The pull sends `Fields: [N, FN, TEL, EMAIL]`, the only properties `parse_vcards` reads.
+Photos are the bulk of a phonebook's bytes and nothing here looks at them: on a 1441-contact
+iPhone with 165 photos, an unfiltered pull was 3,604,655 bytes in ~45 s, and the filtered one
+198,780 bytes in 4 s. Unfiltered, that already sat close enough to the 60 s transfer cap that
+MAP polling sharing the ACL pushed it over, which is the normal state right after connect,
+when the pull runs.
+
 The transfer object disappears from D-Bus the moment it finishes, so a vanished object
 is a normal terminal state rather than a failure (file may still take a bit to appear afterwards),
 which is why the pull waits instead of giving up. Contacts are staged in `$XDG_RUNTIME_DIR` rather than `/tmp`, since a
