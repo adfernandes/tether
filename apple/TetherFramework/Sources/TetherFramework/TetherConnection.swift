@@ -60,7 +60,7 @@ public final class TetherConnection {
     //   - endpoint: The Bonjour or direct `NWEndpoint` to connect to.
     //   - identity: The client's `SecIdentity` for mTLS authentication.
     public func connect(to endpoint: NWEndpoint, identity: SecIdentity) {
-        disconnect()
+        teardown()
 
         let tlsOptions = NWProtocolTLS.Options()
         let secOptions = tlsOptions.securityProtocolOptions
@@ -109,7 +109,7 @@ public final class TetherConnection {
     //   - connection: The `NWConnection` already established and in `.ready` state.
     //   - fingerprint: The verified TLS fingerprint of the incoming client.
     public func accept(incomingConnection conn: NWConnection, fingerprint: String) {
-        disconnect()
+        teardown()
         self.serverFingerprint = fingerprint
         self.connection = conn
 
@@ -125,11 +125,19 @@ public final class TetherConnection {
 
     // Disconnect and tear down the connection.
     public func disconnect() {
-        connection?.cancel()
+        teardown()
+        updateState(.disconnected)
+    }
+
+    // Drop the socket without announcing a state.
+    private func teardown() {
+        if let conn = connection {
+            conn.stateUpdateHandler = nil
+            conn.cancel()
+        }
         connection = nil
         receiveBuffer = Data()
         serverFingerprint = ""
-        updateState(.disconnected)
     }
 
     // Send a protocol message to the daemon.

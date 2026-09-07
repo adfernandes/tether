@@ -131,9 +131,22 @@ final class TetherViewModel {
     private let fileChunkSize = 48 * 1024
     private var hasInitialized = false
     private var pendingReconnectTask: Task<Void, Never>?
+    private var connectTimeoutTask: Task<Void, Never>?
     private var autoConnectingFingerprint: String?
     private var manualDisconnect = false
     private var currentScenePhase: ScenePhase = .active
+
+    // Consecutive failed reconnect attempts, used to space out the retries.
+    private var reconnectAttempts = 0
+
+    // Base delay before a reconnect attempt, doubled per consecutive failure.
+    private static let reconnectBaseDelay: Double = 0.7
+
+    // capped exponential backoff.
+    private static let reconnectMaxDelay: Double = 30
+
+    // How long a dial may sit unanswered before it is treated as failed.
+    private static let connectTimeout: Double = 8
 
     private struct IncomingTransferBuffer {
         let filename: String
@@ -189,10 +202,13 @@ final class TetherViewModel {
         switch phase {
         case .active:
             manualDisconnect = false
+            reconnectAttempts = 0
             refreshDiscovery()
         case .background:
             pendingReconnectTask?.cancel()
             pendingReconnectTask = nil
+            connectTimeoutTask?.cancel()
+            connectTimeoutTask = nil
             suspendForBackground()
         default:
             break
@@ -222,6 +238,7 @@ final class TetherViewModel {
         // Persist the service name so the Share Extension can connect without discovery.
         ShareSender.persistLastServiceName(host.name)
         connection.connect(to: host.endpoint, identity: identity)
+        startConnectTimeout()
     }
 
     // Connect by IP address and port.
@@ -235,6 +252,7 @@ final class TetherViewModel {
         appState = .connecting
         connectedDeviceName = host
         connection.connect(host: host, port: port, identity: identity)
+        startConnectTimeout()
     }
 
     // Disconnect from the daemon.
@@ -242,6 +260,9 @@ final class TetherViewModel {
         manualDisconnect = true
         pendingReconnectTask?.cancel()
         pendingReconnectTask = nil
+        connectTimeoutTask?.cancel()
+        connectTimeoutTask = nil
+        reconnectAttempts = 0
         autoConnectingFingerprint = nil
         certificateManager.lastConnectedFingerprint = nil // Also clear last connection
         connection.disconnect()
@@ -402,21 +423,31 @@ final class TetherViewModel {
             guard let self else { return }
             switch state {
             case .connected(let isInbound):
+                if let expected = self.autoConnectingFingerprint, !isInbound,
+                   self.connection.serverFingerprint != expected {
+                    self.autoConnectingFingerprint = nil
+                    self.connection.disconnect()
+                    return
+                }
+                self.cancelConnectTimeout()
                 self.pendingReconnectTask?.cancel()
                 self.pendingReconnectTask = nil
                 self.autoConnectingFingerprint = nil
+                self.reconnectAttempts = 0
                 self.certificateManager.lastConnectedFingerprint = self.connection.serverFingerprint
                 if let endpoint = self.connection.resolvedEndpoint {
                     ShareSender.persistLastEndpoint(host: endpoint.host, port: endpoint.port)
                 }
                 self.handleConnected(isInbound: isInbound)
             case .disconnected:
+                self.cancelConnectTimeout()
                 self.autoConnectingFingerprint = nil
                 self.appState = .disconnected
                 if self.currentScenePhase == .active {
                     self.scheduleAutoReconnectAttempt()
                 }
             case .failed(let msg):
+                self.cancelConnectTimeout()
                 let wasAutoReconnect = self.autoConnectingFingerprint != nil
                 self.autoConnectingFingerprint = nil
                 self.appState = .disconnected
@@ -485,13 +516,19 @@ final class TetherViewModel {
     }
 
     private func scheduleAutoReconnectAttempt() {
-        print("TetherViewModel: Scheduling auto-reconnect. shouldAutoReconnect: \(shouldAutoReconnect), autoConnectingFingerprint: \(String(describing: autoConnectingFingerprint))")
         guard shouldAutoReconnect else { return }
         guard autoConnectingFingerprint == nil else { return }
 
+        // delay is also mDNS's window to answer
+        let delay = min(
+            Self.reconnectBaseDelay * pow(2, Double(reconnectAttempts)),
+            Self.reconnectMaxDelay
+        )
+
         pendingReconnectTask?.cancel()
         pendingReconnectTask = Task { [weak self] in
-            try? await Task.sleep(for: .milliseconds(700))
+            try? await Task.sleep(for: .seconds(delay))
+            guard !Task.isCancelled else { return }
             await MainActor.run {
                 self?.attemptAutoReconnect()
             }
@@ -512,12 +549,11 @@ final class TetherViewModel {
     }
 
     private func attemptAutoReconnect() {
-        print("TetherViewModel: Attempting auto-reconnect. Last fingerprint: \(String(describing: certificateManager.lastConnectedFingerprint)), Found hosts: \(discovery.hosts.count)")
         guard shouldAutoReconnect else { return }
-        
+
         // If we have a last connected fingerprint, prioritize it.
         let targetFingerprint = certificateManager.lastConnectedFingerprint
-        
+
         let matchingHosts: [DiscoveredHost]
         if let targetFingerprint {
             matchingHosts = discovery.hosts.filter { $0.fingerprint == targetFingerprint }
@@ -526,17 +562,43 @@ final class TetherViewModel {
             // but ONLY if there's exactly one host found.
             matchingHosts = discovery.hosts.count == 1 ? discovery.hosts : []
         }
-        
-        print("TetherViewModel: Found \(matchingHosts.count) matching hosts for auto-reconnect.")
-        guard let targetHost = matchingHosts.first else { return }
 
         // Stay silent when the identity is missing; the error belongs to a user-initiated
         // connect, not to a background reconnect on every launch.
         guard certificateManager.getIdentity() != nil else { return }
 
-        print("TetherViewModel: Connecting to target host: \(targetHost.name)")
-        autoConnectingFingerprint = targetHost.fingerprint
-        connectTo(host: targetHost)
+        if let targetHost = matchingHosts.first {
+            reconnectAttempts += 1
+            autoConnectingFingerprint = targetHost.fingerprint
+            connectTo(host: targetHost)
+            return
+        }
+
+        // discovery found nothing.
+        guard let targetFingerprint, certificateManager.isHostKnown(targetFingerprint),
+              let endpoint = ShareSender.lastEndpoint() else { return }
+
+        reconnectAttempts += 1
+        autoConnectingFingerprint = targetFingerprint
+        connectTo(host: endpoint.host, port: endpoint.port)
+    }
+
+    // Fail a dial that the network never answers, so the reconnect loop can back off and try again.
+    private func startConnectTimeout() {
+        connectTimeoutTask?.cancel()
+        connectTimeoutTask = Task { [weak self] in
+            try? await Task.sleep(for: .seconds(Self.connectTimeout))
+            guard !Task.isCancelled else { return }
+            await MainActor.run {
+                guard let self, self.appState == .connecting else { return }
+                self.connection.disconnect()
+            }
+        }
+    }
+
+    private func cancelConnectTimeout() {
+        connectTimeoutTask?.cancel()
+        connectTimeoutTask = nil
     }
 
     private func suspendForBackground() {

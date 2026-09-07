@@ -289,4 +289,13 @@ extension ShareSender {
         sharedDefaults.set(host, forKey: lastHostKey)
         sharedDefaults.set(Int(port), forKey: lastPortKey)
     }
+
+    /// The last endpoint a connection actually resolved to, if one was ever cached.
+    public static func lastEndpoint() -> (host: String, port: UInt16)? {
+        let sharedDefaults = UserDefaults(suiteName: CertificateManager.appGroupID) ?? .standard
+        guard let host = sharedDefaults.string(forKey: lastHostKey), !host.isEmpty,
+              let portInt = sharedDefaults.object(forKey: lastPortKey) as? Int,
+              portInt > 0, portInt <= Int(UInt16.max) else { return nil }
+        return (host, UInt16(portInt))
+    }
 }
