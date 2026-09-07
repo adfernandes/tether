@@ -57,6 +57,7 @@ struct DashboardView: View {
             }
             .sheet(isPresented: $showManualConnect) {
                 manualConnectSheet
+                    .onAppear(perform: prefillManualConnect)
             }
         }
     }
@@ -276,8 +277,9 @@ struct DashboardView: View {
         NavigationStack {
             Form {
                 Section("Host") {
-                    TextField("IP Address", text: $manualHost)
-                        .keyboardType(.decimalPad)
+                    TextField("Host or IP", text: $manualHost)
+                        .keyboardType(.URL)
+                        .textInputAutocapitalization(.never)
                         .autocorrectionDisabled()
 
                     TextField("Port", text: $manualPort)
@@ -305,6 +307,14 @@ struct DashboardView: View {
     }
 
     // MARK: - Helpers
+
+    // Seed the sheet with the address that last worked, so recovering a connection
+    // discovery cannot make is a tap rather than a retype.
+    private func prefillManualConnect() {
+        guard manualHost.isEmpty, let endpoint = ShareSender.lastEndpoint() else { return }
+        manualHost = endpoint.host
+        manualPort = String(endpoint.port)
+    }
 
     private func formatFingerprint(_ fp: String) -> String {
         var result = ""

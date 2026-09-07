@@ -148,6 +148,8 @@ Only the node with the **lower** fingerprint dials. Every node both listens and 
 
 The iPhone app dials on launch and is therefore reachable either way.
 
+mDNS is multicast, so it resolves nothing across a VPN such as Tailscale, or on Wi-Fi with AP isolation. When discovery returns no match, the iPhone app dials the address its last session resolved to, provided that peer's fingerprint is still in `known_hosts.json`. A handshake fingerprint that does not match the expected one means the address has moved to another machine; the session is dropped without a pairing prompt.
+
 ### `pair_request` (Untrusted Client -> Daemon)
 
 **Description**: Emitted natively by a new client over standard TLS to gracefully present its identity and X.509 fingerprint. The Daemon immediately intercepts the payload, extracts the fingerprint natively from the `SSL*` pipe, and flags it locally as "Pending Authentication". Anything other than `pair_request` results in the TLS socket securely disconnecting.
