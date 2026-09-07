@@ -60,12 +60,11 @@ namespace tether::ui {
             // Handles already asked about, so reopening a conversation does not
             // re-issue a blocking OBEX write per message every time.
             std::set<std::string> marked_read;
-            // Scrolling has to wait for GTK to lay the new rows out, so it is
-            // deferred rather than done inline. `scroll_pin` says whether that
-            // means the newest message or the place the user was reading.
-            guint scroll_idle_id = 0;
+
             bool scroll_pin = true;
+            bool scroll_restore = false;
             double scroll_from_bottom = 0.0;
+            double scroll_last_bottom = 0.0;
             // The user's own message belongs on screen no matter where they had
             // scrolled to when they sent it.
             bool pin_next = false;
@@ -351,22 +350,32 @@ namespace tether::ui {
             return gtk_adjustment_get_value(adjustment) >= conversation_bottom(adjustment) - AT_BOTTOM_SLACK;
         }
 
-        gboolean scroll_conversation_idle(gpointer) {
-            g_messages.scroll_idle_id = 0;
-            GtkAdjustment* adjustment = conversation_adjustment();
-            if (!adjustment)
-                return G_SOURCE_REMOVE;
+        // GTK only updates the adjustment once it has laid the new rows out, and
+        // its layout runs on the frame clock, after any idle this could post.
+        void on_conversation_changed(GtkAdjustment* adjustment, gpointer) {
             const double bottom = conversation_bottom(adjustment);
-            gtk_adjustment_set_value(adjustment,
-                                     g_messages.scroll_pin ? bottom : bottom - g_messages.scroll_from_bottom);
-            return G_SOURCE_REMOVE;
+            g_messages.scroll_last_bottom = bottom;
+            if (g_messages.scroll_pin) {
+                gtk_adjustment_set_value(adjustment, bottom);
+            } else if (g_messages.scroll_restore) {
+                g_messages.scroll_restore = false;
+                gtk_adjustment_set_value(adjustment, bottom - g_messages.scroll_from_bottom);
+            }
+        }
+
+        // A value that moves while the content height is unchanged is the user.
+        void on_conversation_value_changed(GtkAdjustment* adjustment, gpointer) {
+            const double bottom = conversation_bottom(adjustment);
+            if (bottom == g_messages.scroll_last_bottom) {
+                g_messages.scroll_pin = conversation_at_bottom();
+                g_messages.scroll_restore = false;
+            }
+            g_messages.scroll_last_bottom = bottom;
         }
 
         void restore_conversation_scroll(bool pin) {
             g_messages.scroll_pin = pin;
-            if (g_messages.scroll_idle_id == 0)
-                g_messages.scroll_idle_id =
-                    g_idle_add_full(G_PRIORITY_DEFAULT_IDLE, scroll_conversation_idle, nullptr, nullptr);
+            g_messages.scroll_restore = !pin;
         }
 
         gboolean thread_scroll_idle(gpointer) {
@@ -1166,6 +1175,10 @@ namespace tether::ui {
         g_messages.conversation = gtk_list_box_new();
         gtk_list_box_set_selection_mode(GTK_LIST_BOX(g_messages.conversation), GTK_SELECTION_NONE);
         gtk_container_add(GTK_CONTAINER(g_messages.conversation_scroll), g_messages.conversation);
+        if (GtkAdjustment* adjustment = conversation_adjustment()) {
+            g_signal_connect(adjustment, "changed", G_CALLBACK(on_conversation_changed), nullptr);
+            g_signal_connect(adjustment, "value-changed", G_CALLBACK(on_conversation_value_changed), nullptr);
+        }
         gtk_box_pack_start(GTK_BOX(conversation_box), g_messages.conversation_scroll, TRUE, TRUE, 0);
 
         GtkWidget* composer_box = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 8);
