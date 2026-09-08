@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: tether\n"
 "Report-Msgid-Bugs-To: zack@bartel.com\n"
-"POT-Creation-Date: 2026-09-08 16:08-0700\n"
+"POT-Creation-Date: 2026-09-08 16:30-0700\n"
 "PO-Revision-Date: 2026-08-22\n"
 "Last-Translator: Tether project\n"
 "Language-Team: French\n"
@@ -92,6 +92,11 @@ msgstr "Afficher l'état du lien et des profils Bluetooth."
 #: src/cli/main.cpp
 msgid "Show AirPods and case battery."
 msgstr "Afficher la batterie des AirPods et du boîtier."
+
+#: src/cli/main.cpp
+msgid "Set the AirPods listening mode: off, anc, transparency, adaptive."
+msgstr ""
+"Définir le mode d'écoute des AirPods : off, anc, transparency, adaptive."
 
 #: src/cli/main.cpp
 msgid "List iPhone message conversations."
@@ -465,6 +470,15 @@ msgstr "Boîtier"
 #: src/cli/main.cpp
 msgid "Could not reach the daemon.\n"
 msgstr "Impossible de joindre le démon.\n"
+
+#: src/cli/main.cpp
+#, c-format
+msgid "Listening mode set to %s.\n"
+msgstr "Mode d'écoute réglé sur %s.\n"
+
+#: src/cli/main.cpp
+msgid "The listening mode could not be set."
+msgstr "Impossible de régler le mode d'écoute."
 
 #: src/cli/main.cpp
 msgid "Daemon closed the connection before the operation finished.\n"
@@ -1261,6 +1275,14 @@ msgid "Not a DTMF sequence."
 msgstr "Séquence DTMF invalide."
 
 #: src/core/src/net.cpp
+msgid "Unknown listening mode."
+msgstr "Mode d'écoute inconnu."
+
+#: src/core/src/net.cpp src/gtk/devices_view.cpp
+msgid "No AirPods are connected."
+msgstr "Aucun AirPods connecté."
+
+#: src/core/src/net.cpp
 msgid "Notification mirroring is already active; nothing to do."
 msgstr "La duplication des notifications est déjà active, rien à faire."
 
@@ -1476,6 +1498,26 @@ msgstr "Bluetooth est indisponible sur cette machine."
 #: src/gtk/devices_view.cpp
 msgid "Scanning for nearby devices..."
 msgstr "Recherche d'appareils à proximité..."
+
+#: src/gtk/devices_view.cpp
+msgid "Off"
+msgstr "Désactivé"
+
+#: src/gtk/devices_view.cpp
+msgid "Transparency"
+msgstr "Transparence"
+
+#: src/gtk/devices_view.cpp
+msgid "Adaptive"
+msgstr "Adaptatif"
+
+#: src/gtk/devices_view.cpp
+msgid "Noise Cancellation"
+msgstr "Réduction de bruit"
+
+#: src/gtk/devices_view.cpp
+msgid "These AirPods do not report a listening mode."
+msgstr "Ces AirPods ne signalent pas de mode d'écoute."
 
 #: src/gtk/devices_view.cpp
 msgid "Full mode — messages, contacts, and notifications."
@@ -1770,6 +1812,10 @@ msgstr ""
 #: src/gtk/devices_view.cpp
 msgid "Scan for devices"
 msgstr "Rechercher des appareils"
+
+#: src/gtk/devices_view.cpp
+msgid "Listening mode"
+msgstr "Mode d'écoute"
 
 #: src/gtk/devices_view.cpp
 msgid "Bluetooth needs one-time system setup"

@@ -350,6 +350,7 @@ entries only gain an `airpods` boolean saying which device the battery belongs t
   "left": 82,
   "right": 79,
   "case": 45,
+  "anc": "transparency",
   "status": "live",
   "reason": ""
 }
@@ -362,6 +363,22 @@ a flat battery. An empty `address` means no AirPods are connected.
 `status` is `idle`, `connecting`, `live`, `busy` or `failed`. `busy` means another
 program holds the channel, which allows only one client at a time; `reason` carries the
 sentence to show.
+
+`anc` is the listening mode: `off`, `anc`, `transparency`, `adaptive`, or null on a model
+that does not report one. It always reflects what the buds say they are doing, never what
+was last requested.
+
+#### `bt_airpods_mode` (Client -> Daemon, answered directly)
+**Payload**: `{"command": "bt_airpods_mode", "mode": "transparency"}`
+**Response**: `{"command": "bt_airpods_mode_result", "success": true}`, or `success` false
+with a `message`.
+
+Note the name: `bt_set_ancs` elsewhere in this file is Apple Notification Center Service,
+an unrelated feature.
+
+Success means the request reached the buds, not that they applied it. They decline a mode
+they are not configured for and report nothing, so the confirmation is the next
+`bt_airpods` broadcast carrying the mode that is actually in effect.
 
 ### Messages
 

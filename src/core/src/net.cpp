@@ -958,6 +958,22 @@ namespace tether {
                         std::string payload = build_bt_airpods().dump() + "\n";
                         write_plain_packet(client_fd, payload);
                         continue;
+                    } else if (j.contains("command") && j["command"] == "bt_airpods_mode" && j.contains("mode")) {
+                        const auto mode = bluetooth::anc_mode_from_string(j.value("mode", ""));
+                        nlohmann::json reply;
+                        reply["command"] = "bt_airpods_mode_result";
+                        if (!mode) {
+                            reply["success"] = false;
+                            reply["message"] = _("Unknown listening mode.");
+                        } else if (!bluetooth::g_airpods || bluetooth::g_airpods->state().address.empty()) {
+                            reply["success"] = false;
+                            reply["message"] = _("No AirPods are connected.");
+                        } else {
+                            bluetooth::g_airpods->set_anc(*mode);
+                            reply["success"] = true;
+                        }
+                        write_plain_packet(client_fd, reply.dump() + "\n");
+                        continue;
                     } else if (j.contains("command") && j["command"] == "bt_list_devices") {
                         std::string payload = build_bt_devices().dump() + "\n";
                         write_plain_packet(client_fd, payload);

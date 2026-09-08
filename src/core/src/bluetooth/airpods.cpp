@@ -69,6 +69,12 @@ namespace tether::bluetooth {
         constexpr uint8_t BATTERY_PREFIX[] = {0x04, 0x00, 0x04, 0x00, 0x04, 0x00};
         constexpr size_t BATTERY_ENTRY_BYTES = 5;
 
+        // Listening mode, sent and received on the same 11-byte:
+        // 04 00 04 00 09 00 0D [mode] 00 00 00
+        constexpr uint8_t ANC_PREFIX[] = {0x04, 0x00, 0x04, 0x00, 0x09, 0x00, 0x0d};
+        constexpr size_t ANC_PACKET_BYTES = 11;
+        constexpr size_t ANC_MODE_OFFSET = 7;
+
         constexpr int CONNECT_TIMEOUT_MS = 8000;
         constexpr int FIRST_PACKET_TIMEOUT_MS = 8000;
         // A channel that has gone quiet this long is recycled.
@@ -145,9 +151,42 @@ namespace tether::bluetooth {
             {"left", s.battery.left},
             {"right", s.battery.right},
             {"case", s.battery.case_},
+            {"anc", s.anc ? nlohmann::json(to_string(*s.anc)) : nlohmann::json()},
             {"status", to_string(s.status)},
             {"reason", s.reason},
         };
+    }
+
+    const char* to_string(AncMode mode) {
+        switch (mode) {
+        case AncMode::Off:
+            return "off";
+        case AncMode::NoiseCancellation:
+            return "anc";
+        case AncMode::Transparency:
+            return "transparency";
+        case AncMode::Adaptive:
+            return "adaptive";
+        }
+        return "off";
+    }
+
+    std::optional<AncMode> anc_mode_from_string(const std::string& name) {
+        for (AncMode mode : {AncMode::Off, AncMode::NoiseCancellation, AncMode::Transparency, AncMode::Adaptive})
+            if (name == to_string(mode))
+                return mode;
+        return std::nullopt;
+    }
+
+    std::optional<AncMode> parse_anc(const uint8_t* data, size_t len) {
+        if (data == nullptr || len != ANC_PACKET_BYTES)
+            return std::nullopt;
+        if (std::memcmp(data, ANC_PREFIX, sizeof(ANC_PREFIX)) != 0)
+            return std::nullopt;
+        const uint8_t mode = data[ANC_MODE_OFFSET];
+        if (mode < static_cast<uint8_t>(AncMode::Off) || mode > static_cast<uint8_t>(AncMode::Adaptive))
+            return std::nullopt;
+        return static_cast<AncMode>(mode);
     }
 
     std::optional<BatteryUpdate> parse_battery(const uint8_t* data, size_t len) {
@@ -215,6 +254,10 @@ namespace tether::bluetooth {
         AirPodsState published;
         std::string target_address;
         std::string target_name;
+        // Handed to the worker rather than written from the caller's thread: the
+        // socket belongs to the session and closing it out from under a write is
+        // the one race worth not having.
+        std::optional<AncMode> pending_anc;
         bool stopping = false;
 
         int wake_fd = -1;
@@ -255,6 +298,25 @@ namespace tether::bluetooth {
         void backoff(int ms) {
             if (wait_for(-1, wake_fd, 0, ms) == 0)
                 drain_wake();
+        }
+
+        // Sends whatever the caller queued, on the worker thread. False means the
+        // write failed and the session is over.
+        bool send_pending(int fd) {
+            std::optional<AncMode> mode;
+            {
+                std::lock_guard<std::mutex> lock(mutex);
+                std::swap(mode, pending_anc);
+            }
+            if (!mode)
+                return true;
+            const uint8_t packet[] = {
+                0x04, 0x00, 0x04, 0x00, 0x09, 0x00, 0x0d, static_cast<uint8_t>(*mode), 0x00, 0x00, 0x00};
+            static_assert(sizeof(packet) == ANC_PACKET_BYTES);
+            if (write_all(fd, packet, sizeof(packet)))
+                return true;
+            debug::log(DEBUG, "airpods: listening mode write failed: {}", std::strerror(errno));
+            return false;
         }
 
         // Runs one channel from connect to close. Sets `delivered` when at least one
@@ -320,6 +382,8 @@ namespace tether::bluetooth {
                 const int ready = wait_for(fd, wake_fd, POLLIN, timeout);
                 if (ready == 0) {
                     drain_wake();
+                    if (!send_pending(fd))
+                        break;
                     continue;
                 }
                 if (ready < 0)
@@ -329,7 +393,17 @@ namespace tether::bluetooth {
                 if (got <= 0)
                     break;
 
-                auto update = parse_battery(buffer.data(), static_cast<size_t>(got));
+                const size_t size = static_cast<size_t>(got);
+                if (auto mode = parse_anc(buffer.data(), size)) {
+                    {
+                        std::lock_guard<std::mutex> lock(mutex);
+                        state.anc = *mode;
+                    }
+                    publish(delivered ? AirPodsStatus::Live : AirPodsStatus::Connecting, "");
+                    continue;
+                }
+
+                auto update = parse_battery(buffer.data(), size);
                 if (!update)
                     continue;
 
@@ -341,6 +415,11 @@ namespace tether::bluetooth {
                 publish(AirPodsStatus::Live, "");
             }
 
+            {
+                // A queued mode change does not outlive the channel it was meant for.
+                std::lock_guard<std::mutex> lock(mutex);
+                pending_anc.reset();
+            }
             ::close(fd);
         }
 
@@ -365,6 +444,7 @@ namespace tether::bluetooth {
                         state.address.clear();
                         state.name.clear();
                         state.battery = {};
+                        state.anc.reset();
                     }
                     publish(AirPodsStatus::Idle, "");
                     backoff_ms = BACKOFF_START_MS;
@@ -379,6 +459,7 @@ namespace tether::bluetooth {
                     if (state.address != address) {
                         state.address = address;
                         state.battery = {};
+                        state.anc.reset();
                     }
                     state.name = name;
                 }
@@ -435,6 +516,14 @@ namespace tether::bluetooth {
                 return;
             impl_->target_address = address;
             impl_->target_name = name;
+        }
+        impl_->wake();
+    }
+
+    void AirPodsWatcher::set_anc(AncMode mode) {
+        {
+            std::lock_guard<std::mutex> lock(impl_->mutex);
+            impl_->pending_anc = mode;
         }
         impl_->wake();
     }

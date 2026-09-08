@@ -191,6 +191,7 @@ static const Opt kOptions[] = {
     {"--bt-devices", N_("List Bluetooth devices known to BlueZ.")},
     {"--bt-connection", N_("Show Bluetooth link and profile connection state.")},
     {"--bt-airpods", N_("Show AirPods and case battery.")},
+    {"--bt-airpods-mode", N_("Set the AirPods listening mode: off, anc, transparency, adaptive.")},
     {"--bt-threads", N_("List iPhone message conversations.")},
     {"--bt-messages <thread>", N_("Show messages in one conversation.")},
     {"--bt-send <thread> <text>", N_("Reply in one conversation.")},
@@ -527,10 +528,32 @@ static int print_bt_airpods(tether::Client& client) {
     level(_("Right"), "right");
     level(_("Case"), "case");
 
+    if (resp.contains("anc") && resp["anc"].is_string())
+        fprintf(stdout, "  %-6s %s\n", _("Mode"), resp["anc"].get<std::string>().c_str());
+
     const std::string reason = resp.value("reason", "");
     if (!reason.empty())
         fprintf(stdout, "  %s\n", reason.c_str());
     return 0;
+}
+
+static int set_bt_airpods_mode(tether::Client& client, const std::string& mode) {
+    nlohmann::json request;
+    request["command"] = "bt_airpods_mode";
+    request["mode"] = mode;
+    nlohmann::json resp;
+    try {
+        resp = nlohmann::json::parse(client.send_and_wait(request.dump() + "\n"));
+    } catch (const std::exception&) {
+        debug::log(ERR, _("Could not reach the daemon.\n"));
+        return 1;
+    }
+    if (resp.value("success", false)) {
+        fprintf(stdout, _("Listening mode set to %s.\n"), mode.c_str());
+        return 0;
+    }
+    debug::log(ERR, "{}\n", resp.value("message", std::string(_("The listening mode could not be set."))));
+    return 1;
 }
 
 // Pairing takes tens of seconds and reports progress as it goes, so this
@@ -982,6 +1005,10 @@ int main(int argc, char* argv[]) {
             action = "bt_connection";
         } else if (arg == "--bt-airpods") {
             action = "bt_airpods";
+        } else if (arg == "--bt-airpods-mode") {
+            action = "bt_airpods_mode";
+            if (i + 1 < argc && argv[i + 1][0] != '-')
+                arg_val = argv[++i];
         } else if (arg == "--bt-diagnostics") {
             action = "bt_diagnostics";
         } else if (arg == "--bt-threads") {
@@ -1219,6 +1246,8 @@ int main(int argc, char* argv[]) {
         return print_bt_connection(client);
     } else if (action == "bt_airpods") {
         return print_bt_airpods(client);
+    } else if (action == "bt_airpods_mode") {
+        return set_bt_airpods_mode(client, arg_val);
     } else if (action == "bt_diagnostics") {
         return print_bt_diagnostics(client);
     } else if (action == "bt_threads") {

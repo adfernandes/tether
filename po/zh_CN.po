@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: tether\n"
 "Report-Msgid-Bugs-To: zack@bartel.com\n"
-"POT-Creation-Date: 2026-09-08 16:08-0700\n"
+"POT-Creation-Date: 2026-09-08 16:30-0700\n"
 "PO-Revision-Date: 2026-08-23\n"
 "Last-Translator: Tether project\n"
 "Language-Team: Simplified Chinese\n"
@@ -89,6 +89,10 @@ msgstr "显示蓝牙链路和配置文件的连接状态。"
 #: src/cli/main.cpp
 msgid "Show AirPods and case battery."
 msgstr "显示 AirPods 和充电盒电量。"
+
+#: src/cli/main.cpp
+msgid "Set the AirPods listening mode: off, anc, transparency, adaptive."
+msgstr "设置 AirPods 聆听模式：off、anc、transparency、adaptive。"
 
 #: src/cli/main.cpp
 msgid "List iPhone message conversations."
@@ -441,6 +445,15 @@ msgstr "充电盒"
 #: src/cli/main.cpp
 msgid "Could not reach the daemon.\n"
 msgstr "无法连接到守护进程。\n"
+
+#: src/cli/main.cpp
+#, c-format
+msgid "Listening mode set to %s.\n"
+msgstr "聆听模式已设为 %s。\n"
+
+#: src/cli/main.cpp
+msgid "The listening mode could not be set."
+msgstr "无法设置聆听模式。"
 
 #: src/cli/main.cpp
 msgid "Daemon closed the connection before the operation finished.\n"
@@ -1181,6 +1194,14 @@ msgid "Not a DTMF sequence."
 msgstr "不是 DTMF 序列。"
 
 #: src/core/src/net.cpp
+msgid "Unknown listening mode."
+msgstr "未知的聆听模式。"
+
+#: src/core/src/net.cpp src/gtk/devices_view.cpp
+msgid "No AirPods are connected."
+msgstr "未连接 AirPods。"
+
+#: src/core/src/net.cpp
 msgid "Notification mirroring is already active; nothing to do."
 msgstr "通知镜像已在运行，无需操作。"
 
@@ -1389,6 +1410,26 @@ msgstr "这台机器上蓝牙不可用。"
 #: src/gtk/devices_view.cpp
 msgid "Scanning for nearby devices..."
 msgstr "正在搜索附近的设备……"
+
+#: src/gtk/devices_view.cpp
+msgid "Off"
+msgstr "关闭"
+
+#: src/gtk/devices_view.cpp
+msgid "Transparency"
+msgstr "通透模式"
+
+#: src/gtk/devices_view.cpp
+msgid "Adaptive"
+msgstr "自适应"
+
+#: src/gtk/devices_view.cpp
+msgid "Noise Cancellation"
+msgstr "降噪"
+
+#: src/gtk/devices_view.cpp
+msgid "These AirPods do not report a listening mode."
+msgstr "此 AirPods 不报告聆听模式。"
 
 #: src/gtk/devices_view.cpp
 msgid "Full mode — messages, contacts, and notifications."
@@ -1670,6 +1711,10 @@ msgstr ""
 #: src/gtk/devices_view.cpp
 msgid "Scan for devices"
 msgstr "搜索设备"
+
+#: src/gtk/devices_view.cpp
+msgid "Listening mode"
+msgstr "聆听模式"
 
 #: src/gtk/devices_view.cpp
 msgid "Bluetooth needs one-time system setup"

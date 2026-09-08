@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: tether 0.2.27\n"
 "Report-Msgid-Bugs-To: zack@bartel.com\n"
-"POT-Creation-Date: 2026-09-08 16:08-0700\n"
+"POT-Creation-Date: 2026-09-08 16:30-0700\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -88,6 +88,10 @@ msgstr ""
 
 #: src/cli/main.cpp
 msgid "Show AirPods and case battery."
+msgstr ""
+
+#: src/cli/main.cpp
+msgid "Set the AirPods listening mode: off, anc, transparency, adaptive."
 msgstr ""
 
 #: src/cli/main.cpp
@@ -417,6 +421,15 @@ msgstr ""
 
 #: src/cli/main.cpp
 msgid "Could not reach the daemon.\n"
+msgstr ""
+
+#: src/cli/main.cpp
+#, c-format
+msgid "Listening mode set to %s.\n"
+msgstr ""
+
+#: src/cli/main.cpp
+msgid "The listening mode could not be set."
 msgstr ""
 
 #: src/cli/main.cpp
@@ -1111,6 +1124,14 @@ msgid "Not a DTMF sequence."
 msgstr ""
 
 #: src/core/src/net.cpp
+msgid "Unknown listening mode."
+msgstr ""
+
+#: src/core/src/net.cpp src/gtk/devices_view.cpp
+msgid "No AirPods are connected."
+msgstr ""
+
+#: src/core/src/net.cpp
 msgid "Notification mirroring is already active; nothing to do."
 msgstr ""
 
@@ -1313,6 +1334,26 @@ msgstr ""
 
 #: src/gtk/devices_view.cpp
 msgid "Scanning for nearby devices..."
+msgstr ""
+
+#: src/gtk/devices_view.cpp
+msgid "Off"
+msgstr ""
+
+#: src/gtk/devices_view.cpp
+msgid "Transparency"
+msgstr ""
+
+#: src/gtk/devices_view.cpp
+msgid "Adaptive"
+msgstr ""
+
+#: src/gtk/devices_view.cpp
+msgid "Noise Cancellation"
+msgstr ""
+
+#: src/gtk/devices_view.cpp
+msgid "These AirPods do not report a listening mode."
 msgstr ""
 
 #: src/gtk/devices_view.cpp
@@ -1575,6 +1616,10 @@ msgstr ""
 
 #: src/gtk/devices_view.cpp
 msgid "Scan for devices"
+msgstr ""
+
+#: src/gtk/devices_view.cpp
+msgid "Listening mode"
 msgstr ""
 
 #: src/gtk/devices_view.cpp

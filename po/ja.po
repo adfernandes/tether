@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: tether\n"
 "Report-Msgid-Bugs-To: zack@bartel.com\n"
-"POT-Creation-Date: 2026-09-08 16:08-0700\n"
+"POT-Creation-Date: 2026-09-08 16:30-0700\n"
 "PO-Revision-Date: 2026-08-23\n"
 "Last-Translator: Tether project\n"
 "Language-Team: Japanese\n"
@@ -90,6 +90,11 @@ msgstr "Bluetooth リンクとプロファイルの接続状態を表示しま�
 #: src/cli/main.cpp
 msgid "Show AirPods and case battery."
 msgstr "AirPods とケースのバッテリーを表示します。"
+
+#: src/cli/main.cpp
+msgid "Set the AirPods listening mode: off, anc, transparency, adaptive."
+msgstr ""
+"AirPods のリスニングモードを設定します: off, anc, transparency, adaptive。"
 
 #: src/cli/main.cpp
 msgid "List iPhone message conversations."
@@ -451,6 +456,15 @@ msgstr "ケース"
 #: src/cli/main.cpp
 msgid "Could not reach the daemon.\n"
 msgstr "デーモンに接続できませんでした。\n"
+
+#: src/cli/main.cpp
+#, c-format
+msgid "Listening mode set to %s.\n"
+msgstr "リスニングモードを %s に設定しました。\n"
+
+#: src/cli/main.cpp
+msgid "The listening mode could not be set."
+msgstr "リスニングモードを設定できませんでした。"
 
 #: src/cli/main.cpp
 msgid "Daemon closed the connection before the operation finished.\n"
@@ -1227,6 +1241,14 @@ msgid "Not a DTMF sequence."
 msgstr "DTMF シーケンスではありません。"
 
 #: src/core/src/net.cpp
+msgid "Unknown listening mode."
+msgstr "不明なリスニングモードです。"
+
+#: src/core/src/net.cpp src/gtk/devices_view.cpp
+msgid "No AirPods are connected."
+msgstr "AirPods が接続されていません。"
+
+#: src/core/src/net.cpp
 msgid "Notification mirroring is already active; nothing to do."
 msgstr "通知のミラーリングはすでに有効です。操作は不要です。"
 
@@ -1439,6 +1461,26 @@ msgstr "このマシンでは Bluetooth を利用できません。"
 #: src/gtk/devices_view.cpp
 msgid "Scanning for nearby devices..."
 msgstr "近くのデバイスを検索しています..."
+
+#: src/gtk/devices_view.cpp
+msgid "Off"
+msgstr "オフ"
+
+#: src/gtk/devices_view.cpp
+msgid "Transparency"
+msgstr "外部音取り込み"
+
+#: src/gtk/devices_view.cpp
+msgid "Adaptive"
+msgstr "アダプティブ"
+
+#: src/gtk/devices_view.cpp
+msgid "Noise Cancellation"
+msgstr "ノイズキャンセリング"
+
+#: src/gtk/devices_view.cpp
+msgid "These AirPods do not report a listening mode."
+msgstr "この AirPods はリスニングモードを報告しません。"
 
 #: src/gtk/devices_view.cpp
 msgid "Full mode — messages, contacts, and notifications."
@@ -1729,6 +1771,10 @@ msgstr ""
 #: src/gtk/devices_view.cpp
 msgid "Scan for devices"
 msgstr "デバイスを検索"
+
+#: src/gtk/devices_view.cpp
+msgid "Listening mode"
+msgstr "リスニングモード"
 
 #: src/gtk/devices_view.cpp
 msgid "Bluetooth needs one-time system setup"

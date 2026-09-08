@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: tether\n"
 "Report-Msgid-Bugs-To: zack@bartel.com\n"
-"POT-Creation-Date: 2026-09-08 16:08-0700\n"
+"POT-Creation-Date: 2026-09-08 16:30-0700\n"
 "PO-Revision-Date: 2026-08-23\n"
 "Last-Translator: Tether project\n"
 "Language-Team: Korean\n"
@@ -89,6 +89,10 @@ msgstr "Bluetooth 링크와 프로파일의 연결 상태를 표시합니다."
 #: src/cli/main.cpp
 msgid "Show AirPods and case battery."
 msgstr "AirPods 및 케이스 배터리를 표시합니다."
+
+#: src/cli/main.cpp
+msgid "Set the AirPods listening mode: off, anc, transparency, adaptive."
+msgstr "AirPods 청취 모드를 설정합니다: off, anc, transparency, adaptive."
 
 #: src/cli/main.cpp
 msgid "List iPhone message conversations."
@@ -449,6 +453,15 @@ msgstr "케이스"
 #: src/cli/main.cpp
 msgid "Could not reach the daemon.\n"
 msgstr "데몬에 연결하지 못했습니다.\n"
+
+#: src/cli/main.cpp
+#, c-format
+msgid "Listening mode set to %s.\n"
+msgstr "청취 모드를 %s(으)로 설정했습니다.\n"
+
+#: src/cli/main.cpp
+msgid "The listening mode could not be set."
+msgstr "청취 모드를 설정할 수 없습니다."
 
 #: src/cli/main.cpp
 msgid "Daemon closed the connection before the operation finished.\n"
@@ -1213,6 +1226,14 @@ msgid "Not a DTMF sequence."
 msgstr "DTMF 시퀀스가 아닙니다."
 
 #: src/core/src/net.cpp
+msgid "Unknown listening mode."
+msgstr "알 수 없는 청취 모드입니다."
+
+#: src/core/src/net.cpp src/gtk/devices_view.cpp
+msgid "No AirPods are connected."
+msgstr "연결된 AirPods가 없습니다."
+
+#: src/core/src/net.cpp
 msgid "Notification mirroring is already active; nothing to do."
 msgstr "알림 미러링이 이미 활성 상태입니다. 할 일이 없습니다."
 
@@ -1422,6 +1443,26 @@ msgstr "이 컴퓨터에서는 Bluetooth를 사용할 수 없습니다."
 #: src/gtk/devices_view.cpp
 msgid "Scanning for nearby devices..."
 msgstr "근처 기기를 검색하는 중..."
+
+#: src/gtk/devices_view.cpp
+msgid "Off"
+msgstr "끔"
+
+#: src/gtk/devices_view.cpp
+msgid "Transparency"
+msgstr "주변음 허용"
+
+#: src/gtk/devices_view.cpp
+msgid "Adaptive"
+msgstr "적응형"
+
+#: src/gtk/devices_view.cpp
+msgid "Noise Cancellation"
+msgstr "노이즈 캔슬링"
+
+#: src/gtk/devices_view.cpp
+msgid "These AirPods do not report a listening mode."
+msgstr "이 AirPods는 청취 모드를 보고하지 않습니다."
 
 #: src/gtk/devices_view.cpp
 msgid "Full mode — messages, contacts, and notifications."
@@ -1708,6 +1749,10 @@ msgstr ""
 #: src/gtk/devices_view.cpp
 msgid "Scan for devices"
 msgstr "기기 검색"
+
+#: src/gtk/devices_view.cpp
+msgid "Listening mode"
+msgstr "청취 모드"
 
 #: src/gtk/devices_view.cpp
 msgid "Bluetooth needs one-time system setup"

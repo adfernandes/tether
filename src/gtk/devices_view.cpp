@@ -59,6 +59,12 @@ namespace tether::ui {
             std::string selected_bt_address;
             std::string selected_bt_name;
 
+            GtkWidget* lbl_airpods_name = nullptr;
+            GtkWidget* lbl_airpods_battery = nullptr;
+            GtkWidget* lbl_airpods_reason = nullptr;
+            GtkWidget* airpods_mode_buttons[4] = {nullptr, nullptr, nullptr, nullptr};
+            bool airpods_syncing = false;
+
             GtkWidget* lbl_bt_name = nullptr;
             GtkWidget* bt_setup_box = nullptr;
             GtkWidget* lbl_bt_setup_what = nullptr;
@@ -211,6 +217,49 @@ namespace tether::ui {
             daemon_send({{"command", "bt_scan"}});
         }
 
+        // Wire names as the daemon uses them
+        struct AirPodsMode {
+            const char* wire;
+            const char* label;
+        };
+        const AirPodsMode AIRPODS_MODES[4] = {
+            {"off", N_("Off")},
+            {"transparency", N_("Transparency")},
+            {"adaptive", N_("Adaptive")},
+            {"anc", N_("Noise Cancellation")},
+        };
+
+        void on_airpods_mode_toggled(GtkWidget* button, gpointer data) {
+            if (g_devices.airpods_syncing || !gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(button)))
+                return;
+            daemon_send({{"command", "bt_airpods_mode"}, {"mode", AIRPODS_MODES[GPOINTER_TO_INT(data)].wire}});
+        }
+
+        void update_airpods_pane() {
+            const nlohmann::json& airpods = g_devices.bt_airpods;
+            set_markup(g_devices.lbl_airpods_name,
+                       "<b>" + escape_markup(airpods.value("name", g_devices.selected_bt_name)) + "</b>");
+
+            const std::string levels = airpods_status_text(airpods);
+            set_text(g_devices.lbl_airpods_battery, levels.empty() ? _("Reading battery\u2026") : levels);
+
+            const std::string current = airpods.value("anc", "");
+            g_devices.airpods_syncing = true;
+            for (int i = 0; i < 4; ++i) {
+                GtkWidget* button = g_devices.airpods_mode_buttons[i];
+                gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(button), current == AIRPODS_MODES[i].wire);
+                gtk_widget_set_sensitive(button, !current.empty());
+            }
+            g_devices.airpods_syncing = false;
+
+            // Reuses the daemon's own sentence rather than inventing a second one.
+            const char* reason = !current.empty() ? ""
+                                 : airpods.value("address", "").empty()
+                                     ? _("No AirPods are connected.")
+                                     : _("These AirPods do not report a listening mode.");
+            set_text(g_devices.lbl_airpods_reason, reason);
+        }
+
         void update_bt_pane() {
             const std::string address = g_devices.selected_bt_address;
             const nlohmann::json* device = find_bt_device(address);
@@ -345,6 +394,12 @@ namespace tether::ui {
 
         void update_right_pane() {
             if (!g_devices.selected_bt_address.empty()) {
+                const nlohmann::json* device = find_bt_device(g_devices.selected_bt_address);
+                if (device && device->value("airpods", false)) {
+                    gtk_stack_set_visible_child_name(GTK_STACK(g_devices.right_pane_stack), "airpods");
+                    update_airpods_pane();
+                    return;
+                }
                 gtk_stack_set_visible_child_name(GTK_STACK(g_devices.right_pane_stack), "bluetooth");
                 update_bt_pane();
                 return;
@@ -821,8 +876,6 @@ namespace tether::ui {
             gtk_box_pack_start(GTK_BOX(labels), subtitle, FALSE, FALSE, 0);
 
             if (airpods) {
-                gtk_list_box_row_set_selectable(GTK_LIST_BOX_ROW(row), FALSE);
-
                 GtkWidget* battery = gtk_label_new(nullptr);
                 gtk_label_set_xalign(GTK_LABEL(battery), 0.0);
                 gtk_style_context_add_class(gtk_widget_get_style_context(battery), "muted");
@@ -1168,6 +1221,9 @@ namespace tether::ui {
                 gtk_label_set_text(GTK_LABEL(battery), text.c_str());
             }
             g_list_free(rows);
+            // The pane repaints from the same event, but only when it is showing.
+            if (gtk_stack_get_visible_child_name(GTK_STACK(g_devices.right_pane_stack)) == std::string("airpods"))
+                update_airpods_pane();
             return true;
         }
         if (command == "bt_connection_changed") {
@@ -1337,6 +1393,48 @@ namespace tether::ui {
                          nullptr);
         gtk_box_pack_start(GTK_BOX(placeholder), welcome_scan, FALSE, FALSE, 0);
         gtk_stack_add_named(GTK_STACK(g_devices.right_pane_stack), placeholder, "placeholder");
+
+        // AirPods: battery and the listening mode, which is all the buds expose.
+        GtkWidget* airpods_box = gtk_box_new(GTK_ORIENTATION_VERTICAL, 16);
+        gtk_container_set_border_width(GTK_CONTAINER(airpods_box), 32);
+        gtk_widget_set_valign(airpods_box, GTK_ALIGN_CENTER);
+
+        g_devices.lbl_airpods_name = gtk_label_new(nullptr);
+        gtk_label_set_xalign(GTK_LABEL(g_devices.lbl_airpods_name), 0.0);
+        gtk_box_pack_start(GTK_BOX(airpods_box), g_devices.lbl_airpods_name, FALSE, FALSE, 0);
+
+        g_devices.lbl_airpods_battery = gtk_label_new(nullptr);
+        gtk_label_set_xalign(GTK_LABEL(g_devices.lbl_airpods_battery), 0.0);
+        gtk_style_context_add_class(gtk_widget_get_style_context(g_devices.lbl_airpods_battery), "muted");
+        gtk_box_pack_start(GTK_BOX(airpods_box), g_devices.lbl_airpods_battery, FALSE, FALSE, 0);
+
+        GtkWidget* lbl_mode_title = gtk_label_new(nullptr);
+        gtk_label_set_xalign(GTK_LABEL(lbl_mode_title), 0.0);
+        set_markup(lbl_mode_title, "<b>" + escape_markup(_("Listening mode")) + "</b>");
+        gtk_box_pack_start(GTK_BOX(airpods_box), lbl_mode_title, FALSE, FALSE, 0);
+
+        GtkWidget* modes = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 0);
+        gtk_style_context_add_class(gtk_widget_get_style_context(modes), "linked");
+        GtkWidget* group = nullptr;
+        for (int i = 0; i < 4; ++i) {
+            GtkWidget* button =
+                gtk_radio_button_new_with_label_from_widget(GTK_RADIO_BUTTON(group), _(AIRPODS_MODES[i].label));
+            gtk_toggle_button_set_mode(GTK_TOGGLE_BUTTON(button), FALSE);
+            if (!group)
+                group = button;
+            g_signal_connect(button, "toggled", G_CALLBACK(on_airpods_mode_toggled), GINT_TO_POINTER(i));
+            g_devices.airpods_mode_buttons[i] = button;
+            gtk_box_pack_start(GTK_BOX(modes), button, TRUE, TRUE, 0);
+        }
+        gtk_box_pack_start(GTK_BOX(airpods_box), modes, FALSE, FALSE, 0);
+
+        g_devices.lbl_airpods_reason = gtk_label_new(nullptr);
+        gtk_label_set_xalign(GTK_LABEL(g_devices.lbl_airpods_reason), 0.0);
+        gtk_label_set_line_wrap(GTK_LABEL(g_devices.lbl_airpods_reason), TRUE);
+        gtk_style_context_add_class(gtk_widget_get_style_context(g_devices.lbl_airpods_reason), "muted");
+        gtk_box_pack_start(GTK_BOX(airpods_box), g_devices.lbl_airpods_reason, FALSE, FALSE, 0);
+
+        gtk_stack_add_named(GTK_STACK(g_devices.right_pane_stack), airpods_box, "airpods");
 
         // Bluetooth
         GtkWidget* bt_box = gtk_box_new(GTK_ORIENTATION_VERTICAL, 16);

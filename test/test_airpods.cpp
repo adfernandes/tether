@@ -69,6 +69,41 @@ TEST(AirPods, RejectsMalformedPackets) {
     EXPECT_FALSE(parse({0x04, 0x00, 0x04, 0x00, 0x04, 0x00, 0x01, 0x01, 0x01, 0x52, 0x01, 0x01}).has_value());
 }
 
+TEST(AirPods, ParsesEveryListeningMode) {
+    const std::pair<uint8_t, AncMode> cases[] = {
+        {0x01, AncMode::Off},
+        {0x02, AncMode::NoiseCancellation},
+        {0x03, AncMode::Transparency},
+        {0x04, AncMode::Adaptive},
+    };
+    for (const auto& [wire, expected] : cases) {
+        std::vector<uint8_t> packet = {0x04, 0x00, 0x04, 0x00, 0x09, 0x00, 0x0d, wire, 0x00, 0x00, 0x00};
+        auto mode = parse_anc(packet.data(), packet.size());
+        ASSERT_TRUE(mode.has_value()) << "wire value " << int(wire);
+        EXPECT_EQ(*mode, expected);
+        // Round trip through the names the IPC and CLI use.
+        EXPECT_EQ(anc_mode_from_string(to_string(*mode)), expected);
+    }
+}
+
+TEST(AirPods, RejectsMalformedListeningModes) {
+    const auto packet = [](std::initializer_list<uint8_t> bytes) {
+        std::vector<uint8_t> v(bytes);
+        return parse_anc(v.data(), v.size());
+    };
+    // Mode 0 and 5 are outside the range; the wire values start at 1.
+    EXPECT_FALSE(packet({0x04, 0x00, 0x04, 0x00, 0x09, 0x00, 0x0d, 0x00, 0x00, 0x00, 0x00}).has_value());
+    EXPECT_FALSE(packet({0x04, 0x00, 0x04, 0x00, 0x09, 0x00, 0x0d, 0x05, 0x00, 0x00, 0x00}).has_value());
+    // Right prefix, wrong length.
+    EXPECT_FALSE(packet({0x04, 0x00, 0x04, 0x00, 0x09, 0x00, 0x0d, 0x02}).has_value());
+    // A battery notification must not be read as a listening mode.
+    EXPECT_FALSE(packet({0x04, 0x00, 0x04, 0x00, 0x04, 0x00, 0x01, 0x02, 0x01, 0x50, 0x01}).has_value());
+    EXPECT_FALSE(parse_anc(nullptr, 0).has_value());
+
+    EXPECT_FALSE(anc_mode_from_string("").has_value());
+    EXPECT_FALSE(anc_mode_from_string("ancs").has_value());
+}
+
 TEST(AirPods, DistinguishesAirPodsFromAnIPhone) {
     Device buds;
     buds.name = "ZBZ AirPros";

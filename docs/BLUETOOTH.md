@@ -10,7 +10,7 @@ Bluetooth accessory. No iOS-side code is involved.
 | Contacts, for sender names | **PBAP** (Phonebook Access Profile) via `obexd` | BR/EDR | OBEX client |
 | Notifications from any app | **ANCS** (Apple Notification Center Service) | BLE / GATT | GATT central |
 | Phone calls, place + answer | **HFP** (Hands-Free Profile) via BlueZ | BR/EDR | Hands-free unit |
-| AirPods battery, buds + case | **AAP** (Apple Accessory Protocol) | BR/EDR / L2CAP | L2CAP client |
+| AirPods battery + listening mode | **AAP** (Apple Accessory Protocol) | BR/EDR / L2CAP | L2CAP client |
 
 The Tether iOS app is unrelated to these features and just keeps handling clipboard sync and file transfer over TCP + mTLS.
 
@@ -479,8 +479,8 @@ the narrower check; it rules out the `*`/`#` supplementary-service codes deliber
 
 ## AirPods
 
-Battery for the buds and the case, in the Devices list and from `tether --bt-airpods`.
-Read-only: no ANC, ear detection or stem control yet.
+Battery for the buds and the case, and the listening mode, in the Devices list and from
+`tether --bt-airpods`. No ear detection or stem control yet.
 
 It is the one feature here that does not go through BlueZ. AirPods report battery over
 Apple's Accessory Protocol on an L2CAP channel, PSM `0x1001`, the same source an iPhone
@@ -512,12 +512,38 @@ Case `0x08`. Status `0x04` means the component is not reporting — a bud in the
 shut case — which is shown as unknown, never as 0%. A notification carries only what
 changed, so anything it leaves out keeps its previous level.
 
+### Listening mode
+
+Off, Transparency, Adaptive and Noise Cancellation, set from the AirPods page in the GTK
+app or with `tether --bt-airpods-mode <off|anc|transparency|adaptive>`.
+
+Sent and received on the same 11-byte shape, `04 00 04 00 09 00 0D [mode] 00 00 00`, with
+the mode at offset 7. The wire values are one above the order the modes are usually listed
+in: `01` Off, `02` Noise Cancellation, `03` Transparency, `04` Adaptive.
+
+**A mode the buds decline is simply not applied, and they say nothing about it.** Measured
+2026-09-08 on AirPods Pro: `off` was sent three times and the buds stayed in the previous
+mode, while `anc`, `transparency` and `adaptive` all took effect within a second. Apple
+leaves Off out of the noise-control rotation by default on Pro models, and there is no
+error and no refusal packet -- the only evidence is that the mode notification never
+changes.
+
+So nothing here assumes a write succeeded. The published mode only ever comes from the
+buds' own notification, which they send unprompted on every change including the ones the
+desktop asked for. The GTK buttons snap back to the real mode when a write does not take,
+and a model with no listening mode at all reports none and the buttons stay disabled.
+
+Writes are queued for the reader thread rather than sent from the caller's, because the
+socket belongs to the session and closing it out from under a write is the one race worth
+not having. A queued change does not outlive the channel it was meant for.
+
 The constants come from librepods `linux/airpods_packets.h`. The prose
 `docs/AAP Definitions.md` in the same repository disagrees with the header and is wrong.
 
 `DeviceID = bluetooth:004C:0000:0000` in `/etc/bluetooth/main.conf` is **not** needed for
-this. It is what makes the machine present itself to the buds as Apple hardware, and
-reading battery does not require that.
+any of this. It is what makes the machine present itself to the buds as Apple hardware.
+Reading battery does not require it, and neither does setting the listening mode --
+confirmed 2026-09-08 with the setting absent from `main.conf` on the test machine.
 
 ### The channel takes one client
 
@@ -595,6 +621,7 @@ checks the daemon does not make.
 | The iPhone's audio moves to the computer when Tether connects | The machine advertises itself as a Bluetooth speaker/headset, and iOS routes to it. Not caused by Tether beyond bringing the link up | See "Keeping the phone's audio on the phone" below |
 | `tether --bt-calls` reports call control off | PipeWire took the profile *and* its telephony D-Bus service is off, the iPhone reconnected on its own and never opened hands-free, or `bluetoothd` is running without `--experimental` | Either give BlueZ the profile by dropping `hfp_hf` from `bluez5.roles`, or set `bluez5.telephony-dbus-service = true` and let Tether drive PipeWire's gateway -- see "Calls". The daemon cycles the BR/EDR bearer once per outage for the second cause; confirm with `busctl --system tree org.bluez \| grep telephony` and `busctl --user tree org.pipewire.Telephony` |
 | AirPods are listed but the battery stays blank, and the row says another program is using the channel | The AAP channel takes one client, and something else has it | Stop the other AirPods program (LibrePods, AirPods Center, a status-bar widget that reads battery). Nothing else releases it |
+| Setting the AirPods listening mode to `off` does nothing, while the other three work | The buds declined it. Apple leaves Off out of the noise-control rotation by default on Pro models, and there is no refusal to report | Add Off to the rotation on the phone, under Settings > Bluetooth > (i) > Noise Control. Tether keeps showing the mode the buds are actually in |
 | AirPods do not appear in the Devices list at all | They are not connected, or BlueZ has never read their SDP record so there is no Modalias and the name does not contain "airpod" | Connect them, then `tether --bt-devices` -- the row carries an `airpods` flag when Tether recognizes them |
 | Calls work but the audio is on the iPhone | Working as designed. BlueZ signals the call and never opens the voice link, so there is nothing to route here | Nothing. `./scripts/bt-probe.sh --calls` during a call shows the evidence; "Getting the call audio onto the desktop instead" is the trade if you want it |
 | The Calls page is empty after configuring PipeWire for call audio | PipeWire's telephony D-Bus service is off, so neither stack exports anything Tether can read | Set `bluez5.telephony-dbus-service = true` and reconnect. With it on, Tether drives PipeWire's gateway directly and the Calls page works, minus carrier and signal |
