@@ -64,6 +64,11 @@ namespace tether::bluetooth::ancs {
         order_.erase(std::remove(order_.begin(), order_.end(), uid), order_.end());
     }
 
+    void NotificationRegistry::begin_session() {
+        seen_.clear();
+        ++session_;
+    }
+
     void NotificationRegistry::clear() {
         seen_.clear();
         notifications_.clear();
@@ -74,6 +79,7 @@ namespace tether::bluetooth::ancs {
         if (!notifications_.count(notification.uid))
             order_.push_back(notification.uid);
         notifications_[notification.uid] = notification;
+        notifications_[notification.uid].session = session_;
 
         while (order_.size() > MAX_RETAINED) {
             const uint32_t oldest = order_.front();

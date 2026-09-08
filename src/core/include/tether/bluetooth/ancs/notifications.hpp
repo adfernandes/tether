@@ -24,6 +24,7 @@ namespace tether::bluetooth::ancs {
         bool silent = false;
         bool has_positive_action = false;
         bool has_negative_action = false;
+        uint64_t session = 0;
 
         bool operator==(const Notification&) const = default;
     };
@@ -50,6 +51,8 @@ namespace tether::bluetooth::ancs {
         void remember(const SourceEvent& event);
         void forget(uint32_t uid);
         void clear();
+        void begin_session();
+        uint64_t session() const { return session_; }
 
         void store(const Notification& notification);
         // Applies a display name resolved after the notifications were stored.
@@ -61,8 +64,8 @@ namespace tether::bluetooth::ancs {
         size_t size() const { return notifications_.size(); }
 
     private:
-        // UIDs seen this session, to recognize a replay.
         std::map<uint32_t, int64_t> seen_;
+        uint64_t session_ = 0;
         std::map<uint32_t, Notification> notifications_;
         std::vector<uint32_t> order_;
     };

@@ -94,6 +94,44 @@ TEST(AncsRegistry, RenameAppIgnoresEmptyArguments) {
     EXPECT_EQ(registry.find(1)->app_name, "Instagram");
 }
 
+// Measured on a live phone: ANCS UIDs are per-connection counters that restart
+// low on every LE session -- eight retained notifications carried uids 3, 9, 12,
+// 13, 16, 17, 18 and 29, with one notification present twice under 9 and 29. A
+// dedupe set carried across the session boundary therefore reads a genuinely new
+// notification as a replay and drops it, which is a phone that has stopped
+// mirroring for no visible reason.
+TEST(AncsRegistry, ANewSessionStopsRecycledUidsReadingAsReplays) {
+    NotificationRegistry registry;
+
+    SourceEvent first;
+    first.uid = 9;
+    EXPECT_EQ(registry.classify(first, false), Decision::Fetch);
+    registry.remember(first);
+    EXPECT_EQ(registry.classify(first, false), Decision::Ignore) << "same session, same uid: a replay";
+
+    registry.begin_session();
+
+    SourceEvent recycled;
+    recycled.uid = 9; // a different notification, same counter value
+    EXPECT_EQ(registry.classify(recycled, false), Decision::Fetch)
+        << "a recycled uid from a new session was dropped as a replay";
+}
+
+// The dedupe reset must not empty the notification list: an LE blip shows up as
+// the device path dropping and returning, and wiping the list there would clear
+// the UI on every flap.
+TEST(AncsRegistry, ANewSessionKeepsWhatIsOnScreen) {
+    NotificationRegistry registry;
+    registry.store(make(9, "com.burbn.instagram"));
+    const uint64_t before = registry.session();
+
+    registry.begin_session();
+
+    ASSERT_NE(registry.find(9), nullptr) << "a session change emptied the list";
+    EXPECT_EQ(registry.find(9)->session, before) << "the stored copy must keep the session that issued its uid";
+    EXPECT_NE(registry.session(), before);
+}
+
 TEST(AncsRegistry, RecentIsOrderedByDeliveryTime) {
     NotificationRegistry registry;
     // Stored in the order iOS replayed them, which bears no relation to when the

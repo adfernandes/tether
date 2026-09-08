@@ -556,10 +556,14 @@ namespace tether::bluetooth::ancs {
         // A new LE session replays the phone's backlog, so the next batch of
         // pre-existing notifications is a sync rather than news.
         state_->initial_sync = true;
-        if (!same_device) {
-            state_->app_names.clear();
+        {
             std::lock_guard<std::mutex> lock(state_->registry_mutex);
-            state_->registry.clear();
+            if (same_device) {
+                state_->registry.begin_session();
+            } else {
+                state_->app_names.clear();
+                state_->registry.clear();
+            }
         }
         {
             std::lock_guard<std::mutex> lock(state_->inbox);
@@ -589,6 +593,16 @@ namespace tether::bluetooth::ancs {
     }
 
     bool AncsClient::perform_action(uint32_t uid, ActionId action) {
+        {
+            std::lock_guard<std::mutex> lock(state_->registry_mutex);
+            const Notification* stored = state_->registry.find(uid);
+            if (stored && stored->session != state_->registry.session()) {
+                state_->registry.forget(uid);
+                if (state_->on_withdraw)
+                    state_->on_withdraw(uid);
+                return true;
+            }
+        }
         if (!state_->ready)
             return false;
         // The sequencer belongs to tick()'s thread; handing it a request from a

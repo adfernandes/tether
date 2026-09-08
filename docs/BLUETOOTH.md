@@ -2528,3 +2528,72 @@ Not settled: `ServicesResolved` on a live *inbound* LE link, where
 argument that a delivering notify session means discovery completed on that link.
 It has not been captured. Anyone who catches that state should read the property
 and record it here.
+
+### 2026-09-07 - The replay dedupe outlived the UIDs it was deduping
+
+| | |
+|---|---|
+| Controller | MediaTek `usb:v0E8Dp0717`, HCI version 13 |
+| BlueZ | 5.87 with `--experimental` |
+| Phone | iPhone 15 Pro, iOS 26 |
+
+With the LE link finally staying up, notifications stopped arriving, and
+dismissing one from the UI answered:
+
+```
+ancs: control point write failed: GDBus.Error:org.bluez.Error.Failed: Operation failed with ATT error: 0xa2
+```
+
+`0xa2` is ANCS **Invalid Parameter** in Apple's control point error range
+(`0xa0` Unknown Command, `0xa1` Invalid Command, `0xa2` Invalid Parameter,
+`0xa3` Action Failed): the NotificationUID does not name anything on the phone.
+The daemon log shows the boundary exactly -- `Not connected` while LE was down at
+21:37, then every write answering `0xa2` from 21:55 once it was back.
+
+**ANCS UIDs are scoped to the connection.** The retained list made that plain:
+
+```
+uid=9   Pokémon GO   Raid Invitation ...
+uid=29  Pokémon GO   Raid Invitation ...   <- the same notification, next session
+uid=3   Wallet       Apple Card
+uid=12  Google       ...
+```
+
+Eight notifications carrying uids 3, 9, 12, 13, 16, 17, 18 and 29 -- small
+counters that restart low each session, with one notification present twice under
+two of them.
+
+`NotificationRegistry::seen_` is commented "UIDs seen this session", and nothing
+made that true. `clear()` is the only thing that empties it, and `set_device()`
+calls it only when the bond is a *different phone*. Deliberately so: the comment
+there explains that wiping the registry on a blip would empty the notification
+list and the phone's replay would then be suppressed as pre-existing, so nothing
+would come back. That reasoning is right about the notifications and wrong about
+the dedupe, and the two live in the same object.
+
+So `seen_` accumulated every UID from every session, and `classify()` --
+`seen_.count(event.uid) ? Ignore : Fetch` -- read a genuinely new notification
+landing on a recycled counter as a replay and dropped it before any fetch. Each
+reconnect saturates more of the low range. That is a phone that quietly stops
+mirroring, with a healthy `ancs_ready: true` above it.
+
+The same session boundary explains the dismissal: the list holds UIDs the phone
+retired, and `PerformNotificationAction` on one of them can only answer `0xa2`.
+
+Split the two lifetimes:
+
+- `begin_session()` clears `seen_` and bumps a session counter, called for every
+  new LE session. What is on screen is untouched, so the blip behaviour the
+  earlier comment protects is unchanged.
+- `Notification::session` records which session issued a stored UID.
+  `perform_action()` on a stale one retires the desktop copy and never writes to
+  the control point -- the phone's copy is unreachable by that UID, and retiring
+  the local one is what dismissing it asked for.
+
+The full `clear()` still runs, still only for a genuinely different phone.
+
+Worth separating from the diagnosis: this bug is older than the LE work above and
+was largely invisible behind it. A link that came back only after someone toggled
+Bluetooth on the phone rotated sessions rarely; one that reconnects on its own
+rotates them constantly, and the stale dedupe fills up in hours. Fixing the link
+is what surfaced it.
