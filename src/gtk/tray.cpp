@@ -70,6 +70,8 @@ namespace tether::ui {
         std::string g_icon = "tether-offline";
         int g_unread = 0;
         std::string g_tooltip;
+        std::string g_airpods_name;
+        std::string g_airpods_battery;
         bool g_close_to_tray = false;
         std::string g_icon_style = "symbolic";
         std::string g_icon_suffix;
@@ -244,9 +246,11 @@ namespace tether::ui {
         for (Route route : {Route::WiFi, Route::Bluetooth}) {
             const RouteState& r = state(route);
             const std::string status = r.ok ? _("connected") : r.detail.empty() ? _("not connected") : r.detail;
-            // TRANSLATORS: {} is a transport name, "Wi-Fi" or "Bluetooth".
+            // TRANSLATORS: {} is a transport name, "Wi-Fi" or "Bluetooth", or a device name.
             tooltip += tether::tr_format(_("{}: {}"), route_name(route), status) + "\n";
         }
+        if (!g_airpods_battery.empty())
+            tooltip += tether::tr_format(_("{}: {}"), g_airpods_name, g_airpods_battery) + "\n";
         if (!daemon_connected())
             tooltip += std::string(_("Daemon: not running")) + "\n";
         if (g_unread > 0)
@@ -266,6 +270,14 @@ namespace tether::ui {
             g_tooltip = tooltip;
             emit("NewToolTip");
         }
+    }
+
+    void tray_set_airpods(const std::string& name, const std::string& battery) {
+        if (name == g_airpods_name && battery == g_airpods_battery)
+            return;
+        g_airpods_name = name;
+        g_airpods_battery = battery;
+        tray_refresh();
     }
 
     void tray_set_unread(int count) {

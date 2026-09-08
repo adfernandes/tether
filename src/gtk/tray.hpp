@@ -15,6 +15,10 @@ namespace tether::ui {
     // Total unread across threads. Drives the badged icon and a tooltip line.
     void tray_set_unread(int count);
 
+    // AirPods battery for the tooltip, already formatted. Empty removes the line:
+    // nothing connected, or the channel has reported nothing yet.
+    void tray_set_airpods(const std::string& name, const std::string& battery);
+
     // Repaints from cached state, for when the daemon returns before any route event.
     void tray_refresh();
 

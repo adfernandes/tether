@@ -1,5 +1,6 @@
 #include "devices_view.hpp"
 #include "daemon_client.hpp"
+#include "tray.hpp"
 #include "ui_util.hpp"
 #include <tether/i18n.hpp>
 
@@ -121,9 +122,10 @@ namespace tether::ui {
             return nullptr;
         }
 
-        // "L 82%  R 79%  Case 45%", omitting whatever is not reporting. An empty
-        // result means nothing is known yet.
-        std::string airpods_battery_text(const nlohmann::json& airpods) {
+        // "L 82%  R 79%  Case 45%", omitting whatever is not reporting, or the reason
+        // there are no levels at all. Empty while the channel is still opening, which
+        // is the one state not worth reporting anywhere.
+        std::string airpods_status_text(const nlohmann::json& airpods) {
             std::string text;
             const auto append = [&](const char* label, int level) {
                 if (level < 0)
@@ -144,7 +146,13 @@ namespace tether::ui {
             const std::string status = airpods.value("status", "");
             if (status == "busy" || status == "failed")
                 return airpods.value("reason", "");
-            return _("Reading battery\u2026");
+            return "";
+        }
+
+        // The device row has room to say why it is empty; the tray tooltip does not.
+        std::string airpods_row_text(const nlohmann::json& airpods) {
+            const std::string text = airpods_status_text(airpods);
+            return text.empty() ? _("Reading battery\u2026") : text;
         }
 
         // The daemon supervises one iPhone at a time, so the live profile status
@@ -819,7 +827,7 @@ namespace tether::ui {
                 gtk_label_set_xalign(GTK_LABEL(battery), 0.0);
                 gtk_style_context_add_class(gtk_widget_get_style_context(battery), "muted");
                 if (g_devices.bt_airpods.value("address", "") == address)
-                    gtk_label_set_text(GTK_LABEL(battery), airpods_battery_text(g_devices.bt_airpods).c_str());
+                    gtk_label_set_text(GTK_LABEL(battery), airpods_row_text(g_devices.bt_airpods).c_str());
                 g_object_set_data(G_OBJECT(row), "bt_battery", battery);
                 gtk_box_pack_start(GTK_BOX(labels), battery, FALSE, FALSE, 0);
             }
@@ -1148,7 +1156,8 @@ namespace tether::ui {
             g_devices.bt_airpods = event;
             // Battery arrives whenever the buds feel like sending it
             const std::string address = event.value("address", "");
-            const std::string text = address.empty() ? "" : airpods_battery_text(event);
+            const std::string text = address.empty() ? "" : airpods_row_text(event);
+            tray_set_airpods(event.value("name", ""), address.empty() ? "" : airpods_status_text(event));
             GList* rows = gtk_container_get_children(GTK_CONTAINER(g_devices.list_devices));
             for (GList* item = rows; item; item = item->next) {
                 auto* row = GTK_WIDGET(item->data);

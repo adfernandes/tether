@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: tether\n"
 "Report-Msgid-Bugs-To: zack@bartel.com\n"
-"POT-Creation-Date: 2026-09-08 15:00-0700\n"
+"POT-Creation-Date: 2026-09-08 16:08-0700\n"
 "PO-Revision-Date: 2026-08-23\n"
 "Last-Translator: Tether project\n"
 "Language-Team: Italian\n"
@@ -441,6 +441,7 @@ msgid "Could not read the AirPods battery from the daemon.\n"
 msgstr "Impossibile leggere la batteria degli AirPods dal demone.\n"
 
 #: src/cli/main.cpp
+#, c-format
 msgid "No AirPods connected.\n"
 msgstr "Nessun AirPods connesso.\n"
 
@@ -2096,6 +2097,7 @@ msgstr "connesso"
 msgid "not connected"
 msgstr "non connesso"
 
+#. TRANSLATORS: {} is a transport name, "Wi-Fi" or "Bluetooth", or a device name.
 #. TRANSLATORS: {} is a transport name, "Wi-Fi" or "Bluetooth".
 #: src/gtk/tray.cpp src/gtk/ui_util.cpp
 #, c++-format
