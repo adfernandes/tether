@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: tether\n"
 "Report-Msgid-Bugs-To: zack@bartel.com\n"
-"POT-Creation-Date: 2026-09-07 17:37-0700\n"
+"POT-Creation-Date: 2026-09-08 15:00-0700\n"
 "PO-Revision-Date: 2026-08-23\n"
 "Last-Translator: Tether project\n"
 "Language-Team: Polish\n"
@@ -87,6 +87,10 @@ msgstr "Wypisz urządzenia Bluetooth znane BlueZ."
 #: src/cli/main.cpp
 msgid "Show Bluetooth link and profile connection state."
 msgstr "Pokaż stan połączenia Bluetooth i profili."
+
+#: src/cli/main.cpp
+msgid "Show AirPods and case battery."
+msgstr "Pokaż poziom baterii AirPods i etui."
 
 #: src/cli/main.cpp
 msgid "List iPhone message conversations."
@@ -434,6 +438,27 @@ msgstr "Nie udało się odczytać urządzeń Bluetooth od demona.\n"
 #, c-format
 msgid "No Bluetooth devices known to BlueZ.\n"
 msgstr "BlueZ nie zna żadnych urządzeń Bluetooth.\n"
+
+#: src/cli/main.cpp
+msgid "Could not read the AirPods battery from the daemon.\n"
+msgstr "Nie można odczytać poziomu baterii AirPods z demona.\n"
+
+#: src/cli/main.cpp
+msgid "No AirPods connected.\n"
+msgstr "Nie podłączono żadnych AirPods.\n"
+
+#: src/cli/main.cpp
+msgid "Left"
+msgstr "Lewa"
+
+#: src/cli/main.cpp
+msgid "Right"
+msgstr "Prawa"
+
+#. TRANSLATORS: The AirPods charging case, on the device row beside the two earbuds.
+#: src/cli/main.cpp src/gtk/devices_view.cpp
+msgid "Case"
+msgstr "Etui"
 
 #: src/cli/main.cpp
 msgid "Could not reach the daemon.\n"
@@ -785,6 +810,18 @@ msgstr "Wybór adaptera jest automatyczny: pierwszy włączony.\n"
 msgid "Using controller {}."
 msgstr "Używany adapter: {}."
 
+#: src/core/src/bluetooth/airpods.cpp
+msgid "The AirPods address could not be read."
+msgstr "Nie można odczytać adresu AirPods."
+
+#: src/core/src/bluetooth/airpods.cpp
+msgid "Bluetooth sockets are unavailable on this system."
+msgstr "Gniazda Bluetooth są niedostępne w tym systemie."
+
+#: src/core/src/bluetooth/airpods.cpp
+msgid "Another program is using the AirPods channel."
+msgstr "Inny program używa kanału AirPods."
+
 #: src/core/src/bluetooth/bearer_supervisor.cpp
 msgid ""
 "Messages and contacts are connected. BlueZ reports the Bluetooth link down "
@@ -817,7 +854,10 @@ msgid ""
 "come up within a minute. Nothing on the iPhone changes this and re-pairing "
 "will not either."
 msgstr ""
-"Ten komputer przypiął powiązanie do BR/EDR, co odrzuca połączenie LE otwierane przez iPhone'a do przesyłania powiadomień. Właśnie jest to cofane; LE powinno pojawić się w ciągu minuty. Nic w iPhonie tego nie zmieni, ponowne parowanie również nie."
+"Ten komputer przypiął powiązanie do BR/EDR, co odrzuca połączenie LE "
+"otwierane przez iPhone'a do przesyłania powiadomień. Właśnie jest to cofane; "
+"LE powinno pojawić się w ciągu minuty. Nic w iPhonie tego nie zmieni, "
+"ponowne parowanie również nie."
 
 #: src/core/src/bluetooth/bearer_supervisor.cpp
 msgid ""
@@ -1390,6 +1430,20 @@ msgstr "Demon Tether nie działa."
 #: src/gtk/daemon_client.cpp
 msgid "Daemon Online"
 msgstr "Demon online"
+
+#. TRANSLATORS: Left earbud, abbreviated to fit the device row. One or two letters.
+#: src/gtk/devices_view.cpp
+msgid "L"
+msgstr "L"
+
+#. TRANSLATORS: Right earbud, abbreviated to fit the device row. One or two letters.
+#: src/gtk/devices_view.cpp
+msgid "R"
+msgstr "P"
+
+#: src/gtk/devices_view.cpp
+msgid "Reading battery…"
+msgstr "Odczytywanie baterii…"
 
 #: src/gtk/devices_view.cpp
 msgid "Connected."

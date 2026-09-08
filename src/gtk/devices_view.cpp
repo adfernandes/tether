@@ -32,6 +32,8 @@ namespace tether::ui {
 
             // The Bluetooth route
             std::vector<nlohmann::json> bt_devices;
+            // An object, not null: bt_devices can arrive before the first bt_airpods.
+            nlohmann::json bt_airpods = nlohmann::json::object();
             nlohmann::json bt_status = nlohmann::json::object();
             nlohmann::json bt_connection = nlohmann::json::object();
 
@@ -117,6 +119,32 @@ namespace tether::ui {
                     return &device;
             }
             return nullptr;
+        }
+
+        // "L 82%  R 79%  Case 45%", omitting whatever is not reporting. An empty
+        // result means nothing is known yet.
+        std::string airpods_battery_text(const nlohmann::json& airpods) {
+            std::string text;
+            const auto append = [&](const char* label, int level) {
+                if (level < 0)
+                    return;
+                if (!text.empty())
+                    text += "   ";
+                text += label + (" " + std::to_string(level) + "%");
+            };
+            // TRANSLATORS: Left earbud, abbreviated to fit the device row. One or two letters.
+            append(_("L"), airpods.value("left", -1));
+            // TRANSLATORS: Right earbud, abbreviated to fit the device row. One or two letters.
+            append(_("R"), airpods.value("right", -1));
+            // TRANSLATORS: The AirPods charging case, on the device row beside the two earbuds.
+            append(_("Case"), airpods.value("case", -1));
+            if (!text.empty())
+                return text;
+
+            const std::string status = airpods.value("status", "");
+            if (status == "busy" || status == "failed")
+                return airpods.value("reason", "");
+            return _("Reading battery\u2026");
         }
 
         // The daemon supervises one iPhone at a time, so the live profile status
@@ -749,6 +777,7 @@ namespace tether::ui {
             const std::string name = device.value("name", "").empty() ? address : device.value("name", "");
             const bool paired = device.value("paired", false);
             const bool connected = device.value("connected", false);
+            const bool airpods = device.value("airpods", false);
             const bool route_ready =
                 is_supervised_bt_device(address) && (g_devices.bt_connection.value("map_open", false) ||
                                                      g_devices.bt_connection.value("ancs_ready", false));
@@ -760,8 +789,10 @@ namespace tether::ui {
             GtkWidget* box = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 12);
             gtk_container_set_border_width(GTK_CONTAINER(box), 12);
 
-            GtkWidget* icon = gtk_image_new_from_icon_name(
-                connected ? "bluetooth-active-symbolic" : "bluetooth-symbolic", GTK_ICON_SIZE_LARGE_TOOLBAR);
+            const char* icon_name = airpods     ? "audio-headphones-symbolic"
+                                    : connected ? "bluetooth-active-symbolic"
+                                                : "bluetooth-symbolic";
+            GtkWidget* icon = gtk_image_new_from_icon_name(icon_name, GTK_ICON_SIZE_LARGE_TOOLBAR);
             gtk_box_pack_start(GTK_BOX(box), icon, FALSE, FALSE, 0);
 
             GtkWidget* labels = gtk_box_new(GTK_ORIENTATION_VERTICAL, 2);
@@ -770,14 +801,28 @@ namespace tether::ui {
             gtk_label_set_xalign(GTK_LABEL(title), 0.0);
             gtk_box_pack_start(GTK_BOX(labels), title, FALSE, FALSE, 0);
 
-            const char* subtitle_text = route_ready ? _("Connected")
-                                        : connected ? _("Partially connected")
-                                        : paired    ? _("Paired")
-                                                    : _("Nearby (Tap to Pair)");
+            // "Partially connected" is about the iPhone's message and notification
+            // routes, which say nothing about a pair of earbuds.
+            const char* subtitle_text = (route_ready || (airpods && connected)) ? _("Connected")
+                                        : connected                             ? _("Partially connected")
+                                        : paired                                ? _("Paired")
+                                                                                : _("Nearby (Tap to Pair)");
             GtkWidget* subtitle = gtk_label_new(subtitle_text);
             gtk_label_set_xalign(GTK_LABEL(subtitle), 0.0);
             gtk_style_context_add_class(gtk_widget_get_style_context(subtitle), "muted");
             gtk_box_pack_start(GTK_BOX(labels), subtitle, FALSE, FALSE, 0);
+
+            if (airpods) {
+                gtk_list_box_row_set_selectable(GTK_LIST_BOX_ROW(row), FALSE);
+
+                GtkWidget* battery = gtk_label_new(nullptr);
+                gtk_label_set_xalign(GTK_LABEL(battery), 0.0);
+                gtk_style_context_add_class(gtk_widget_get_style_context(battery), "muted");
+                if (g_devices.bt_airpods.value("address", "") == address)
+                    gtk_label_set_text(GTK_LABEL(battery), airpods_battery_text(g_devices.bt_airpods).c_str());
+                g_object_set_data(G_OBJECT(row), "bt_battery", battery);
+                gtk_box_pack_start(GTK_BOX(labels), battery, FALSE, FALSE, 0);
+            }
 
             gtk_box_pack_start(GTK_BOX(box), labels, TRUE, TRUE, 0);
             gtk_container_add(GTK_CONTAINER(row), box);
@@ -871,7 +916,8 @@ namespace tether::ui {
 
         std::vector<GtkWidget*> bt_rows;
         for (const auto& device : g_devices.bt_devices) {
-            if (!device.value("iphone", false) && !is_supervised_bt_device(device.value("address", "")))
+            if (!device.value("iphone", false) && !device.value("airpods", false) &&
+                !is_supervised_bt_device(device.value("address", "")))
                 continue;
             bt_rows.push_back(create_bt_row(device));
         }
@@ -1096,6 +1142,23 @@ namespace tether::ui {
             }
             devices_view_refresh();
             update_right_pane();
+            return true;
+        }
+        if (command == "bt_airpods") {
+            g_devices.bt_airpods = event;
+            // Battery arrives whenever the buds feel like sending it
+            const std::string address = event.value("address", "");
+            const std::string text = address.empty() ? "" : airpods_battery_text(event);
+            GList* rows = gtk_container_get_children(GTK_CONTAINER(g_devices.list_devices));
+            for (GList* item = rows; item; item = item->next) {
+                auto* row = GTK_WIDGET(item->data);
+                const char* row_address = (const char*)g_object_get_data(G_OBJECT(row), "bt_address");
+                auto* battery = GTK_WIDGET(g_object_get_data(G_OBJECT(row), "bt_battery"));
+                if (!battery || !row_address || (!address.empty() && address != row_address))
+                    continue;
+                gtk_label_set_text(GTK_LABEL(battery), text.c_str());
+            }
+            g_list_free(rows);
             return true;
         }
         if (command == "bt_connection_changed") {

@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: tether\n"
 "Report-Msgid-Bugs-To: zack@bartel.com\n"
-"POT-Creation-Date: 2026-09-07 17:37-0700\n"
+"POT-Creation-Date: 2026-09-08 15:00-0700\n"
 "PO-Revision-Date: 2026-08-23\n"
 "Last-Translator: Tether project\n"
 "Language-Team: Simplified Chinese\n"
@@ -85,6 +85,10 @@ msgstr "列出 BlueZ 已知的蓝牙设备。"
 #: src/cli/main.cpp
 msgid "Show Bluetooth link and profile connection state."
 msgstr "显示蓝牙链路和配置文件的连接状态。"
+
+#: src/cli/main.cpp
+msgid "Show AirPods and case battery."
+msgstr "显示 AirPods 和充电盒电量。"
 
 #: src/cli/main.cpp
 msgid "List iPhone message conversations."
@@ -411,6 +415,27 @@ msgstr "无法从守护进程读取蓝牙设备。\n"
 #, c-format
 msgid "No Bluetooth devices known to BlueZ.\n"
 msgstr "BlueZ 没有已知的蓝牙设备。\n"
+
+#: src/cli/main.cpp
+msgid "Could not read the AirPods battery from the daemon.\n"
+msgstr "无法从守护进程读取 AirPods 电量。\n"
+
+#: src/cli/main.cpp
+msgid "No AirPods connected.\n"
+msgstr "未连接 AirPods。\n"
+
+#: src/cli/main.cpp
+msgid "Left"
+msgstr "左"
+
+#: src/cli/main.cpp
+msgid "Right"
+msgstr "右"
+
+#. TRANSLATORS: The AirPods charging case, on the device row beside the two earbuds.
+#: src/cli/main.cpp src/gtk/devices_view.cpp
+msgid "Case"
+msgstr "充电盒"
 
 #: src/cli/main.cpp
 msgid "Could not reach the daemon.\n"
@@ -752,6 +777,18 @@ msgstr "适配器选择为自动：第一个已开启的适配器。\n"
 msgid "Using controller {}."
 msgstr "正在使用适配器 {}。"
 
+#: src/core/src/bluetooth/airpods.cpp
+msgid "The AirPods address could not be read."
+msgstr "无法读取 AirPods 地址。"
+
+#: src/core/src/bluetooth/airpods.cpp
+msgid "Bluetooth sockets are unavailable on this system."
+msgstr "此系统不支持 Bluetooth 套接字。"
+
+#: src/core/src/bluetooth/airpods.cpp
+msgid "Another program is using the AirPods channel."
+msgstr "另一个程序正在使用 AirPods 通道。"
+
 #: src/core/src/bluetooth/bearer_supervisor.cpp
 msgid ""
 "Messages and contacts are connected. BlueZ reports the Bluetooth link down "
@@ -781,7 +818,9 @@ msgid ""
 "come up within a minute. Nothing on the iPhone changes this and re-pairing "
 "will not either."
 msgstr ""
-"这台电脑此前把配对固定在了 BR/EDR，因而拒绝了 iPhone 为传送通知而打开的 LE 链路。现在正在撤销；LE 应在一分钟内建立。在 iPhone 上做任何操作都改变不了这一点，重新配对也不行。"
+"这台电脑此前把配对固定在了 BR/EDR，因而拒绝了 iPhone 为传送通知而打开的 LE 链"
+"路。现在正在撤销；LE 应在一分钟内建立。在 iPhone 上做任何操作都改变不了这一"
+"点，重新配对也不行。"
 
 #: src/core/src/bluetooth/bearer_supervisor.cpp
 msgid ""
@@ -1319,6 +1358,20 @@ msgstr "Tether 守护进程未在运行。"
 #: src/gtk/daemon_client.cpp
 msgid "Daemon Online"
 msgstr "守护进程在线"
+
+#. TRANSLATORS: Left earbud, abbreviated to fit the device row. One or two letters.
+#: src/gtk/devices_view.cpp
+msgid "L"
+msgstr "左"
+
+#. TRANSLATORS: Right earbud, abbreviated to fit the device row. One or two letters.
+#: src/gtk/devices_view.cpp
+msgid "R"
+msgstr "右"
+
+#: src/gtk/devices_view.cpp
+msgid "Reading battery…"
+msgstr "正在读取电量…"
 
 #: src/gtk/devices_view.cpp
 msgid "Connected."

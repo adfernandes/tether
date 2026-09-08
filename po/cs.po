@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: tether\n"
 "Report-Msgid-Bugs-To: zack@bartel.com\n"
-"POT-Creation-Date: 2026-09-07 17:37-0700\n"
+"POT-Creation-Date: 2026-09-08 15:00-0700\n"
 "PO-Revision-Date: 2026-08-23\n"
 "Last-Translator: Tether project\n"
 "Language-Team: Czech\n"
@@ -86,6 +86,10 @@ msgstr "Vypsat Bluetooth zařízení známá BlueZ."
 #: src/cli/main.cpp
 msgid "Show Bluetooth link and profile connection state."
 msgstr "Zobrazit stav Bluetooth spojení a profilů."
+
+#: src/cli/main.cpp
+msgid "Show AirPods and case battery."
+msgstr "Zobrazit baterii AirPods a pouzdra."
 
 #: src/cli/main.cpp
 msgid "List iPhone message conversations."
@@ -431,6 +435,27 @@ msgstr "Nepodařilo se načíst Bluetooth zařízení od démona.\n"
 #, c-format
 msgid "No Bluetooth devices known to BlueZ.\n"
 msgstr "BlueZ nezná žádná Bluetooth zařízení.\n"
+
+#: src/cli/main.cpp
+msgid "Could not read the AirPods battery from the daemon.\n"
+msgstr "Nepodařilo se načíst baterii AirPods z démona.\n"
+
+#: src/cli/main.cpp
+msgid "No AirPods connected.\n"
+msgstr "Nejsou připojena žádná AirPods.\n"
+
+#: src/cli/main.cpp
+msgid "Left"
+msgstr "Levé"
+
+#: src/cli/main.cpp
+msgid "Right"
+msgstr "Pravé"
+
+#. TRANSLATORS: The AirPods charging case, on the device row beside the two earbuds.
+#: src/cli/main.cpp src/gtk/devices_view.cpp
+msgid "Case"
+msgstr "Pouzdro"
 
 #: src/cli/main.cpp
 msgid "Could not reach the daemon.\n"
@@ -781,6 +806,18 @@ msgstr "Výběr adaptéru je automatický: první zapnutý.\n"
 msgid "Using controller {}."
 msgstr "Používá se adaptér {}."
 
+#: src/core/src/bluetooth/airpods.cpp
+msgid "The AirPods address could not be read."
+msgstr "Adresu AirPods se nepodařilo přečíst."
+
+#: src/core/src/bluetooth/airpods.cpp
+msgid "Bluetooth sockets are unavailable on this system."
+msgstr "Sokety Bluetooth nejsou v tomto systému dostupné."
+
+#: src/core/src/bluetooth/airpods.cpp
+msgid "Another program is using the AirPods channel."
+msgstr "Kanál AirPods používá jiný program."
+
 #: src/core/src/bluetooth/bearer_supervisor.cpp
 msgid ""
 "Messages and contacts are connected. BlueZ reports the Bluetooth link down "
@@ -813,7 +850,9 @@ msgid ""
 "come up within a minute. Nothing on the iPhone changes this and re-pairing "
 "will not either."
 msgstr ""
-"Tento počítač připnul párování na BR/EDR, což odmítá spojení LE, které iPhone otevírá pro přenos oznámení. Nyní se to ruší; LE by se mělo navázat do minuty. Nic na iPhonu to nezmění a opětovné spárování také ne."
+"Tento počítač připnul párování na BR/EDR, což odmítá spojení LE, které "
+"iPhone otevírá pro přenos oznámení. Nyní se to ruší; LE by se mělo navázat "
+"do minuty. Nic na iPhonu to nezmění a opětovné spárování také ne."
 
 #: src/core/src/bluetooth/bearer_supervisor.cpp
 msgid ""
@@ -1377,6 +1416,20 @@ msgstr "Démon Tether neběží."
 #: src/gtk/daemon_client.cpp
 msgid "Daemon Online"
 msgstr "Démon je online"
+
+#. TRANSLATORS: Left earbud, abbreviated to fit the device row. One or two letters.
+#: src/gtk/devices_view.cpp
+msgid "L"
+msgstr "L"
+
+#. TRANSLATORS: Right earbud, abbreviated to fit the device row. One or two letters.
+#: src/gtk/devices_view.cpp
+msgid "R"
+msgstr "P"
+
+#: src/gtk/devices_view.cpp
+msgid "Reading battery…"
+msgstr "Načítání baterie…"
 
 #: src/gtk/devices_view.cpp
 msgid "Connected."

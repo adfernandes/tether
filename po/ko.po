@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: tether\n"
 "Report-Msgid-Bugs-To: zack@bartel.com\n"
-"POT-Creation-Date: 2026-09-07 17:37-0700\n"
+"POT-Creation-Date: 2026-09-08 15:00-0700\n"
 "PO-Revision-Date: 2026-08-23\n"
 "Last-Translator: Tether project\n"
 "Language-Team: Korean\n"
@@ -85,6 +85,10 @@ msgstr "BlueZ가 알고 있는 Bluetooth 기기를 나열합니다."
 #: src/cli/main.cpp
 msgid "Show Bluetooth link and profile connection state."
 msgstr "Bluetooth 링크와 프로파일의 연결 상태를 표시합니다."
+
+#: src/cli/main.cpp
+msgid "Show AirPods and case battery."
+msgstr "AirPods 및 케이스 배터리를 표시합니다."
 
 #: src/cli/main.cpp
 msgid "List iPhone message conversations."
@@ -419,6 +423,27 @@ msgstr "데몬에서 Bluetooth 기기를 읽지 못했습니다.\n"
 #, c-format
 msgid "No Bluetooth devices known to BlueZ.\n"
 msgstr "BlueZ가 알고 있는 Bluetooth 기기가 없습니다.\n"
+
+#: src/cli/main.cpp
+msgid "Could not read the AirPods battery from the daemon.\n"
+msgstr "데몬에서 AirPods 배터리를 읽을 수 없습니다.\n"
+
+#: src/cli/main.cpp
+msgid "No AirPods connected.\n"
+msgstr "연결된 AirPods가 없습니다.\n"
+
+#: src/cli/main.cpp
+msgid "Left"
+msgstr "왼쪽"
+
+#: src/cli/main.cpp
+msgid "Right"
+msgstr "오른쪽"
+
+#. TRANSLATORS: The AirPods charging case, on the device row beside the two earbuds.
+#: src/cli/main.cpp src/gtk/devices_view.cpp
+msgid "Case"
+msgstr "케이스"
 
 #: src/cli/main.cpp
 msgid "Could not reach the daemon.\n"
@@ -763,6 +788,18 @@ msgstr "어댑터 선택은 자동입니다. 전원이 켜진 첫 번째 어댑�
 msgid "Using controller {}."
 msgstr "어댑터 {}을(를) 사용합니다."
 
+#: src/core/src/bluetooth/airpods.cpp
+msgid "The AirPods address could not be read."
+msgstr "AirPods 주소를 읽을 수 없습니다."
+
+#: src/core/src/bluetooth/airpods.cpp
+msgid "Bluetooth sockets are unavailable on this system."
+msgstr "이 시스템에서는 Bluetooth 소켓을 사용할 수 없습니다."
+
+#: src/core/src/bluetooth/airpods.cpp
+msgid "Another program is using the AirPods channel."
+msgstr "다른 프로그램이 AirPods 채널을 사용 중입니다."
+
 #: src/core/src/bluetooth/bearer_supervisor.cpp
 msgid ""
 "Messages and contacts are connected. BlueZ reports the Bluetooth link down "
@@ -794,7 +831,9 @@ msgid ""
 "come up within a minute. Nothing on the iPhone changes this and re-pairing "
 "will not either."
 msgstr ""
-"이 컴퓨터가 페어링을 BR/EDR로 고정해 두어, iPhone이 알림을 전달하려고 여는 LE 링크가 거부되고 있습니다. 지금 되돌리는 중이며, LE는 1분 이내에 연결될 것입니다. iPhone에서 바꿀 수 있는 것은 없으며, 다시 페어링해도 마찬가지입니다."
+"이 컴퓨터가 페어링을 BR/EDR로 고정해 두어, iPhone이 알림을 전달하려고 여는 "
+"LE 링크가 거부되고 있습니다. 지금 되돌리는 중이며, LE는 1분 이내에 연결될 것"
+"입니다. iPhone에서 바꿀 수 있는 것은 없으며, 다시 페어링해도 마찬가지입니다."
 
 #: src/core/src/bluetooth/bearer_supervisor.cpp
 msgid ""
@@ -1352,6 +1391,20 @@ msgstr "Tether 데몬이 실행 중이 아닙니다."
 #: src/gtk/daemon_client.cpp
 msgid "Daemon Online"
 msgstr "데몬 온라인"
+
+#. TRANSLATORS: Left earbud, abbreviated to fit the device row. One or two letters.
+#: src/gtk/devices_view.cpp
+msgid "L"
+msgstr "좌"
+
+#. TRANSLATORS: Right earbud, abbreviated to fit the device row. One or two letters.
+#: src/gtk/devices_view.cpp
+msgid "R"
+msgstr "우"
+
+#: src/gtk/devices_view.cpp
+msgid "Reading battery…"
+msgstr "배터리를 읽는 중…"
 
 #: src/gtk/devices_view.cpp
 msgid "Connected."

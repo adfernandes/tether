@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: tether 0.2.27\n"
 "Report-Msgid-Bugs-To: zack@bartel.com\n"
-"POT-Creation-Date: 2026-09-07 17:37-0700\n"
+"POT-Creation-Date: 2026-09-08 15:00-0700\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -84,6 +84,10 @@ msgstr ""
 
 #: src/cli/main.cpp
 msgid "Show Bluetooth link and profile connection state."
+msgstr ""
+
+#: src/cli/main.cpp
+msgid "Show AirPods and case battery."
 msgstr ""
 
 #: src/cli/main.cpp
@@ -387,6 +391,28 @@ msgstr ""
 #: src/cli/main.cpp
 #, c-format
 msgid "No Bluetooth devices known to BlueZ.\n"
+msgstr ""
+
+#: src/cli/main.cpp
+msgid "Could not read the AirPods battery from the daemon.\n"
+msgstr ""
+
+#: src/cli/main.cpp
+#, c-format
+msgid "No AirPods connected.\n"
+msgstr ""
+
+#: src/cli/main.cpp
+msgid "Left"
+msgstr ""
+
+#: src/cli/main.cpp
+msgid "Right"
+msgstr ""
+
+#. TRANSLATORS: The AirPods charging case, on the device row beside the two earbuds.
+#: src/cli/main.cpp src/gtk/devices_view.cpp
+msgid "Case"
 msgstr ""
 
 #: src/cli/main.cpp
@@ -719,6 +745,18 @@ msgstr ""
 #: src/cli/main.cpp
 #, c++-format
 msgid "Using controller {}."
+msgstr ""
+
+#: src/core/src/bluetooth/airpods.cpp
+msgid "The AirPods address could not be read."
+msgstr ""
+
+#: src/core/src/bluetooth/airpods.cpp
+msgid "Bluetooth sockets are unavailable on this system."
+msgstr ""
+
+#: src/core/src/bluetooth/airpods.cpp
+msgid "Another program is using the AirPods channel."
 msgstr ""
 
 #: src/core/src/bluetooth/bearer_supervisor.cpp
@@ -1245,6 +1283,20 @@ msgstr ""
 
 #: src/gtk/daemon_client.cpp
 msgid "Daemon Online"
+msgstr ""
+
+#. TRANSLATORS: Left earbud, abbreviated to fit the device row. One or two letters.
+#: src/gtk/devices_view.cpp
+msgid "L"
+msgstr ""
+
+#. TRANSLATORS: Right earbud, abbreviated to fit the device row. One or two letters.
+#: src/gtk/devices_view.cpp
+msgid "R"
+msgstr ""
+
+#: src/gtk/devices_view.cpp
+msgid "Reading battery…"
 msgstr ""
 
 #: src/gtk/devices_view.cpp

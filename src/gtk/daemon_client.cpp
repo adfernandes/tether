@@ -157,6 +157,7 @@ namespace tether::ui {
             daemon_send({{"command", "bt_connection"}});
             daemon_send({{"command", "bt_status"}});
             daemon_send({{"command", "bt_list_devices"}});
+            daemon_send({{"command", "bt_airpods"}});
             // primes the tray unread count
             daemon_send({{"command", "bt_list_threads"}});
             set_status_main(_("Daemon Online"));

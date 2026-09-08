@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: tether\n"
 "Report-Msgid-Bugs-To: zack@bartel.com\n"
-"POT-Creation-Date: 2026-09-07 17:37-0700\n"
+"POT-Creation-Date: 2026-09-08 15:00-0700\n"
 "PO-Revision-Date: 2026-08-23\n"
 "Last-Translator: Tether project\n"
 "Language-Team: Japanese\n"
@@ -86,6 +86,10 @@ msgstr "BlueZ が認識している Bluetooth デバイスを一覧表示しま�
 #: src/cli/main.cpp
 msgid "Show Bluetooth link and profile connection state."
 msgstr "Bluetooth リンクとプロファイルの接続状態を表示します。"
+
+#: src/cli/main.cpp
+msgid "Show AirPods and case battery."
+msgstr "AirPods とケースのバッテリーを表示します。"
 
 #: src/cli/main.cpp
 msgid "List iPhone message conversations."
@@ -421,6 +425,27 @@ msgstr "デーモンから Bluetooth デバイスを読み取れませんでし�
 #, c-format
 msgid "No Bluetooth devices known to BlueZ.\n"
 msgstr "BlueZ が認識している Bluetooth デバイスはありません。\n"
+
+#: src/cli/main.cpp
+msgid "Could not read the AirPods battery from the daemon.\n"
+msgstr "デーモンから AirPods のバッテリーを読み取れませんでした。\n"
+
+#: src/cli/main.cpp
+msgid "No AirPods connected.\n"
+msgstr "AirPods は接続されていません。\n"
+
+#: src/cli/main.cpp
+msgid "Left"
+msgstr "左"
+
+#: src/cli/main.cpp
+msgid "Right"
+msgstr "右"
+
+#. TRANSLATORS: The AirPods charging case, on the device row beside the two earbuds.
+#: src/cli/main.cpp src/gtk/devices_view.cpp
+msgid "Case"
+msgstr "ケース"
 
 #: src/cli/main.cpp
 msgid "Could not reach the daemon.\n"
@@ -770,6 +795,18 @@ msgstr ""
 msgid "Using controller {}."
 msgstr "アダプタ {} を使用します。"
 
+#: src/core/src/bluetooth/airpods.cpp
+msgid "The AirPods address could not be read."
+msgstr "AirPods のアドレスを読み取れませんでした。"
+
+#: src/core/src/bluetooth/airpods.cpp
+msgid "Bluetooth sockets are unavailable on this system."
+msgstr "このシステムでは Bluetooth ソケットを利用できません。"
+
+#: src/core/src/bluetooth/airpods.cpp
+msgid "Another program is using the AirPods channel."
+msgstr "別のプログラムが AirPods のチャンネルを使用しています。"
+
 #: src/core/src/bluetooth/bearer_supervisor.cpp
 msgid ""
 "Messages and contacts are connected. BlueZ reports the Bluetooth link down "
@@ -802,7 +839,10 @@ msgid ""
 "come up within a minute. Nothing on the iPhone changes this and re-pairing "
 "will not either."
 msgstr ""
-"このコンピュータがペアリングを BR/EDR に固定していたため、iPhone が通知を運ぶために開く LE リンクが拒否されています。現在それを解除しています。LE は 1 分以内に接続するはずです。iPhone 側で変えられることはなく、ペアリングし直しても変わりません。"
+"このコンピュータがペアリングを BR/EDR に固定していたため、iPhone が通知を運ぶ"
+"ために開く LE リンクが拒否されています。現在それを解除しています。LE は 1 分"
+"以内に接続するはずです。iPhone 側で変えられることはなく、ペアリングし直しても"
+"変わりません。"
 
 #: src/core/src/bluetooth/bearer_supervisor.cpp
 msgid ""
@@ -1368,6 +1408,20 @@ msgstr "Tether デーモンが動作していません。"
 #: src/gtk/daemon_client.cpp
 msgid "Daemon Online"
 msgstr "デーモンはオンライン"
+
+#. TRANSLATORS: Left earbud, abbreviated to fit the device row. One or two letters.
+#: src/gtk/devices_view.cpp
+msgid "L"
+msgstr "左"
+
+#. TRANSLATORS: Right earbud, abbreviated to fit the device row. One or two letters.
+#: src/gtk/devices_view.cpp
+msgid "R"
+msgstr "右"
+
+#: src/gtk/devices_view.cpp
+msgid "Reading battery…"
+msgstr "バッテリーを読み取り中…"
 
 #: src/gtk/devices_view.cpp
 msgid "Connected."

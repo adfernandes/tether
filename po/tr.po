@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: tether\n"
 "Report-Msgid-Bugs-To: zack@bartel.com\n"
-"POT-Creation-Date: 2026-09-07 17:37-0700\n"
+"POT-Creation-Date: 2026-09-08 15:00-0700\n"
 "PO-Revision-Date: 2026-08-23\n"
 "Last-Translator: Tether project\n"
 "Language-Team: Turkish\n"
@@ -85,6 +85,10 @@ msgstr "BlueZ'in bildiği Bluetooth aygıtlarını listele."
 #: src/cli/main.cpp
 msgid "Show Bluetooth link and profile connection state."
 msgstr "Bluetooth bağlantısının ve profillerin durumunu göster."
+
+#: src/cli/main.cpp
+msgid "Show AirPods and case battery."
+msgstr "AirPods ve kutu pil durumunu göster."
 
 #: src/cli/main.cpp
 msgid "List iPhone message conversations."
@@ -428,6 +432,27 @@ msgstr "Bluetooth aygıtları arka plan hizmetinden okunamadı.\n"
 #, c-format
 msgid "No Bluetooth devices known to BlueZ.\n"
 msgstr "BlueZ'in bildiği hiçbir Bluetooth aygıtı yok.\n"
+
+#: src/cli/main.cpp
+msgid "Could not read the AirPods battery from the daemon.\n"
+msgstr "AirPods pil durumu arka plan hizmetinden okunamadı.\n"
+
+#: src/cli/main.cpp
+msgid "No AirPods connected.\n"
+msgstr "Bağlı AirPods yok.\n"
+
+#: src/cli/main.cpp
+msgid "Left"
+msgstr "Sol"
+
+#: src/cli/main.cpp
+msgid "Right"
+msgstr "Sağ"
+
+#. TRANSLATORS: The AirPods charging case, on the device row beside the two earbuds.
+#: src/cli/main.cpp src/gtk/devices_view.cpp
+msgid "Case"
+msgstr "Kutu"
 
 #: src/cli/main.cpp
 msgid "Could not reach the daemon.\n"
@@ -779,6 +804,18 @@ msgstr "Bağdaştırıcı seçimi otomatik: açık olan ilk bağdaştırıcı.\n
 msgid "Using controller {}."
 msgstr "{} bağdaştırıcısı kullanılıyor."
 
+#: src/core/src/bluetooth/airpods.cpp
+msgid "The AirPods address could not be read."
+msgstr "AirPods adresi okunamadı."
+
+#: src/core/src/bluetooth/airpods.cpp
+msgid "Bluetooth sockets are unavailable on this system."
+msgstr "Bu sistemde Bluetooth soketleri kullanılamıyor."
+
+#: src/core/src/bluetooth/airpods.cpp
+msgid "Another program is using the AirPods channel."
+msgstr "AirPods kanalını başka bir program kullanıyor."
+
 #: src/core/src/bluetooth/bearer_supervisor.cpp
 msgid ""
 "Messages and contacts are connected. BlueZ reports the Bluetooth link down "
@@ -811,7 +848,10 @@ msgid ""
 "come up within a minute. Nothing on the iPhone changes this and re-pairing "
 "will not either."
 msgstr ""
-"Bu bilgisayar eşleşmeyi BR/EDR'ye sabitlemişti; bu da iPhone'un bildirimleri taşımak için açtığı LE bağlantısını reddediyor. Bu şimdi geri alınıyor; LE bir dakika içinde kurulmalı. iPhone'da hiçbir şey bunu değiştirmez, yeniden eşleştirmek de değiştirmez."
+"Bu bilgisayar eşleşmeyi BR/EDR'ye sabitlemişti; bu da iPhone'un bildirimleri "
+"taşımak için açtığı LE bağlantısını reddediyor. Bu şimdi geri alınıyor; LE "
+"bir dakika içinde kurulmalı. iPhone'da hiçbir şey bunu değiştirmez, yeniden "
+"eşleştirmek de değiştirmez."
 
 #: src/core/src/bluetooth/bearer_supervisor.cpp
 msgid ""
@@ -1372,6 +1412,20 @@ msgstr "Tether arka plan hizmeti çalışmıyor."
 #: src/gtk/daemon_client.cpp
 msgid "Daemon Online"
 msgstr "Arka plan hizmeti çevrimiçi"
+
+#. TRANSLATORS: Left earbud, abbreviated to fit the device row. One or two letters.
+#: src/gtk/devices_view.cpp
+msgid "L"
+msgstr "L"
+
+#. TRANSLATORS: Right earbud, abbreviated to fit the device row. One or two letters.
+#: src/gtk/devices_view.cpp
+msgid "R"
+msgstr "R"
+
+#: src/gtk/devices_view.cpp
+msgid "Reading battery…"
+msgstr "Pil durumu okunuyor…"
 
 #: src/gtk/devices_view.cpp
 msgid "Connected."

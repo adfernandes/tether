@@ -190,6 +190,7 @@ static const Opt kOptions[] = {
     {"--bt-status", N_("Show Bluetooth adapter capability and delivery mode.")},
     {"--bt-devices", N_("List Bluetooth devices known to BlueZ.")},
     {"--bt-connection", N_("Show Bluetooth link and profile connection state.")},
+    {"--bt-airpods", N_("Show AirPods and case battery.")},
     {"--bt-threads", N_("List iPhone message conversations.")},
     {"--bt-messages <thread>", N_("Show messages in one conversation.")},
     {"--bt-send <thread> <text>", N_("Reply in one conversation.")},
@@ -484,6 +485,8 @@ static int print_bt_devices(tether::Client& client) {
             add("pbap");
         if (d.value("ancs", false))
             add("ancs");
+        if (d.value("airpods", false))
+            add("airpods");
         if (d.value("preferred_bearer", std::string()) == "bredr" && !d.value("le_connected", false))
             add("pinned-bredr");
 
@@ -494,6 +497,39 @@ static int print_bt_devices(tether::Client& client) {
                 flags.c_str(),
                 d.value("iphone", false) ? "  <- iPhone" : "");
     }
+    return 0;
+}
+
+static int print_bt_airpods(tether::Client& client) {
+    nlohmann::json resp;
+    try {
+        resp = nlohmann::json::parse(client.send_and_wait("{\"command\":\"bt_airpods\"}\n"));
+    } catch (const std::exception&) {
+        debug::log(ERR, _("Could not read the AirPods battery from the daemon.\n"));
+        return 1;
+    }
+
+    if (resp.value("address", "").empty()) {
+        fprintf(stdout, _("No AirPods connected.\n"));
+        return 0;
+    }
+
+    fprintf(stdout, "%s  (%s)\n", resp.value("name", "").c_str(), resp.value("address", "").c_str());
+
+    const auto level = [&](const char* label, const char* key) {
+        const int percent = resp.value(key, -1);
+        if (percent >= 0)
+            fprintf(stdout, "  %-6s %d%%\n", label, percent);
+        else
+            fprintf(stdout, "  %-6s --\n", label);
+    };
+    level(_("Left"), "left");
+    level(_("Right"), "right");
+    level(_("Case"), "case");
+
+    const std::string reason = resp.value("reason", "");
+    if (!reason.empty())
+        fprintf(stdout, "  %s\n", reason.c_str());
     return 0;
 }
 
@@ -944,6 +980,8 @@ int main(int argc, char* argv[]) {
             action = "bt_devices";
         } else if (arg == "--bt-connection") {
             action = "bt_connection";
+        } else if (arg == "--bt-airpods") {
+            action = "bt_airpods";
         } else if (arg == "--bt-diagnostics") {
             action = "bt_diagnostics";
         } else if (arg == "--bt-threads") {
@@ -1179,6 +1217,8 @@ int main(int argc, char* argv[]) {
         return print_bt_devices(client);
     } else if (action == "bt_connection") {
         return print_bt_connection(client);
+    } else if (action == "bt_airpods") {
+        return print_bt_airpods(client);
     } else if (action == "bt_diagnostics") {
         return print_bt_diagnostics(client);
     } else if (action == "bt_threads") {

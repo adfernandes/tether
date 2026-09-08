@@ -15,6 +15,7 @@
 #include <sys/wait.h>
 #include <unistd.h>
 
+#include "tether/bluetooth/airpods.hpp"
 #include "tether/bluetooth/config.hpp"
 #include "tether/bluetooth/connection.hpp"
 #include "tether/bluetooth/contacts.hpp"
@@ -669,6 +670,12 @@ namespace tether {
         return result;
     }
 
+    nlohmann::json build_bt_airpods() {
+        if (!bluetooth::g_airpods)
+            return bluetooth::to_json(bluetooth::AirPodsState{});
+        return bluetooth::to_json(bluetooth::g_airpods->state());
+    }
+
     static nlohmann::json build_local_state_snapshot() {
         nlohmann::json snapshot;
         snapshot["command"] = "state_snapshot";
@@ -947,6 +954,10 @@ namespace tether {
                         continue;
                     } else if (j.contains("command") && j["command"] == "bt_scan") {
                         std::thread(run_bt_scan).detach();
+                    } else if (j.contains("command") && j["command"] == "bt_airpods") {
+                        std::string payload = build_bt_airpods().dump() + "\n";
+                        write_plain_packet(client_fd, payload);
+                        continue;
                     } else if (j.contains("command") && j["command"] == "bt_list_devices") {
                         std::string payload = build_bt_devices().dump() + "\n";
                         write_plain_packet(client_fd, payload);

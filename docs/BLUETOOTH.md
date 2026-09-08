@@ -10,6 +10,7 @@ Bluetooth accessory. No iOS-side code is involved.
 | Contacts, for sender names | **PBAP** (Phonebook Access Profile) via `obexd` | BR/EDR | OBEX client |
 | Notifications from any app | **ANCS** (Apple Notification Center Service) | BLE / GATT | GATT central |
 | Phone calls, place + answer | **HFP** (Hands-Free Profile) via BlueZ | BR/EDR | Hands-free unit |
+| AirPods battery, buds + case | **AAP** (Apple Accessory Protocol) | BR/EDR / L2CAP | L2CAP client |
 
 The Tether iOS app is unrelated to these features and just keeps handling clipboard sync and file transfer over TCP + mTLS.
 
@@ -476,9 +477,69 @@ the narrower check; it rules out the `*`/`#` supplementary-service codes deliber
   the PBAP address book by number. A network that refuses caller ID sends the literal
   `withheld`, which is shown as unknown and never offered to redial.
 
+## AirPods
+
+Battery for the buds and the case, in the Devices list and from `tether --bt-airpods`.
+Read-only: no ANC, ear detection or stem control yet.
+
+It is the one feature here that does not go through BlueZ. AirPods report battery over
+Apple's Accessory Protocol on an L2CAP channel, PSM `0x1001`, the same source an iPhone
+uses. `src/core/src/bluetooth/airpods.cpp` opens it directly and is the only raw
+Bluetooth socket in the tree; the kernel's L2CAP constants and address struct are
+declared there rather than pulled in from bluez-libs, which the rest of the build does
+not need. No root and no capabilities: PSM `0x1001` is above the privileged range.
+
+BlueZ is still what says *which* device to open: `Device1.Modalias` starting
+`bluetooth:v004c` plus an A2DP sink UUID, falling back to a name containing "airpod"
+because Modalias is absent until SDP has been read once. The name alone is not enough —
+AirPods can be renamed to anything — and the vendor id alone is not either, since an
+iPhone is the same vendor.
+
+### The wire protocol
+
+Three packets on connect, in order, then read. All three are required: without
+set-features, or with anything but the five-`FF` request, no notification ever arrives.
+
+```
+handshake              00000400010002000000000000000000
+set-features           040004004d00d700000000000000
+request-notifications  040004000f00ffffffffff
+```
+
+A battery notification is `04 00 04 00 04 00 [count]` followed by `count` five-byte
+entries, `[component] 01 [level] [status] 01`. Components are Right `0x02`, Left `0x04`,
+Case `0x08`. Status `0x04` means the component is not reporting — a bud in the case, a
+shut case — which is shown as unknown, never as 0%. A notification carries only what
+changed, so anything it leaves out keeps its previous level.
+
+The constants come from librepods `linux/airpods_packets.h`. The prose
+`docs/AAP Definitions.md` in the same repository disagrees with the header and is wrong.
+
+`DeviceID = bluetooth:004C:0000:0000` in `/etc/bluetooth/main.conf` is **not** needed for
+this. It is what makes the machine present itself to the buds as Apple hardware, and
+reading battery does not require that.
+
+### The channel takes one client
+
+This is the failure worth knowing about. A second client on PSM `0x1001` — and an
+established channel that has silently died — makes `connect()` block **indefinitely and
+report nothing**. There is no error to log and no timeout of its own, so the naive
+symptom is a connected device whose battery never arrives and a daemon that looks idle.
+
+So the socket is non-blocking and every wait has a deadline: 8s to open the channel, 8s
+for the first notification, then 5 minutes of silence before the channel is recycled.
+Three attempts in a row that reach a deadline having delivered nothing are reported as
+`busy` rather than retried quietly, because the remedy is to stop the other program and
+nothing in the log would otherwise say so.
+
+Anything else on the machine speaking AAP is such a program: LibrePods, AirPods Center,
+a status-bar widget that reads battery itself. Only one of them can hold the channel.
+
 ## Conflicts
 
 The iPhone serves one MAP session at a time. Any other program on any machine holding it will block Tether.
+
+Only one program per machine can hold an AirPods AAP channel. See "AirPods" above.
 
 ## Known limits
 
@@ -533,6 +594,8 @@ checks the daemon does not make.
 | The link reads down forever with `br-connection-unknown`, while messages, contacts and notifications all work | This computer offers the iPhone no BR/EDR profile to connect to, and BlueZ only reports a link up while some local profile is connected | Nothing. Tether no longer waits on that link -- see 2026-08-23 below. Call support does not change this: BlueZ's hands-free profile is not one of the local profiles BlueZ counts |
 | The iPhone's audio moves to the computer when Tether connects | The machine advertises itself as a Bluetooth speaker/headset, and iOS routes to it. Not caused by Tether beyond bringing the link up | See "Keeping the phone's audio on the phone" below |
 | `tether --bt-calls` reports call control off | PipeWire took the profile *and* its telephony D-Bus service is off, the iPhone reconnected on its own and never opened hands-free, or `bluetoothd` is running without `--experimental` | Either give BlueZ the profile by dropping `hfp_hf` from `bluez5.roles`, or set `bluez5.telephony-dbus-service = true` and let Tether drive PipeWire's gateway -- see "Calls". The daemon cycles the BR/EDR bearer once per outage for the second cause; confirm with `busctl --system tree org.bluez \| grep telephony` and `busctl --user tree org.pipewire.Telephony` |
+| AirPods are listed but the battery stays blank, and the row says another program is using the channel | The AAP channel takes one client, and something else has it | Stop the other AirPods program (LibrePods, AirPods Center, a status-bar widget that reads battery). Nothing else releases it |
+| AirPods do not appear in the Devices list at all | They are not connected, or BlueZ has never read their SDP record so there is no Modalias and the name does not contain "airpod" | Connect them, then `tether --bt-devices` -- the row carries an `airpods` flag when Tether recognizes them |
 | Calls work but the audio is on the iPhone | Working as designed. BlueZ signals the call and never opens the voice link, so there is nothing to route here | Nothing. `./scripts/bt-probe.sh --calls` during a call shows the evidence; "Getting the call audio onto the desktop instead" is the trade if you want it |
 | The Calls page is empty after configuring PipeWire for call audio | PipeWire's telephony D-Bus service is off, so neither stack exports anything Tether can read | Set `bluez5.telephony-dbus-service = true` and reconnect. With it on, Tether drives PipeWire's gateway directly and the Calls page works, minus carrier and signal |
 | Configured PipeWire for call audio and the machine is not in the iPhone's audio picker | `a2dp_sink` is missing from `bluez5.roles`. iOS only speaks hands-free to a machine it considers an audio destination | Add `a2dp_sink`, and accept that the phone's music comes here too -- see "Getting the call audio onto the desktop instead" |

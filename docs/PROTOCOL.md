@@ -333,6 +333,36 @@ The two `*_reason` strings are written for display (permission is off or a trans
 `map_error` and `pbap_error` name the classification: `forbidden` means the toggle on the phone is off,
 `busy` means another computer holds the phone's single MAP session.
 
+### AirPods
+
+Battery does not come from BlueZ. It arrives over Apple's AAP protocol on an L2CAP
+channel the daemon opens itself, so it is reported separately from `bt_devices` — whose
+entries only gain an `airpods` boolean saying which device the battery belongs to.
+
+#### `bt_airpods` (Client -> Daemon, answered directly; also Daemon -> Clients)
+**Payload**: `{"command": "bt_airpods"}`
+
+```json
+{
+  "command": "bt_airpods",
+  "address": "AA:BB:CC:DD:EE:FF",
+  "name": "AirPods Pro",
+  "left": 82,
+  "right": 79,
+  "case": 45,
+  "status": "live",
+  "reason": ""
+}
+```
+
+Broadcast when the published state changes, not on a timer. A level of `-1` means the
+component is not reporting — a bud in the case, or a shut case — and is not the same as
+a flat battery. An empty `address` means no AirPods are connected.
+
+`status` is `idle`, `connecting`, `live`, `busy` or `failed`. `busy` means another
+program holds the channel, which allows only one client at a time; `reason` carries the
+sentence to show.
+
 ### Messages
 
 #### `bt_list_threads` (Client -> Daemon, answered directly)

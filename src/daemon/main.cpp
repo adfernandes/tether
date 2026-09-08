@@ -5,6 +5,7 @@
 #include <mutex>
 #include <nlohmann/json.hpp>
 #include <sys/timerfd.h>
+#include <tether/bluetooth/airpods.hpp>
 #include <tether/bluetooth/config.hpp>
 #include <tether/bluetooth/connection.hpp>
 #include <tether/bluetooth/contacts.hpp>
@@ -245,12 +246,27 @@ int main(int argc, char** argv) {
 
     // Pick the controller before the first capability, a second adapter never comes up bound to the wrong one.
     bluez.set_preferred_adapter(bt_config.adapter);
+
+    // AirPods battery arrives on its own L2CAP channel, not through BlueZ.
+    tether::bluetooth::AirPodsWatcher airpods([](const tether::bluetooth::AirPodsState& state) {
+        tether::broadcast_local_event(tether::bluetooth::to_json(state).dump());
+    });
+    const auto follow_airpods = [&bluez, &airpods]() {
+        const auto snapshot = bluez.snapshot();
+        const auto* device = tether::bluetooth::find_airpods(snapshot);
+        airpods.set_device(device ? device->address : std::string{}, device ? device->name : std::string{});
+    };
+
     if (bluez.start()) {
         tether::bluetooth::g_bluez = &bluez;
-        loop.addFd(bluez.event_fd(), [&bluez](int) {
+        tether::bluetooth::g_airpods = &airpods;
+        loop.addFd(bluez.event_fd(), [&bluez, &follow_airpods](int) {
             bluez.drain();
+            tether::broadcast_local_event(tether::build_bt_devices().dump());
             tether::broadcast_local_event(tether::build_bt_status().dump());
+            follow_airpods();
         });
+        follow_airpods();
         auto cap = bluez.capability();
         debug::log(INFO, "Bluetooth: {} mode", tether::bluetooth::to_string(cap.mode));
         for (const auto& reason : cap.reasons)
