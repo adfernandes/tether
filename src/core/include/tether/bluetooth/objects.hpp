@@ -57,6 +57,12 @@ namespace tether::bluetooth {
 
         bool ancs_notifying = false;
 
+        // Device1.ServicesResolved
+        bool services_resolved = false;
+
+        // Device1.PreferredBearer: "le", "bredr" or "last-seen".
+        std::string preferred_bearer;
+
         bool has_le_bearer = false;
         bool le_paired = false;
         bool le_bonded = false;
@@ -69,7 +75,7 @@ namespace tether::bluetooth {
         bool classic_state_known = false;
 
         bool classic_link_up() const { return classic_state_known ? classic_connected : connected; }
-        bool le_link_up() const { return le_connected || ancs_notifying; }
+        bool le_link_up() const { return le_connected || (ancs_notifying && services_resolved); }
 
         bool has_uuid(const std::string& uuid) const;
         bool supports_map() const { return has_uuid(UUID_MAP_MAS); }

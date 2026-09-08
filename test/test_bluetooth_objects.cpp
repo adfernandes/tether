@@ -417,7 +417,8 @@ TEST(Capability, ClassicOnlyBondOnANonPhoneIsNotReported) {
 TEST(DeviceParsing, AnAncsNotifySessionProvesTheLeLinkIsUp) {
     Payload p(join(ADAPTER_FULL, R"({
       '/org/bluez/hci0/dev_60_57_C8_30_6A_F7': {
-        'org.bluez.Device1': { 'Paired': <true>, 'Bonded': <true>, 'Connected': <true> },
+        'org.bluez.Device1': { 'Paired': <true>, 'Bonded': <true>, 'Connected': <true>,
+                               'ServicesResolved': <true> },
         'org.bluez.Bearer.LE1': { 'Paired': <true>, 'Bonded': <true>, 'Connected': <false> }
       },
       '/org/bluez/hci0/dev_60_57_C8_30_6A_F7/service004f/char0050': {
@@ -431,6 +432,34 @@ TEST(DeviceParsing, AnAncsNotifySessionProvesTheLeLinkIsUp) {
     EXPECT_FALSE(objects.devices[0].le_connected) << "the fixture is not reproducing the disagreement";
     EXPECT_TRUE(objects.devices[0].ancs_notifying);
     EXPECT_TRUE(objects.devices[0].le_link_up()) << "a live ANCS session was reported as no LE link";
+}
+
+// Measured on this hardware: Bearer.LE1.Disconnect under a device still Classic
+// connected leaves the whole GATT tree in place -- 23 characteristics, both ANCS
+// notify sources still Notifying, the ANCS UUID still on Device1 -- for as long as
+// it was watched. Only ServicesResolved goes with the ATT link. Reading Notifying
+// alone latched le_link_up() true on a dead link, which took the supervisor's LE
+// recovery, the solicitation and the outbound dial all off the table.
+TEST(DeviceParsing, ANotifyFlagLeftOverADeadLeBearerIsNotALink) {
+    Payload p(join(ADAPTER_FULL, R"({
+      '/org/bluez/hci0/dev_60_57_C8_30_6A_F7': {
+        'org.bluez.Device1': { 'Paired': <true>, 'Bonded': <true>, 'Connected': <true>,
+                               'ServicesResolved': <false> },
+        'org.bluez.Bearer.LE1': { 'Paired': <true>, 'Bonded': <true>, 'Connected': <false> },
+        'org.bluez.Bearer.BREDR1': { 'Connected': <true> }
+      },
+      '/org/bluez/hci0/dev_60_57_C8_30_6A_F7/service004f/char0050': {
+        'org.bluez.GattCharacteristic1': { 'UUID': <'9FBF120D-6301-42D9-8C58-25E699A21DBD'>, 'Notifying': <true> }
+      }
+    })")
+                  .c_str());
+    auto objects = parse_managed_objects(p.v);
+
+    ASSERT_EQ(objects.devices.size(), 1u);
+    EXPECT_TRUE(objects.devices[0].ancs_notifying) << "the fixture is not reproducing the stale flag";
+    EXPECT_FALSE(objects.devices[0].services_resolved);
+    EXPECT_FALSE(objects.devices[0].le_link_up()) << "a stale notify flag was read as a live LE link";
+    EXPECT_TRUE(objects.devices[0].classic_link_up()) << "Classic is up throughout; only LE dropped";
 }
 
 // The characteristic has to belong to this device. A sibling device's GATT tree

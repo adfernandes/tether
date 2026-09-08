@@ -513,6 +513,7 @@ checks the daemon does not make.
 | The phone shows two entries for this computer | A failed pairing left both a Classic and an LE record | Delete both on the phone before retrying |
 | LE never connects and the log repeats `org.bluez.Error.InProgress` | BlueZ is holding an auto-connect registration that never completed | `sudo systemctl restart bluetooth` -- nothing short of that clears it, see 2026-08-19 below. With `tether-btclass@hci0` enabled the class survives the restart |
 | The log says `could not re-arm the ANCS solicitation` | BlueZ refused to register the advertisement, so nothing is on air for the iPhone to answer | `sudo systemctl restart bluetooth`. Nothing else brings it back, and the LE link cannot form without it |
+| The log repeats `RegisterAdvertisement failed: ... AlreadyExists` for minutes after one timeout | A registration whose call timed out is still held by BlueZ, and the local flag said otherwise so nothing released it | Fixed. A timed-out registration is now released and an `AlreadyExists` is adopted rather than discarded -- see 2026-09-07 below |
 | Pairing warns `RegisterAdvertisement ... doesn't exist` on `org.bluez.LEAdvertisingManager1` | BlueZ exported no advertising manager on this adapter at all, because the controller reports no LE advertising support. Distinct from the row above, where the interface exists and the call is refused | Restarting `bluetooth.service` changes nothing. Confirm with `./scripts/bt-probe.sh`; the only route to ANCS is a controller that can advertise, selected with `tether --bt-adapter <hciN>` -- see 2026-09-03 below |
 | LE never connects and the log repeats `le-connection-abort-by-local` | Something on this side is cancelling the connection. Tether's own cause was a `PreferredBearer` write racing the async connect, fixed; anything else writing that property during a connect will do the same | Check no other Bluetooth tool is driving the same device. The phone is not the cause: `abort-by-local` means the local host cancelled |
 | Messages stopped after turning notification mirroring off | Fixed. The toggle used to restart supervision, which abandoned the MAP and PBAP sessions at obexd instead of removing them, and the iPhone serves one MAP session at a time | Nothing. Mirroring is switched in place now, and a dropped profile supervisor releases its sessions. On an older build, restart `tetherd` |
@@ -521,7 +522,8 @@ checks the daemon does not make.
 | Walked back into range and nothing reconnected for minutes | Fixed. The ANCS advert was gated on the Classic link, and the Classic backoff had no event that ended the absence | Nothing. The advert stays on air whenever LE is down, and an LE link coming up clears the Classic backoff -- see 2026-08-22 |
 | Startup logs `StartNotify not ready yet (InProgress)` for up to a minute | GATT discovery is still running on the new LE link | Nothing. It subscribes on its own. Only treat it as the 2026-08-19 hang if the LE link never comes up |
 | `tether --bt-connection` reports LE and messages up but `Notifications: no`, for hours | Fixed. The LE link was opened by the dial and carries no ANCS. A connected link used to take the solicitation off air, so the phone was never asked for the service | Nothing. The advert goes back on air over a link that has stayed up without ANCS -- see 2026-08-23. To clear it by hand on an older build, `tether --bt-solicit`; do not re-pair, and do not cycle the phone's Bluetooth |
-| LE never comes up on a `BR/EDR + LE` bond, the advert is on air, and cycling the phone's Bluetooth changes nothing | The bond is pinned to `PreferredBearer=bredr`, so the inbound LE link the iPhone opens is never accepted | Fixed for new bonds, which are handed back to `le` after pairing. An older bond stays pinned: re-pair it, or set the property by hand with `busctl set-property org.bluez /org/bluez/hci0/dev_<ADDR> org.bluez.Device1 PreferredBearer s le` -- see 2026-08-25 below |
+| LE never comes up on a `BR/EDR + LE` bond, the advert is on air, and cycling the phone's Bluetooth changes nothing | The bond is pinned to `PreferredBearer=bredr`, so the inbound LE link the iPhone opens is never accepted | Fixed. The supervisor hands the preference back to `le` once the Classic link has settled, on every bond including older ones. **Re-pairing was never the fix** -- the Classic fallback re-pinned it on the next drop -- see 2026-09-07 below. `tether --bt-diagnostics` reports `preferred_bearer`; by hand it is `busctl set-property org.bluez /org/bluez/hci0/dev_<ADDR> org.bluez.Device1 PreferredBearer s le` |
+| `tether --bt-connection` says `LE: yes` and `Notifications: yes`, but nothing arrives, and only toggling Bluetooth on the iPhone fixes it | The LE bearer dropped while Classic stayed up, and BlueZ left `Notifying` set on the ANCS characteristics, so the daemon read the dead link as live and stopped trying to recover it | Fixed. `le_link_up()` now requires `ServicesResolved` alongside `Notifying` -- see 2026-09-07 below. On an older build, toggling the phone's Bluetooth is the only remedy, which is why it was the only one that ever worked |
 | The status says the iPhone is not answering on LE, and its permission is on | The phone's Bluetooth stack is wedged, which the granted permission does not prevent | Turn Bluetooth off and back on **on the iPhone**. Re-pairing and re-toggling the permission do not clear this |
 | The status says this computer is not putting the notification request on air | The adapter reports LE advertising support and BlueZ is holding no advertising instance for it, so the iPhone is never asked for the service | Nothing on the iPhone, and re-pairing will not help. Check `controller` in `tether --bt-diagnostics` and try another with `tether --bt-adapter <hciN>` -- see 2026-09-04 below |
 | Everything connects but `ancs_ready` stays false | Compatibility mode, or iOS has not authorized notification content yet | Check `Mode:` in `tether --bt-status`. In full mode the daemon retries, the first request returns `NotPermitted` until the prompt on the phone is approved |
@@ -856,6 +858,11 @@ notify session needs a live ATT link to exist, so it cannot outlive the link the
 way a cached attribute does, and it was true throughout the working session
 above. That is what `Device::le_link_up()` reads, and what anything tearing the
 bearer down refuses to act against.
+
+**Corrected 2026-09-07: `Notifying` does outlive the link.** When only the LE
+bearer drops under a device that is still Classic-connected, BlueZ leaves it set
+indefinitely -- measured, see that entry below. `le_link_up()` now pairs it with
+`ServicesResolved`.
 
 ### 2026-08-19 - The solicitation advert was a one-shot
 
@@ -2350,3 +2357,174 @@ and PBAP sessions on that bearer. It is one cycle per outage: the drop it causes
 back through `reset()`, so the spent flag survives `reset()` and clears only when a
 telephony object is actually seen. A phone that never offers hands-free -- the PipeWire
 case above -- is therefore asked exactly once and then left alone.
+
+### 2026-09-07 - The bond re-pinned itself to BR/EDR, and re-pairing could not clear it
+
+| | |
+|---|---|
+| Controllers | MediaTek, manufacturer 2279, HCI version 13 (Core 5.4); Realtek RTL8852BE, `usb:v0BDApB85C`, manufacturer 93, HCI version 11 (Core 5.2) |
+| BlueZ | 5.87 on both |
+| Phones | iPhone 17 / iOS 26.6.1; iPhone, iOS 26 |
+| Tether | 0.2.24 and 0.2.26 |
+
+[#128](https://github.com/zackb/tether/issues/128), two reporters, one symptom: a
+`BR/EDR + LE` bond with `bond_has_le: true`, MAP and PBAP both open, the solicitation
+confirmed on air (`advertising_active_instances: 1`), and `LE: no` indefinitely. Both were
+shown `LE_PHONE_SILENT_ADVICE` and cycled the iPhone's Bluetooth -- "countless times", one
+of them -- and both re-paired repeatedly. Neither was on a dongle. One of the two has two
+other machines on which the same phone works.
+
+**The controller is not the variable.** MediaTek and Realtek, two Core versions apart, two
+distributions, identical failure. No known-bad-controller list is warranted by this, and the
+2026-09-04 decision not to keep one stands.
+
+The variable was `PreferredBearer`, and this side wrote it. `connect_classic()` pinned the
+bond so the ACL would come up first:
+
+```cpp
+if (!device->le_link_up())
+    set_preferred_bearer("bredr");
+```
+
+The 2026-08-25 entry fixed the pairing path -- it hands the preference back to `"le"` after
+`CLASSIC_SETTLE_SECONDS` -- and named this exact remaining hole: "`connection.cpp` can re-pin
+`bredr` on the Classic `Device1.Connect` fallback... it can undo the fix later in a session."
+Nothing ever wrote it back. That makes the pin self-reinforcing:
+
+1. Pair. The preference goes back to `"le"` and LE works.
+2. Classic drops, for any reason at all.
+3. The supervisor retries, LE is down, so the fallback re-pins `"bredr"`.
+4. A bond pinned to `bredr` does not accept the inbound LE link the iPhone opens in answer to
+   the solicitation, measured as an A/B on 2026-08-25 (`bredr`: down for 180s across twelve
+   polls; `le`: up in 12s). LE never comes up.
+5. LE being down is the condition in step 3. Every later attempt re-pins.
+
+Which is why re-pairing did nothing for either reporter, and why the troubleshooting row that
+told them to re-pair was wrong. One reporter's log is the whole cycle in forty minutes:
+`11:35:42 already_paired` -> `settling` -> `soliciting`, first Classic failure at `11:36:52`
+(`br-connection-aborted-by-local`), and LE never up again, across a daemon restart.
+
+Fixed in `BearerSupervisor::tick()` rather than in the fallback, because the fallback's reason
+for pinning is sound and only the hand-back was missing. It reuses the settle gate that already
+guards the outbound LE dial, and takes both guards the earlier entries paid for: never over a
+dial in flight (2026-08-19: that write is what produced `le-connection-abort-by-local`, an error
+that appears in this reporter's log too), and once per Classic session rather than once per poll.
+Older bonds are cleared without a re-pair, which the previous troubleshooting row said was
+impossible.
+
+**Two failures of reporting made this cost far more than it should have.**
+
+`PreferredBearer` appeared nowhere -- not in `--bt-connection`, not in `--bt-diagnostics`, not in
+`bt-probe.sh`. Two reporters produced about 25KB of logs, a full diagnostics dump and a clean
+probe between them, and the one property that decided the outcome was in none of it. It is now
+parsed onto `Device`, emitted as `preferred_bearer`, and checked per bonded device by the probe,
+which names the `busctl` one-liner when it reads `bredr` with LE down.
+
+`LE_PHONE_SILENT_ADVICE` sent both of them at the phone. Its selection is sound as far as it goes
+-- `solicited_since_le_down_` correctly rules out our own advertisement -- but "not us" was then
+read as "the phone", and there was a third possibility sitting in a property we were writing
+ourselves. A pinned bond now gets its own advice, ahead of that one. This is the second time
+(2026-09-04 was the first) that a reason string confidently blamed something the daemon had not
+actually checked.
+
+One incidental, from the same log and not the cause of any of the above:
+
+```
+[11:47:50] RegisterAdvertisement failed: Le délai d'attente est dépassé
+[11:48:11] RegisterAdvertisement failed: GDBus.Error:org.bluez.Error.AlreadyExists
+   ... every 30s until 11:50:12
+```
+
+`register_with_bluez` leaves `registered_with_bluez` false on any error, and
+`unregister_with_bluez` is gated on that flag, so a call that timed out left BlueZ holding a
+registration nothing would ever release. It cleared only when the advert's own 180s `Timeout`
+expired -- three minutes with nothing on air. A timed-out registration is now released (harmless
+if it never took), and an `AlreadyExists` is adopted as the registration it is rather than
+discarded. Not raised: the 10s D-Bus timeout on that call. A controller that stalls past ten
+seconds is the problem; a longer timeout only stalls the poll loop with it.
+
+### 2026-09-07 - A notify flag outlived its link, and the daemon stopped trying
+
+| | |
+|---|---|
+| Controller | MediaTek `usb:v0E8Dp0717`, HCI version 13 |
+| BlueZ | 5.87 with `--experimental` |
+| Phone | iPhone 15 Pro, iOS 26 |
+
+Set up to test the `PreferredBearer` hand-back from the entry above: pin a healthy
+bond to `bredr`, drop the LE bearer, watch the supervisor put it right. It did
+nothing for 90 seconds. The hand-back never logged, no solicitation went on air,
+and `tether --bt-connection` reported `LE: yes` and `Notifications: yes` the
+whole time -- on a link that was measurably down.
+
+The two views disagreed completely:
+
+| | Daemon | Bus |
+|---|---|---|
+| LE | `le_connected: true` | `Bearer.LE1.Connected: false` |
+| ANCS | `ancs_ready: true` | `ServicesResolved: false` |
+
+`Device::le_link_up()` is `le_connected || ancs_notifying`, and `ancs_notifying`
+is read from the ANCS Notification Source characteristic's `Notifying` property
+with nothing else consulted. The 2026-08-19 entry chose that property on the
+reasoning that "a notify session needs a live ATT link to exist, so it cannot
+outlive the link the way a cached attribute does." **That is not true when only
+the LE bearer drops.** `Bearer.LE1.Disconnect` under a device still connected on
+BR/EDR leaves everything standing:
+
+| Signal | LE up | LE down |
+|---|---|---|
+| `Device1.Connected` | true | true |
+| `Bearer.LE1.Connected` | true | false |
+| `Bearer.BREDR1.Connected` | true | true |
+| GATT characteristics under the device | 23 | 23 |
+| ANCS notify sources with `Notifying` | 2 | **2** |
+| ANCS UUID in `Device1.UUIDs` | present | present |
+| **`Device1.ServicesResolved`** | **true** | **false** |
+
+Watched to 38s and again to 90s in a separate run; nothing cleared. So
+`le_link_up()` latched true on a dead link, and everything that recovers LE lives
+behind `!le_connected` in `BearerSupervisor::tick()` -- the outbound dial, the
+ANCS solicitation, and the bearer hand-back. All three were unreachable.
+`ancs_soliciting` read false throughout: nothing was on air, and nothing was
+asking.
+
+This is the shape of the long-standing "LE drops and two times in three I have to
+toggle Bluetooth on the iPhone" complaint on this machine. The daemon was not
+failing to recover the link; it did not believe anything was wrong. A phone-side
+toggle is the only thing that tears the GATT tree down and clears `Notifying`,
+which is exactly why it was the only remedy that ever worked, and why waiting
+never did.
+
+`ServicesResolved` is the one property that tracks the ATT link, so it is now
+required alongside the notify flag:
+
+```cpp
+bool le_link_up() const { return le_connected || (ancs_notifying && services_resolved); }
+```
+
+The `ancs_notifying` half stays, because `Bearer.LE1.Connected` still reads false
+on a link the phone opened inbound (2026-08-19), and the cached-GATT trap that
+sent the original reading there is unchanged -- a cached tree has no notify
+session. `ServicesResolved` alone would not do either: 2026-08-23 caught it false
+on a live `Bearer.LE1` link, but with no GATT objects at all, so the notify half
+is false there and the pair still reads down correctly.
+
+Re-running the same test with both fixes installed:
+
+```
+18:02:38  pinned to bredr, Bearer.LE1.Disconnect
+18:02:41  bond was pinned to BR/EDR; preference handed back to LE
+18:02:43  soliciting ANCS for 180s
+          LE, ServicesResolved and PreferredBearer all back inside 5s
+```
+
+Against 90 seconds of nothing on the same hardware minutes earlier. That is the
+first end-to-end confirmation of the hand-back as well: it could not fire before,
+because the branch it lives in was unreachable.
+
+Not settled: `ServicesResolved` on a live *inbound* LE link, where
+`Bearer.LE1.Connected` reads false. The unit fixture asserts true on the mechanism
+argument that a delivering notify session means discovery completed on that link.
+It has not been captured. Anyone who catches that state should read the property
+and record it here.

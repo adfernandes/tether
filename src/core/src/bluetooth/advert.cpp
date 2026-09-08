@@ -166,10 +166,25 @@ namespace tether::bluetooth {
                                                       &error);
         if (!reply) {
             const std::string message = error && error->message ? error->message : "unknown error";
+            const bool already = message.find("AlreadyExists") != std::string::npos;
+            const bool timed_out = g_error_matches(error, G_IO_ERROR, G_IO_ERROR_TIMED_OUT);
+            g_clear_error(&error);
+
+            if (already) {
+                state_->registered_with_bluez = true;
+                debug::log(INFO, "bluetooth: ANCS solicitation was already registered; adopted it");
+                return true;
+            }
+
             debug::log(ERR, "bluetooth: RegisterAdvertisement failed: {}", message);
             if (failure)
                 *failure = message;
-            g_clear_error(&error);
+
+            // A call that timed out has an unknown outcome.
+            if (timed_out) {
+                state_->registered_with_bluez = true;
+                unregister_with_bluez();
+            }
             return false;
         }
         g_variant_unref(reply);

@@ -10,6 +10,7 @@
 #include <algorithm>
 #include <chrono>
 #include <cstdlib>
+#include <cstring>
 #include <deque>
 #include <functional>
 #include <glib.h>
@@ -278,6 +279,14 @@ namespace tether::bluetooth {
         report["group_messages_enabled"] = config.group_messages_enabled;
         report["enabled"] = config.enabled;
         report["ancs_soliciting"] = ancs_solicitation_active();
+        // Device1.PreferredBearer for the selected bond. A "bredr" here with LE
+        // down is the problem.
+        report["preferred_bearer"] = "";
+        if (g_bluez && !config.device_address.empty()) {
+            for (const auto& device : g_bluez->snapshot().devices)
+                if (strcasecmp(device.address.c_str(), config.device_address.c_str()) == 0)
+                    report["preferred_bearer"] = device.preferred_bearer;
+        }
         report["retention"] = to_string(config.retention);
         report["retention_ready"] = secret::have_key();
         report["status"] = redactor.value(status);
