@@ -67,6 +67,11 @@ namespace tether::bluetooth {
                "the service. Nothing on the iPhone changes this and re-pairing will not either. Check the "
                "controller with tether --bt-status; another one can be selected with tether --bt-adapter.");
 
+        constexpr const char* LE_BOND_PINNED_ADVICE =
+            N_("This computer had pinned the bond to BR/EDR, which refuses the LE link the iPhone opens to carry "
+               "notifications. That is being undone now; LE should come up within a minute. Nothing on the iPhone "
+               "changes this and re-pairing will not either.");
+
         constexpr const char* LE_PHONE_SILENT_ADVICE =
             N_("The iPhone is not answering on LE. Its Bluetooth is wedged on its own side: turn Bluetooth off "
                "and back on on the iPhone, which clears this even when Share System Notifications is already on. "
@@ -87,6 +92,7 @@ namespace tether::bluetooth {
         le_down_since_ = -1;
         solicited_since_le_down_ = false;
         classic_connected_since_ = -1;
+        bearer_handed_back_ = false;
         next_classic_attempt_ = 0;
         status_.classic_backoff = 0;
         status_.le_dialling = ops_.le_connect_outstanding();
@@ -141,6 +147,7 @@ namespace tether::bluetooth {
             // rides LE alone, so calling it down here would switch notification
             // mirroring off for a phone that is still delivering notifications.
             classic_connected_since_ = -1;
+            bearer_handed_back_ = false;
 
             const int ceiling = status_.le_connected ? LE_UP_CLASSIC_BACKOFF_MAX_SECONDS : BEARER_BACKOFF_MAX_SECONDS;
 
@@ -221,6 +228,13 @@ namespace tether::bluetooth {
             const bool settled =
                 classic_connected_since_ >= 0 && now - classic_connected_since_ >= BEARER_SETTLE_SECONDS;
 
+            const bool pinned = ops_.preferred_bearer() == "bredr";
+            if (pinned && settled && !bearer_handed_back_ && !ops_.le_connect_outstanding()) {
+                ops_.set_preferred_bearer("le");
+                bearer_handed_back_ = true;
+                debug::log(INFO, "bluetooth: bond was pinned to BR/EDR; preference handed back to LE");
+            }
+
             if (!le_dial_spent_ && settled && !ops_.le_connect_outstanding()) {
                 std::string err;
                 const ConnectResult result = classify(ops_.connect_le(err), err);
@@ -235,6 +249,7 @@ namespace tether::bluetooth {
             const bool le_silent = le_down_since_ >= 0 && now - le_down_since_ >= LE_SILENT_SECONDS;
 
             status_.reason = le_silent && !solicited_since_le_down_ ? _(LE_NEVER_SOLICITED_ADVICE)
+                             : le_silent && pinned                  ? _(LE_BOND_PINNED_ADVICE)
                              : le_silent ? _(LE_PHONE_SILENT_ADVICE)
                                          : _("Connected. Waiting for the iPhone to open the LE link that carries "
                                              "notifications. If it does not, open Settings > Bluetooth > (i) on the "

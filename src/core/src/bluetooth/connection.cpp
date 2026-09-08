@@ -317,7 +317,12 @@ namespace tether::bluetooth {
                 return device && device->le_link_up();
             }
 
-            void set_preferred_bearer(const std::string& bearer) {
+            std::string preferred_bearer() const override {
+                auto device = lookup();
+                return device ? device->preferred_bearer : std::string();
+            }
+
+            void set_preferred_bearer(const std::string& bearer) override {
                 auto device = lookup();
                 if (!device)
                     return;

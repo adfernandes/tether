@@ -226,6 +226,41 @@ else
     fi
 fi
 
+# --- bonded devices ------------------------------------------------------
+# A bond pinned to PreferredBearer=bredr refuses the inbound LE link the iPhone
+# opens in answer to the ANCS solicitation, so notifications never arrive while
+# messages and contacts look perfect.
+echo
+echo "Bonded devices"
+
+dev_paths=$(busctl --system tree org.bluez 2>/dev/null |
+    grep -o "$ADAPTER_PATH/dev_[0-9A-F_]*$" | sort -u)
+
+if [[ -z $dev_paths ]]; then
+    note "none bonded on $ADAPTER"
+else
+    while read -r dev; do
+        [[ -n $dev ]] || continue
+        devprop() {
+            busctl --system get-property org.bluez "$dev" "$1" "$2" 2>/dev/null |
+                awk '{ $1=""; sub(/^ /,""); gsub(/"/,""); print }'
+        }
+        [[ $(devprop org.bluez.Device1 Paired) == true ]] || continue
+        alias=$(devprop org.bluez.Device1 Alias)
+        bearer=$(devprop org.bluez.Device1 PreferredBearer)
+        le_conn=$(devprop org.bluez.Bearer.LE1 Connected)
+
+        if [[ -z $bearer ]]; then
+            note "$alias — PreferredBearer not exposed by this BlueZ"
+        elif [[ $bearer == bredr && $le_conn != true ]]; then
+            warn "$alias — PreferredBearer=bredr with LE down; the bond is refusing the LE link"
+            note "Clear it: busctl set-property org.bluez $dev org.bluez.Device1 PreferredBearer s le"
+        else
+            ok "$alias — PreferredBearer=$bearer"
+        fi
+    done <<<"$dev_paths"
+fi
+
 # --- conflicts -----------------------------------------------------------
 # The iPhone serves exactly one MAP session at a time. Any other local process
 # holding it makes Tether's MAP connect fail with "Connection refused (111)",

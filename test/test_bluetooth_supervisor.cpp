@@ -28,6 +28,16 @@ namespace {
         bool le_bearer_available() const override { return le_available; }
         bool le_connected() const override { return le; }
 
+        // BlueZ's default is "last-seen"; only the pin the Classic fallback
+        // writes matters here.
+        std::string bearer_pref = "last-seen";
+        std::vector<std::string> bearer_writes;
+        std::string preferred_bearer() const override { return bearer_pref; }
+        void set_preferred_bearer(const std::string& bearer) override {
+            bearer_pref = bearer;
+            bearer_writes.push_back(bearer);
+        }
+
         std::string classic_error = "br/edr refused";
         std::string le_error = "le refused";
 
@@ -344,6 +354,71 @@ TEST(BearerSupervisor, BlamesTheAdapterWhenNothingWasEverSolicited) {
 
     sup.tick(now + LE_SILENT_SECONDS);
     EXPECT_NE(sup.status().reason.find("not putting the notification request on air"), std::string::npos);
+    EXPECT_EQ(sup.status().reason.find("turn Bluetooth off"), std::string::npos) << "blames the phone";
+}
+
+// #128: the Classic fallback pins the bond to bredr, and a bond left pinned
+// refuses the inbound LE link the iPhone opens. Nothing used to hand it back, so
+// the pin outlived every re-pair and LE stayed down for good.
+TEST(BearerSupervisor, HandsTheBearerPreferenceBackToLeOnceClassicSettles) {
+    FakeBearer ops;
+    ops.le_succeeds = false;
+    ops.bearer_pref = "bredr";
+    BearerSupervisor sup(ops, true);
+
+    int64_t now = 0;
+    sup.tick(now);
+    sup.tick(++now);
+    EXPECT_TRUE(ops.bearer_writes.empty()) << "wrote before the Classic link settled";
+
+    now += BEARER_SETTLE_SECONDS;
+    sup.tick(now);
+    EXPECT_EQ(ops.bearer_writes, std::vector<std::string>{"le"});
+
+    // One write per Classic session, not one per poll.
+    sup.tick(++now);
+    sup.tick(++now);
+    EXPECT_EQ(ops.bearer_writes.size(), 1u);
+}
+
+// Writing the property under a dial in flight is what cancelled the connect as
+// le-connection-abort-by-local.
+TEST(BearerSupervisor, DoesNotWriteTheBearerPreferenceOverADialInFlight) {
+    FakeBearer ops;
+    ops.le_succeeds = false;
+    ops.bearer_pref = "bredr";
+    ops.outstanding = true;
+    BearerSupervisor sup(ops, true);
+
+    int64_t now = 0;
+    sup.tick(now);
+    sup.tick(++now);
+    now += BEARER_SETTLE_SECONDS;
+    sup.tick(now);
+    EXPECT_TRUE(ops.bearer_writes.empty()) << "wrote over an outstanding connect";
+
+    ops.outstanding = false;
+    sup.tick(++now);
+    EXPECT_EQ(ops.bearer_writes, std::vector<std::string>{"le"});
+}
+
+// A bond still reading bredr after the silence is this computer's doing. Sending
+// that user to cycle Bluetooth on the iPhone is the other #128 dead end.
+TEST(BearerSupervisor, BlamesThePinnedBondRatherThanThePhone) {
+    FakeBearer ops;
+    ops.le_succeeds = false;
+    ops.bearer_pref = "bredr";
+    BearerSupervisor sup(ops, true);
+
+    int64_t now = 0;
+    sup.tick(now);
+    sup.tick(++now);
+    now += BEARER_SETTLE_SECONDS;
+    sup.tick(now);
+    ops.bearer_pref = "bredr"; // the write has not taken effect on the bus yet
+
+    sup.tick(now + LE_SILENT_SECONDS);
+    EXPECT_NE(sup.status().reason.find("pinned the bond to BR/EDR"), std::string::npos);
     EXPECT_EQ(sup.status().reason.find("turn Bluetooth off"), std::string::npos) << "blames the phone";
 }
 

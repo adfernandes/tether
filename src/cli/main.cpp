@@ -484,6 +484,8 @@ static int print_bt_devices(tether::Client& client) {
             add("pbap");
         if (d.value("ancs", false))
             add("ancs");
+        if (d.value("preferred_bearer", std::string()) == "bredr" && !d.value("le_connected", false))
+            add("pinned-bredr");
 
         fprintf(stdout,
                 "  %-18s %-24s %s%s\n",

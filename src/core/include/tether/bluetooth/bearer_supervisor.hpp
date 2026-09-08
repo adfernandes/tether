@@ -54,6 +54,11 @@ namespace tether::bluetooth {
         virtual bool classic_connected() const = 0;
         virtual bool le_bearer_available() const = 0;
         virtual bool le_connected() const = 0;
+        // Device1.PreferredBearer, or empty when BlueZ does not expose it.
+        virtual std::string preferred_bearer() const = 0;
+        // Writes Device1.PreferredBearer. Never while a connect is in flight:
+        // that cancels it as le-connection-abort-by-local.
+        virtual void set_preferred_bearer(const std::string& bearer) = 0;
 
         virtual ConnectResult connect_classic(std::string& err) = 0;
         // Must not block: BlueZ keeps working on a connect after a synchronous
@@ -131,6 +136,8 @@ namespace tether::bluetooth {
         int64_t le_down_since_ = -1;
         // Whether the solicitation has been observed on air since LE went down.
         bool solicited_since_le_down_ = false;
+        // Whether the bearer preference has been handed back to LE this Classic session.
+        bool bearer_handed_back_ = false;
         int64_t next_classic_attempt_ = 0;
     };
 

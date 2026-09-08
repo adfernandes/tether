@@ -211,6 +211,8 @@ namespace tether::bluetooth {
             d.trusted = get_bool(props, "Trusted");
             d.connected = get_bool(props, "Connected");
             d.uuids = get_strv(props, "UUIDs");
+            d.preferred_bearer = get_string(props, "PreferredBearer");
+            d.services_resolved = get_bool(props, "ServicesResolved");
             g_variant_unref(props);
 
             if (GVariant* le = g_variant_lookup_value(ifaces, IFACE_BEARER_LE, G_VARIANT_TYPE("a{sv}"))) {
@@ -572,10 +574,12 @@ namespace tether::bluetooth {
             {"le_bearer", d.has_le_bearer},
             {"le_bonded", d.le_bonded},
             {"le_connected", d.le_connected},
+            {"preferred_bearer", d.preferred_bearer},
             {"map", d.supports_map()},
             {"pbap", d.supports_pbap()},
             {"ancs", d.supports_ancs()},
             {"ancs_notifying", d.ancs_notifying},
+            {"services_resolved", d.services_resolved},
             {"iphone", d.looks_like_iphone()},
         };
     }

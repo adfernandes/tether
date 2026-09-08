@@ -6,9 +6,9 @@
 #, fuzzy
 msgid ""
 msgstr ""
-"Project-Id-Version: tether 0.2.26\n"
+"Project-Id-Version: tether 0.2.27\n"
 "Report-Msgid-Bugs-To: zack@bartel.com\n"
-"POT-Creation-Date: 2026-09-06 13:50-0700\n"
+"POT-Creation-Date: 2026-09-07 17:37-0700\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -735,6 +735,14 @@ msgid ""
 "is never asked for the service. Nothing on the iPhone changes this and re-"
 "pairing will not either. Check the controller with tether --bt-status; "
 "another one can be selected with tether --bt-adapter."
+msgstr ""
+
+#: src/core/src/bluetooth/bearer_supervisor.cpp
+msgid ""
+"This computer had pinned the bond to BR/EDR, which refuses the LE link the "
+"iPhone opens to carry notifications. That is being undone now; LE should "
+"come up within a minute. Nothing on the iPhone changes this and re-pairing "
+"will not either."
 msgstr ""
 
 #: src/core/src/bluetooth/bearer_supervisor.cpp
