@@ -131,6 +131,11 @@ namespace tether::ui {
             return nullptr;
         }
 
+        std::string json_string(const nlohmann::json& j, const char* key, const std::string& fallback = "") {
+            const auto it = j.find(key);
+            return it != j.end() && it->is_string() ? it->get<std::string>() : fallback;
+        }
+
         // "L 82%  R 79%  Case 45%", omitting whatever is not reporting, or the reason
         // there are no levels at all. Empty while the channel is still opening, which
         // is the one state not worth reporting anywhere.
@@ -152,9 +157,9 @@ namespace tether::ui {
             if (!text.empty())
                 return text;
 
-            const std::string status = airpods.value("status", "");
+            const std::string status = json_string(airpods, "status");
             if (status == "busy" || status == "failed")
-                return airpods.value("reason", "");
+                return json_string(airpods, "reason");
             return "";
         }
 
@@ -261,12 +266,12 @@ namespace tether::ui {
         void update_airpods_pane() {
             const nlohmann::json& airpods = g_devices.bt_airpods;
             set_markup(g_devices.lbl_airpods_name,
-                       "<b>" + escape_markup(airpods.value("name", g_devices.selected_bt_name)) + "</b>");
+                       "<b>" + escape_markup(json_string(airpods, "name", g_devices.selected_bt_name)) + "</b>");
 
             const std::string levels = airpods_status_text(airpods);
             set_text(g_devices.lbl_airpods_battery, levels.empty() ? _("Reading battery\u2026") : levels);
 
-            const std::string current = airpods.value("anc", "");
+            const std::string current = json_string(airpods, "anc");
             g_devices.airpods_syncing = true;
             for (int i = 0; i < 4; ++i) {
                 GtkWidget* button = g_devices.airpods_mode_buttons[i];
@@ -277,7 +282,7 @@ namespace tether::ui {
 
             // Reuses the daemon's own sentence rather than inventing a second one.
             const char* reason = !current.empty() ? ""
-                                 : airpods.value("address", "").empty()
+                                 : json_string(airpods, "address").empty()
                                      ? _("No AirPods are connected.")
                                      : _("These AirPods do not report a listening mode.");
             set_text(g_devices.lbl_airpods_reason, reason);
@@ -286,8 +291,8 @@ namespace tether::ui {
             // than naming a side.
             const int in_ear = airpods.value("in_ear", 0);
             const nlohmann::json ear = airpods.value("ear", nlohmann::json::object());
-            const bool ear_known =
-                ear.value("primary", "unknown") != "unknown" || ear.value("secondary", "unknown") != "unknown";
+            const bool ear_known = json_string(ear, "primary", "unknown") != "unknown" ||
+                                   json_string(ear, "secondary", "unknown") != "unknown";
             set_text(g_devices.lbl_airpods_worn,
                      !ear_known    ? _("These AirPods do not report whether they are being worn.")
                      : in_ear == 2 ? _("Both buds are in.")
@@ -1259,7 +1264,7 @@ namespace tether::ui {
             // Battery arrives whenever the buds feel like sending it
             const std::string address = event.value("address", "");
             const std::string text = address.empty() ? "" : airpods_row_text(event);
-            tray_set_airpods(event.value("name", ""), address.empty() ? "" : airpods_status_text(event));
+            tray_set_airpods(json_string(event, "name"), address.empty() ? "" : airpods_status_text(event));
             GList* rows = gtk_container_get_children(GTK_CONTAINER(g_devices.list_devices));
             for (GList* item = rows; item; item = item->next) {
                 auto* row = GTK_WIDGET(item->data);
