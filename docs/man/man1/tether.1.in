@@ -98,6 +98,10 @@ without reporting an error, so check the result with \fB\-\-bt-airpods\fR.
 Pause whatever is playing on this computer when an AirPod is removed, and start it again
 when the buds go back in. Off by default. Only playback Tether paused is resumed.
 .TP
+\fB\-\-bt-airpods-handoff\fR \fIon\fR|\fIoff\fR
+Hand the AirPods to the iPhone when it has a call and take them back afterwards. Off by
+default. Requires call control (\fB\-\-bt-calls-enable on\fR).
+.TP
 \fB\-\-bt-pair\fR \fIADDRESS\fR
 Pair with an iPhone over Bluetooth.
 .TP

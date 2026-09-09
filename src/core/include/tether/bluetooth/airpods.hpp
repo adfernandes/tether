@@ -120,6 +120,16 @@ namespace tether::bluetooth {
     // `holding` is whether the caller has a pause outstanding.
     MediaAction ear_media_action(const EarState& before, const EarState& after, PauseMode mode, bool holding);
 
+    // What an iPhone call should do to AirPods that are connected to this machine.
+    enum class HandoffAction { None, Release, Reclaim };
+
+    // `released` is whether this code is what disconnected them: buds the user
+    // took away by hand are never reclaimed.
+    HandoffAction handoff_action(bool call_active, bool buds_on_linux, bool released, bool enabled);
+
+    // Whether a bt_calls payload describes a call worth handing the buds over for.
+    bool call_wants_audio(const nlohmann::json& calls);
+
     // The connected AirPods worth opening a channel to, or null. Only one is
     // returned: the channel is single-client and so is the watcher.
     const Device* find_airpods(const BluezObjects& objects);

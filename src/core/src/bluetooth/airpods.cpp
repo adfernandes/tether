@@ -286,6 +286,28 @@ namespace tether::bluetooth {
         return MediaAction::None;
     }
 
+    bool call_wants_audio(const nlohmann::json& calls) {
+        if (!calls.is_array())
+            return false;
+        for (const auto& call : calls) {
+            // Ringing counts: the buds have to be on the phone before it is answered.
+            if (call.value("ringing", false) || call.value("outgoing", false) || call.value("connected", false))
+                return true;
+        }
+        return false;
+    }
+
+    HandoffAction handoff_action(bool call_active, bool buds_on_linux, bool released, bool enabled) {
+        if (!enabled)
+            return HandoffAction::None;
+        if (call_active && buds_on_linux && !released)
+            return HandoffAction::Release;
+        // Only after the call, and only buds this code took away.
+        if (!call_active && released)
+            return HandoffAction::Reclaim;
+        return HandoffAction::None;
+    }
+
     const Device* find_airpods(const BluezObjects& objects) {
         for (const auto& device : objects.devices)
             if (device.connected && device.looks_like_airpods())

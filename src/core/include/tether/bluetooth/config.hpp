@@ -50,6 +50,8 @@ namespace tether::bluetooth {
         bool desktop_popups_enabled = true;
         // Whether removing an AirPod pauses local playback.
         PauseMode airpods_pause = PauseMode::Never;
+        // Whether an iPhone call hands the AirPods to the phone and takes them back after.
+        bool airpods_handoff = false;
 
         bool operator==(const Config&) const = default;
     };

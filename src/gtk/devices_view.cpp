@@ -64,6 +64,7 @@ namespace tether::ui {
             GtkWidget* lbl_airpods_reason = nullptr;
             GtkWidget* lbl_airpods_worn = nullptr;
             GtkWidget* cmb_airpods_pause = nullptr;
+            GtkWidget* chk_airpods_handoff = nullptr;
             GtkWidget* airpods_mode_buttons[4] = {nullptr, nullptr, nullptr, nullptr};
             bool airpods_syncing = false;
 
@@ -244,6 +245,13 @@ namespace tether::ui {
             daemon_send({{"command", "bt_airpods_pause"}, {"mode", AIRPODS_PAUSE_MODES[index]}});
         }
 
+        void on_airpods_handoff_toggled(GtkWidget* button, gpointer) {
+            if (g_devices.airpods_syncing)
+                return;
+            daemon_send({{"command", "bt_airpods_handoff"},
+                         {"enabled", gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(button)) == TRUE}});
+        }
+
         void on_airpods_mode_toggled(GtkWidget* button, gpointer data) {
             if (g_devices.airpods_syncing || !gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(button)))
                 return;
@@ -293,6 +301,11 @@ namespace tether::ui {
                     gtk_combo_box_set_active(GTK_COMBO_BOX(g_devices.cmb_airpods_pause), i);
             }
             gtk_widget_set_sensitive(g_devices.cmb_airpods_pause, ear_known);
+
+            gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(g_devices.chk_airpods_handoff),
+                                         g_devices.bt_status.value("airpods_handoff", false));
+            const bool calls_on = g_devices.bt_status.value("calls_enabled", false);
+            gtk_widget_set_sensitive(g_devices.chk_airpods_handoff, calls_on);
             g_devices.airpods_syncing = false;
         }
 
@@ -1493,6 +1506,20 @@ namespace tether::ui {
         g_signal_connect(g_devices.cmb_airpods_pause, "changed", G_CALLBACK(on_airpods_pause_changed), nullptr);
         gtk_box_pack_start(GTK_BOX(pause_row), g_devices.cmb_airpods_pause, FALSE, FALSE, 0);
         gtk_box_pack_start(GTK_BOX(airpods_box), pause_row, FALSE, FALSE, 0);
+
+        GtkWidget* lbl_handoff_title = gtk_label_new(nullptr);
+        gtk_label_set_xalign(GTK_LABEL(lbl_handoff_title), 0.0);
+        set_markup(lbl_handoff_title, "<b>" + escape_markup(_("Calls")) + "</b>");
+        gtk_box_pack_start(GTK_BOX(airpods_box), lbl_handoff_title, FALSE, FALSE, 0);
+
+        g_devices.chk_airpods_handoff =
+            gtk_check_button_new_with_label(_("Hand the AirPods to the iPhone during a call"));
+        gtk_widget_set_tooltip_text(g_devices.chk_airpods_handoff,
+                                    _("Pauses playback and disconnects the AirPods so the iPhone can take them, "
+                                      "then reconnects them when the call ends. Needs call control, and only "
+                                      "applies while the buds are connected to this computer."));
+        g_signal_connect(g_devices.chk_airpods_handoff, "toggled", G_CALLBACK(on_airpods_handoff_toggled), nullptr);
+        gtk_box_pack_start(GTK_BOX(airpods_box), g_devices.chk_airpods_handoff, FALSE, FALSE, 0);
 
         gtk_stack_add_named(GTK_STACK(g_devices.right_pane_stack), airpods_box, "airpods");
 

@@ -64,6 +64,7 @@ namespace tether::bluetooth {
         j["retention"] = to_string(config.retention);
         j["desktop_popups_enabled"] = config.desktop_popups_enabled;
         j["airpods_pause"] = to_string(config.airpods_pause);
+        j["airpods_handoff"] = config.airpods_handoff;
         return j.dump(2);
     }
 
@@ -85,6 +86,7 @@ namespace tether::bluetooth {
             config.retention = retention_from_string(j.value("retention", "encrypted"));
             config.desktop_popups_enabled = j.value("desktop_popups_enabled", true);
             config.airpods_pause = pause_mode_from_string(j.value("airpods_pause", ""));
+            config.airpods_handoff = j.value("airpods_handoff", false);
         } catch (const std::exception&) {
             // A corrupt file must not stop the daemon; defaults are safe.
         }

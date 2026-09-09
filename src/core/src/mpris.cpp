@@ -7,6 +7,8 @@
 
 namespace tether {
 
+    MediaControl* g_media = nullptr;
+
     namespace {
 
         constexpr const char* MPRIS_PREFIX = "org.mpris.MediaPlayer2.";

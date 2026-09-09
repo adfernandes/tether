@@ -37,4 +37,7 @@ namespace tether {
         std::unique_ptr<Impl> impl_;
     };
 
+    // Set for the daemon's lifetime
+    extern MediaControl* g_media;
+
 } // namespace tether

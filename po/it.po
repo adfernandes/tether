@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: tether\n"
 "Report-Msgid-Bugs-To: zack@bartel.com\n"
-"POT-Creation-Date: 2026-09-08 16:56-0700\n"
+"POT-Creation-Date: 2026-09-08 17:21-0700\n"
 "PO-Revision-Date: 2026-08-23\n"
 "Last-Translator: Tether project\n"
 "Language-Team: Italian\n"
@@ -100,8 +100,16 @@ msgstr ""
 "adaptive."
 
 #: src/cli/main.cpp
-msgid "Pause local playback when an AirPod is removed: never, one-removed, both-removed."
-msgstr "Metti in pausa la riproduzione locale quando un AirPod viene rimosso: never, one-removed, both-removed."
+msgid ""
+"Pause local playback when an AirPod is removed: never, one-removed, both-"
+"removed."
+msgstr ""
+"Metti in pausa la riproduzione locale quando un AirPod viene rimosso: never, "
+"one-removed, both-removed."
+
+#: src/cli/main.cpp
+msgid "Hand the AirPods to the iPhone during a call: on or off."
+msgstr "Passa gli AirPods all'iPhone durante una chiamata: on oppure off."
 
 #: src/cli/main.cpp
 msgid "List iPhone message conversations."
@@ -490,8 +498,21 @@ msgid "Use never, one-removed or both-removed.\n"
 msgstr "Usa never, one-removed o both-removed.\n"
 
 #: src/cli/main.cpp
+#, c-format
 msgid "Pause on removal set to %s.\n"
 msgstr "Pausa alla rimozione impostata su %s.\n"
+
+#: src/cli/main.cpp
+msgid "Use on or off.\n"
+msgstr "Usa on oppure off.\n"
+
+#: src/cli/main.cpp
+msgid "An iPhone call will hand the AirPods to the phone and take them back after."
+msgstr "Una chiamata sull'iPhone gli passerà gli AirPods e li riprenderà al termine."
+
+#: src/cli/main.cpp
+msgid "AirPods handoff is off."
+msgstr "Il passaggio degli AirPods è disattivato."
 
 #: src/cli/main.cpp
 msgid "Daemon closed the connection before the operation finished.\n"
@@ -1863,8 +1884,25 @@ msgid "Both buds are removed"
 msgstr "Entrambi gli auricolari vengono rimossi"
 
 #: src/gtk/devices_view.cpp
-msgid "Pauses whatever is playing on this computer, and starts it again when the buds go back in. Only playback Tether paused is resumed."
-msgstr "Mette in pausa ciò che è in riproduzione su questo computer e lo riavvia quando gli auricolari vengono rimessi. Viene ripresa solo la riproduzione messa in pausa da Tether."
+msgid ""
+"Pauses whatever is playing on this computer, and starts it again when the "
+"buds go back in. Only playback Tether paused is resumed."
+msgstr ""
+"Mette in pausa ciò che è in riproduzione su questo computer e lo riavvia "
+"quando gli auricolari vengono rimessi. Viene ripresa solo la riproduzione "
+"messa in pausa da Tether."
+
+#: src/gtk/devices_view.cpp src/gtk/main.cpp
+msgid "Calls"
+msgstr "Chiamate"
+
+#: src/gtk/devices_view.cpp
+msgid "Hand the AirPods to the iPhone during a call"
+msgstr "Passa gli AirPods all'iPhone durante una chiamata"
+
+#: src/gtk/devices_view.cpp
+msgid "Pauses playback and disconnects the AirPods so the iPhone can take them, then reconnects them when the call ends. Needs call control, and only applies while the buds are connected to this computer."
+msgstr "Mette in pausa la riproduzione e disconnette gli AirPods perché l'iPhone possa prenderli, poi li riconnette al termine della chiamata. Richiede il controllo delle chiamate e si applica solo mentre gli auricolari sono connessi a questo computer."
 
 #: src/gtk/devices_view.cpp
 msgid "Bluetooth needs one-time system setup"
@@ -1951,10 +1989,6 @@ msgstr "Esci"
 #: src/gtk/main.cpp
 msgid "Devices"
 msgstr "Dispositivi"
-
-#: src/gtk/main.cpp
-msgid "Calls"
-msgstr "Chiamate"
 
 #: src/gtk/main.cpp
 msgid "Start hidden in the system tray"

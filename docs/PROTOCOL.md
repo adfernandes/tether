@@ -380,6 +380,12 @@ them, so `in_ear` carries the count and nothing names a side.
 Whether removing a bud pauses local playback: `never` (the default), `one-removed` or
 `both-removed`. Persisted, and reported back as `airpods_pause` in `bt_status`.
 
+#### `bt_airpods_handoff` (Client -> Daemon)
+**Payload**: `{"command": "bt_airpods_handoff", "enabled": true}`
+
+Whether an iPhone call hands the AirPods to the phone and takes them back after. Off by
+default, needs call control, and reported as `airpods_handoff` in `bt_status`.
+
 #### `bt_airpods_mode` (Client -> Daemon, answered directly)
 **Payload**: `{"command": "bt_airpods_mode", "mode": "transparency"}`
 **Response**: `{"command": "bt_airpods_mode_result", "success": true}`, or `success` false

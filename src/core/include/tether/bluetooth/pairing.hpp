@@ -64,6 +64,10 @@ namespace tether::bluetooth {
     // so a caller can publish the growing device list.
     bool scan_devices(BluezMonitor& monitor, int seconds, const std::function<void()>& on_tick, std::string& err);
 
+    // Device1.Connect / Device1.Disconnect on a bonded device, by address.
+    bool connect_device(BluezMonitor& monitor, const std::string& address, std::string& err);
+    bool disconnect_device(BluezMonitor& monitor, const std::string& address, std::string& err);
+
     // Puts the ANCS solicitation advertisement back on air without re-pairing.
     // This is what makes iOS reveal its "Show Message Notifications" and
     // "Sync Contacts" toggles, and it expires a few minutes after pairing, so

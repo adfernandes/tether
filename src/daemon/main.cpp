@@ -10,6 +10,7 @@
 #include <tether/bluetooth/connection.hpp>
 #include <tether/bluetooth/contacts.hpp>
 #include <tether/bluetooth/monitor.hpp>
+#include <tether/bluetooth/pairing.hpp>
 #include <tether/core.hpp>
 #include <tether/crypto.hpp>
 #include <tether/discovery.hpp>
@@ -48,6 +49,10 @@ static void redirect_output_to_log() {
         // Losing the log is survivable; failing to start is not.
     }
 }
+
+// How long to let the phone finish with the buds before reclaiming them.
+constexpr int HANDOFF_SETTLE_SECONDS = 2;
+constexpr int HANDOFF_RECLAIM_ATTEMPTS = 3;
 
 int main(int argc, char** argv) {
     redirect_output_to_log();
@@ -248,29 +253,122 @@ int main(int argc, char** argv) {
     // Pick the controller before the first capability, a second adapter never comes up bound to the wrong one.
     bluez.set_preferred_adapter(bt_config.adapter);
 
+    // Handing the buds to the iPhone for a call and taking them back after.
+    struct Handoff {
+        mutable std::mutex mutex;
+        std::string released;
+        bool busy = false;
+
+        bool holding_buds() const {
+            std::lock_guard<std::mutex> lock(mutex);
+            return !released.empty();
+        }
+    };
+    auto handoff = std::make_shared<Handoff>();
+
     // AirPods battery arrives on its own L2CAP channel, not through BlueZ.
     tether::MediaControl media;
     tether::bluetooth::EarState last_ear;
-    tether::bluetooth::AirPodsWatcher airpods([&media, &last_ear](const tether::bluetooth::AirPodsState& state) {
-        const auto mode = tether::bluetooth::load_config().airpods_pause;
-        switch (tether::bluetooth::ear_media_action(last_ear, state.ear, mode, media.holding())) {
-        case tether::bluetooth::MediaAction::Pause:
-            if (const size_t paused = media.pause())
-                debug::log(INFO, "airpods: paused {} player(s), a bud came out", paused);
-            break;
-        case tether::bluetooth::MediaAction::Resume:
-            if (const size_t resumed = media.resume())
-                debug::log(INFO, "airpods: resumed {} player(s), the buds went back in", resumed);
-            break;
-        case tether::bluetooth::MediaAction::None:
-            break;
-        }
-        if (state.address.empty())
-            media.forget();
-        last_ear = state.ear;
+    tether::bluetooth::AirPodsWatcher airpods(
+        [&media, &last_ear, handoff](const tether::bluetooth::AirPodsState& state) {
+            const auto mode = tether::bluetooth::load_config().airpods_pause;
+            switch (tether::bluetooth::ear_media_action(last_ear, state.ear, mode, media.holding())) {
+            case tether::bluetooth::MediaAction::Pause:
+                if (const size_t paused = media.pause())
+                    debug::log(INFO, "airpods: paused {} player(s), a bud came out", paused);
+                break;
+            case tether::bluetooth::MediaAction::Resume:
+                if (const size_t resumed = media.resume())
+                    debug::log(INFO, "airpods: resumed {} player(s), the buds went back in", resumed);
+                break;
+            case tether::bluetooth::MediaAction::None:
+                break;
+            }
 
-        tether::broadcast_local_event(tether::bluetooth::to_json(state).dump());
-    });
+            if (state.address.empty() && !handoff->holding_buds())
+                media.forget();
+
+            last_ear = state.ear;
+
+            tether::broadcast_local_event(tether::bluetooth::to_json(state).dump());
+        });
+    const auto run_handoff = [&bluez, &media, handoff](const nlohmann::json& calls) {
+        const auto config = tether::bluetooth::load_config();
+        const bool active = tether::bluetooth::call_wants_audio(calls);
+
+        std::string target;
+        bool released_now = false;
+        {
+            std::lock_guard<std::mutex> lock(handoff->mutex);
+            if (handoff->busy)
+                return;
+            released_now = !handoff->released.empty();
+            target = handoff->released;
+        }
+
+        // The snapshot has to outlive the pointer into it.
+        const auto snapshot = bluez.snapshot();
+        const auto* device = tether::bluetooth::find_airpods(snapshot);
+        if (!released_now && device)
+            target = device->address;
+
+        const auto action =
+            tether::bluetooth::handoff_action(active, device != nullptr, released_now, config.airpods_handoff);
+        if (action == tether::bluetooth::HandoffAction::None || target.empty())
+            return;
+
+        {
+            std::lock_guard<std::mutex> lock(handoff->mutex);
+            handoff->busy = true;
+        }
+
+        if (action == tether::bluetooth::HandoffAction::Release) {
+            media.pause();
+            {
+                std::lock_guard<std::mutex> lock(handoff->mutex);
+                handoff->released = target;
+            }
+            std::string err;
+            const bool ok = tether::bluetooth::disconnect_device(bluez, target, err);
+            std::lock_guard<std::mutex> lock(handoff->mutex);
+            handoff->busy = false;
+            if (ok) {
+                debug::log(INFO, "airpods: handed the buds to the iPhone for a call");
+            } else {
+                handoff->released.clear();
+                debug::log(WARN, "airpods: could not release the buds: {}", err);
+            }
+            return;
+        }
+
+        std::thread([handoff, target] {
+            // The phone does not drop them the instant the call ends.
+            std::this_thread::sleep_for(std::chrono::seconds(HANDOFF_SETTLE_SECONDS));
+            bool ok = false;
+            for (int attempt = 0; attempt < HANDOFF_RECLAIM_ATTEMPTS && !ok; ++attempt) {
+                std::string err;
+                ok = tether::bluetooth::g_bluez &&
+                     tether::bluetooth::connect_device(*tether::bluetooth::g_bluez, target, err);
+                if (!ok) {
+                    debug::log(DEBUG, "airpods: reclaim attempt {} failed: {}", attempt + 1, err);
+                    std::this_thread::sleep_for(std::chrono::seconds(HANDOFF_SETTLE_SECONDS));
+                }
+            }
+            if (tether::g_media) {
+                if (ok)
+                    tether::g_media->resume();
+                else
+                    tether::g_media->forget();
+            }
+            debug::log(ok ? INFO : WARN,
+                       ok ? "airpods: took the buds back after the call"
+                          : "airpods: the buds did not come back; leaving them to the phone");
+            std::lock_guard<std::mutex> lock(handoff->mutex);
+            handoff->released.clear();
+            handoff->busy = false;
+        }).detach();
+    };
+
     const auto follow_airpods = [&bluez, &airpods]() {
         const auto snapshot = bluez.snapshot();
         const auto* device = tether::bluetooth::find_airpods(snapshot);
@@ -280,6 +378,7 @@ int main(int argc, char** argv) {
     if (bluez.start()) {
         tether::bluetooth::g_bluez = &bluez;
         tether::bluetooth::g_airpods = &airpods;
+        tether::g_media = &media;
         loop.addFd(bluez.event_fd(), [&bluez, &follow_airpods](int) {
             bluez.drain();
             tether::broadcast_local_event(tether::build_bt_devices().dump());
@@ -346,7 +445,9 @@ int main(int argc, char** argv) {
                 });
         }
 
-        connections.set_call_handler([](const nlohmann::json& calls) {
+        connections.set_call_handler([&run_handoff](const nlohmann::json& calls) {
+            run_handoff(calls);
+
             nlohmann::json event;
             event["command"] = "bt_calls";
             event["calls"] = calls;

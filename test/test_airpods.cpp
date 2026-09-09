@@ -181,6 +181,49 @@ TEST(AirPods, PutsABudInTheCaseTheSameAsOutOfTheEar) {
     EXPECT_EQ(ear_media_action(in_case, in_case, PauseMode::OneRemoved, false), MediaAction::None);
 }
 
+TEST(AirPods, HandoffIsOffUnlessEnabled) {
+    EXPECT_EQ(handoff_action(true, true, false, false), HandoffAction::None);
+    EXPECT_EQ(handoff_action(false, false, true, false), HandoffAction::None);
+}
+
+TEST(AirPods, HandsBudsOverForACallAndTakesThemBack) {
+    EXPECT_EQ(handoff_action(true, true, false, true), HandoffAction::Release);
+    // Released, so the buds are no longer on this machine; the call ending is the trigger.
+    EXPECT_EQ(handoff_action(true, false, true, true), HandoffAction::None);
+    EXPECT_EQ(handoff_action(false, false, true, true), HandoffAction::Reclaim);
+}
+
+// Buds the user disconnected themselves are not ours to take back.
+TEST(AirPods, DoesNotReclaimBudsItDidNotRelease) {
+    EXPECT_EQ(handoff_action(false, false, false, true), HandoffAction::None);
+    EXPECT_EQ(handoff_action(false, true, false, true), HandoffAction::None);
+}
+
+// A call while the buds are already on the phone has nothing to hand over.
+TEST(AirPods, DoesNothingWhenTheBudsAreNotOnThisMachine) {
+    EXPECT_EQ(handoff_action(true, false, false, true), HandoffAction::None);
+}
+
+// Releasing twice would lose track of what to give back.
+TEST(AirPods, DoesNotReleaseTwice) { EXPECT_EQ(handoff_action(true, true, true, true), HandoffAction::None); }
+
+TEST(AirPods, RecognisesCallsThatWantTheBuds) {
+    const auto calls = [](const char* text) { return nlohmann::json::parse(text); };
+    EXPECT_TRUE(call_wants_audio(calls(R"([{"state":"incoming","ringing":true}])")));
+    EXPECT_TRUE(call_wants_audio(calls(R"([{"state":"active","connected":true}])")));
+    EXPECT_TRUE(call_wants_audio(calls(R"([{"state":"dialing","outgoing":true}])")));
+    // A held call still has the buds' attention.
+    EXPECT_TRUE(call_wants_audio(calls(R"([{"state":"held","connected":true}])")));
+
+    EXPECT_FALSE(call_wants_audio(calls("[]")));
+    EXPECT_FALSE(call_wants_audio(calls(R"([{"state":"disconnected"}])")));
+    EXPECT_FALSE(call_wants_audio(nlohmann::json()));
+    EXPECT_FALSE(call_wants_audio(calls(R"({"not":"an array"})")));
+
+    // One live call among finished ones still counts.
+    EXPECT_TRUE(call_wants_audio(calls(R"([{"state":"disconnected"},{"state":"active","connected":true}])")));
+}
+
 TEST(AirPods, DistinguishesAirPodsFromAnIPhone) {
     Device buds;
     buds.name = "ZBZ AirPros";

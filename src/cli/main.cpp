@@ -194,6 +194,7 @@ static const Opt kOptions[] = {
     {"--bt-airpods", N_("Show AirPods and case battery.")},
     {"--bt-airpods-mode", N_("Set the AirPods listening mode: off, anc, transparency, adaptive.")},
     {"--bt-airpods-pause", N_("Pause local playback when an AirPod is removed: never, one-removed, both-removed.")},
+    {"--bt-airpods-handoff", N_("Hand the AirPods to the iPhone during a call: on or off.")},
     {"--bt-threads", N_("List iPhone message conversations.")},
     {"--bt-messages <thread>", N_("Show messages in one conversation.")},
     {"--bt-send <thread> <text>", N_("Reply in one conversation.")},
@@ -575,6 +576,22 @@ static int set_bt_airpods_pause(tether::Client& client, const std::string& mode)
         return 1;
     }
     fprintf(stdout, _("Pause on removal set to %s.\n"), mode.c_str());
+    return 0;
+}
+
+static int set_bt_airpods_handoff(tether::Client& client, const std::string& value) {
+    if (value != "on" && value != "off") {
+        debug::log(ERR, _("Use on or off.\n"));
+        return 1;
+    }
+    if (!client.send(nlohmann::json{{"command", "bt_airpods_handoff"}, {"enabled", value == "on"}}.dump() + "\n")) {
+        debug::log(ERR, _("Could not reach the daemon.\n"));
+        return 1;
+    }
+    fprintf(stdout,
+            "%s\n",
+            value == "on" ? _("An iPhone call will hand the AirPods to the phone and take them back after.")
+                          : _("AirPods handoff is off."));
     return 0;
 }
 
@@ -1035,6 +1052,10 @@ int main(int argc, char* argv[]) {
             action = "bt_airpods_pause";
             if (i + 1 < argc && argv[i + 1][0] != '-')
                 arg_val = argv[++i];
+        } else if (arg == "--bt-airpods-handoff") {
+            action = "bt_airpods_handoff";
+            if (i + 1 < argc && argv[i + 1][0] != '-')
+                arg_val = argv[++i];
         } else if (arg == "--bt-diagnostics") {
             action = "bt_diagnostics";
         } else if (arg == "--bt-threads") {
@@ -1276,6 +1297,8 @@ int main(int argc, char* argv[]) {
         return set_bt_airpods_mode(client, arg_val);
     } else if (action == "bt_airpods_pause") {
         return set_bt_airpods_pause(client, arg_val);
+    } else if (action == "bt_airpods_handoff") {
+        return set_bt_airpods_handoff(client, arg_val);
     } else if (action == "bt_diagnostics") {
         return print_bt_diagnostics(client);
     } else if (action == "bt_threads") {
