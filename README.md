@@ -30,10 +30,10 @@
 | **iOS App** | ✅ Stable |
 | **Browser Extension** | ✅ Stable |
 | **Mail Extension** | ✅ Stable |
-| **Messages (SMS/iMessage)** | 🧪 Beta |
+| **Messages (SMS/iMessage)** | ✅ Stable |
 | **Notification Mirroring** | 🧪 Beta |
-| **Phone Calls** | 🧪 Alpha |
-| **TOTP/OTP Vault** | 🗓️ Planning |
+| **Phone Calls** (PipeWire only) | 🧪 Alpha |
+| **AirPods** | 🧪 Alpha |
 
 ### Clipboard Sync
 Text copied on your Linux desktop appears instantly on your iPhone, and vice versa.
