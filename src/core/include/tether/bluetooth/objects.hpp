@@ -17,6 +17,10 @@ namespace tether::bluetooth {
     inline constexpr const char* UUID_MAP_MNS = "00001133-0000-1000-8000-00805f9b34fb";
     inline constexpr const char* UUID_PBAP_PSE = "0000112f-0000-1000-8000-00805f9b34fb";
     inline constexpr const char* UUID_ANCS = "7905f431-b5ce-4e99-a40f-4b1e122d00d0";
+    inline constexpr const char* UUID_A2DP_SINK = "0000110b-0000-1000-8000-00805f9b34fb";
+
+    // Modalias prefix for Apple's Bluetooth vendor id, shared by every Apple device.
+    inline constexpr const char* MODALIAS_APPLE = "bluetooth:v004c";
 
     inline constexpr uint32_t COD_TARGET = 0x0408;
     inline constexpr uint32_t COD_MASK = 0x1fff;
@@ -54,6 +58,8 @@ namespace tether::bluetooth {
         bool trusted = false;
         bool connected = false;
         std::vector<std::string> uuids;
+        // Device1.Modalias, e.g. "bluetooth:v004Cp200Ed0100". Names the remote's vendor.
+        std::string modalias;
 
         bool ancs_notifying = false;
 
@@ -82,6 +88,8 @@ namespace tether::bluetooth {
         bool supports_pbap() const { return has_uuid(UUID_PBAP_PSE); }
         bool supports_ancs() const { return has_uuid(UUID_ANCS); }
         bool looks_like_iphone() const;
+        // Apple audio gear rather than a phone: AAP battery is worth trying on it.
+        bool looks_like_airpods() const;
 
         bool operator==(const Device&) const = default;
     };

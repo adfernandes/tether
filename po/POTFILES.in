@@ -1,4 +1,5 @@
 src/cli/main.cpp
+src/core/src/bluetooth/airpods.cpp
 src/core/src/bluetooth/bearer_supervisor.cpp
 src/core/src/bluetooth/connection.cpp
 src/core/src/bluetooth/groups.cpp

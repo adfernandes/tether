@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: tether\n"
 "Report-Msgid-Bugs-To: zack@bartel.com\n"
-"POT-Creation-Date: 2026-09-07 17:37-0700\n"
+"POT-Creation-Date: 2026-09-08 17:21-0700\n"
 "PO-Revision-Date: 2026-08-23\n"
 "Last-Translator: Tether project\n"
 "Language-Team: Turkish\n"
@@ -85,6 +85,26 @@ msgstr "BlueZ'in bildiği Bluetooth aygıtlarını listele."
 #: src/cli/main.cpp
 msgid "Show Bluetooth link and profile connection state."
 msgstr "Bluetooth bağlantısının ve profillerin durumunu göster."
+
+#: src/cli/main.cpp
+msgid "Show AirPods and case battery."
+msgstr "AirPods ve kutu pil durumunu göster."
+
+#: src/cli/main.cpp
+msgid "Set the AirPods listening mode: off, anc, transparency, adaptive."
+msgstr "AirPods dinleme modunu ayarla: off, anc, transparency, adaptive."
+
+#: src/cli/main.cpp
+msgid ""
+"Pause local playback when an AirPod is removed: never, one-removed, both-"
+"removed."
+msgstr ""
+"Bir AirPod çıkarıldığında yerel oynatmayı duraklat: never, one-removed, both-"
+"removed."
+
+#: src/cli/main.cpp
+msgid "Hand the AirPods to the iPhone during a call: on or off."
+msgstr "Görüşme sırasında AirPods’u iPhone’a devret: on veya off."
 
 #: src/cli/main.cpp
 msgid "List iPhone message conversations."
@@ -430,8 +450,64 @@ msgid "No Bluetooth devices known to BlueZ.\n"
 msgstr "BlueZ'in bildiği hiçbir Bluetooth aygıtı yok.\n"
 
 #: src/cli/main.cpp
+msgid "Could not read the AirPods battery from the daemon.\n"
+msgstr "AirPods pil durumu arka plan hizmetinden okunamadı.\n"
+
+#: src/cli/main.cpp
+#, c-format
+msgid "No AirPods connected.\n"
+msgstr "Bağlı AirPods yok.\n"
+
+#: src/cli/main.cpp
+msgid "Left"
+msgstr "Sol"
+
+#: src/cli/main.cpp
+msgid "Right"
+msgstr "Sağ"
+
+#. TRANSLATORS: The AirPods charging case, on the device row beside the two earbuds.
+#: src/cli/main.cpp src/gtk/devices_view.cpp
+msgid "Case"
+msgstr "Kutu"
+
+#: src/cli/main.cpp
+msgid "Worn"
+msgstr "Takılı"
+
+#: src/cli/main.cpp
 msgid "Could not reach the daemon.\n"
 msgstr "Arka plan hizmetine ulaşılamadı.\n"
+
+#: src/cli/main.cpp
+#, c-format
+msgid "Listening mode set to %s.\n"
+msgstr "Dinleme modu %s olarak ayarlandı.\n"
+
+#: src/cli/main.cpp
+msgid "The listening mode could not be set."
+msgstr "Dinleme modu ayarlanamadı."
+
+#: src/cli/main.cpp
+msgid "Use never, one-removed or both-removed.\n"
+msgstr "never, one-removed veya both-removed kullanın.\n"
+
+#: src/cli/main.cpp
+#, c-format
+msgid "Pause on removal set to %s.\n"
+msgstr "Çıkarınca duraklatma %s olarak ayarlandı.\n"
+
+#: src/cli/main.cpp
+msgid "Use on or off.\n"
+msgstr "on veya off kullanın.\n"
+
+#: src/cli/main.cpp
+msgid "An iPhone call will hand the AirPods to the phone and take them back after."
+msgstr "iPhone’daki bir çağrı AirPods’u telefona devreder ve görüşme bitince geri alır."
+
+#: src/cli/main.cpp
+msgid "AirPods handoff is off."
+msgstr "AirPods devri kapalı."
 
 #: src/cli/main.cpp
 msgid "Daemon closed the connection before the operation finished.\n"
@@ -779,6 +855,18 @@ msgstr "Bağdaştırıcı seçimi otomatik: açık olan ilk bağdaştırıcı.\n
 msgid "Using controller {}."
 msgstr "{} bağdaştırıcısı kullanılıyor."
 
+#: src/core/src/bluetooth/airpods.cpp
+msgid "The AirPods address could not be read."
+msgstr "AirPods adresi okunamadı."
+
+#: src/core/src/bluetooth/airpods.cpp
+msgid "Bluetooth sockets are unavailable on this system."
+msgstr "Bu sistemde Bluetooth soketleri kullanılamıyor."
+
+#: src/core/src/bluetooth/airpods.cpp
+msgid "Another program is using the AirPods channel."
+msgstr "AirPods kanalını başka bir program kullanıyor."
+
 #: src/core/src/bluetooth/bearer_supervisor.cpp
 msgid ""
 "Messages and contacts are connected. BlueZ reports the Bluetooth link down "
@@ -811,7 +899,10 @@ msgid ""
 "come up within a minute. Nothing on the iPhone changes this and re-pairing "
 "will not either."
 msgstr ""
-"Bu bilgisayar eşleşmeyi BR/EDR'ye sabitlemişti; bu da iPhone'un bildirimleri taşımak için açtığı LE bağlantısını reddediyor. Bu şimdi geri alınıyor; LE bir dakika içinde kurulmalı. iPhone'da hiçbir şey bunu değiştirmez, yeniden eşleştirmek de değiştirmez."
+"Bu bilgisayar eşleşmeyi BR/EDR'ye sabitlemişti; bu da iPhone'un bildirimleri "
+"taşımak için açtığı LE bağlantısını reddediyor. Bu şimdi geri alınıyor; LE "
+"bir dakika içinde kurulmalı. iPhone'da hiçbir şey bunu değiştirmez, yeniden "
+"eşleştirmek de değiştirmez."
 
 #: src/core/src/bluetooth/bearer_supervisor.cpp
 msgid ""
@@ -1192,6 +1283,14 @@ msgid "Not a DTMF sequence."
 msgstr "DTMF dizisi değil."
 
 #: src/core/src/net.cpp
+msgid "Unknown listening mode."
+msgstr "Bilinmeyen dinleme modu."
+
+#: src/core/src/net.cpp src/gtk/devices_view.cpp
+msgid "No AirPods are connected."
+msgstr "Bağlı AirPods yok."
+
+#: src/core/src/net.cpp
 msgid "Notification mirroring is already active; nothing to do."
 msgstr "Bildirim yansıtma zaten etkin, yapılacak bir şey yok."
 
@@ -1373,6 +1472,20 @@ msgstr "Tether arka plan hizmeti çalışmıyor."
 msgid "Daemon Online"
 msgstr "Arka plan hizmeti çevrimiçi"
 
+#. TRANSLATORS: Left earbud, abbreviated to fit the device row. One or two letters.
+#: src/gtk/devices_view.cpp
+msgid "L"
+msgstr "L"
+
+#. TRANSLATORS: Right earbud, abbreviated to fit the device row. One or two letters.
+#: src/gtk/devices_view.cpp
+msgid "R"
+msgstr "R"
+
+#: src/gtk/devices_view.cpp
+msgid "Reading battery…"
+msgstr "Pil durumu okunuyor…"
+
 #: src/gtk/devices_view.cpp
 msgid "Connected."
 msgstr "Bağlandı."
@@ -1388,6 +1501,42 @@ msgstr "Bu makinede Bluetooth kullanılamıyor."
 #: src/gtk/devices_view.cpp
 msgid "Scanning for nearby devices..."
 msgstr "Yakındaki aygıtlar taranıyor..."
+
+#: src/gtk/devices_view.cpp
+msgid "Off"
+msgstr "Kapalı"
+
+#: src/gtk/devices_view.cpp
+msgid "Transparency"
+msgstr "Şeffaflık"
+
+#: src/gtk/devices_view.cpp
+msgid "Adaptive"
+msgstr "Uyarlanabilir"
+
+#: src/gtk/devices_view.cpp
+msgid "Noise Cancellation"
+msgstr "Gürültü Engelleme"
+
+#: src/gtk/devices_view.cpp
+msgid "These AirPods do not report a listening mode."
+msgstr "Bu AirPods bir dinleme modu bildirmiyor."
+
+#: src/gtk/devices_view.cpp
+msgid "These AirPods do not report whether they are being worn."
+msgstr "Bu AirPods takılı olup olmadığını bildirmiyor."
+
+#: src/gtk/devices_view.cpp
+msgid "Both buds are in."
+msgstr "Her iki kulaklık da takılı."
+
+#: src/gtk/devices_view.cpp
+msgid "One bud is in."
+msgstr "Bir kulaklık takılı."
+
+#: src/gtk/devices_view.cpp
+msgid "Neither bud is in."
+msgstr "Hiçbir kulaklık takılı değil."
 
 #: src/gtk/devices_view.cpp
 msgid "Full mode — messages, contacts, and notifications."
@@ -1677,6 +1826,50 @@ msgid "Scan for devices"
 msgstr "Aygıtları tara"
 
 #: src/gtk/devices_view.cpp
+msgid "Listening mode"
+msgstr "Dinleme modu"
+
+#: src/gtk/devices_view.cpp
+msgid "In-ear detection"
+msgstr "Kulakta algılama"
+
+#: src/gtk/devices_view.cpp
+msgid "Pause playback when:"
+msgstr "Şu durumda oynatmayı duraklat:"
+
+#: src/gtk/devices_view.cpp
+msgid "Never"
+msgstr "Asla"
+
+#: src/gtk/devices_view.cpp
+msgid "One bud is removed"
+msgstr "Bir kulaklık çıkarıldığında"
+
+#: src/gtk/devices_view.cpp
+msgid "Both buds are removed"
+msgstr "Her iki kulaklık da çıkarıldığında"
+
+#: src/gtk/devices_view.cpp
+msgid ""
+"Pauses whatever is playing on this computer, and starts it again when the "
+"buds go back in. Only playback Tether paused is resumed."
+msgstr ""
+"Bu bilgisayarda çalan her şeyi duraklatır ve kulaklıklar geri takıldığında "
+"yeniden başlatır. Yalnızca Tether tarafından duraklatılan oynatma sürdürülür."
+
+#: src/gtk/devices_view.cpp src/gtk/main.cpp
+msgid "Calls"
+msgstr "Çağrılar"
+
+#: src/gtk/devices_view.cpp
+msgid "Hand the AirPods to the iPhone during a call"
+msgstr "Görüşme sırasında AirPods’u iPhone’a devret"
+
+#: src/gtk/devices_view.cpp
+msgid "Pauses playback and disconnects the AirPods so the iPhone can take them, then reconnects them when the call ends. Needs call control, and only applies while the buds are connected to this computer."
+msgstr "Oynatmayı duraklatır ve iPhone alabilsin diye AirPods bağlantısını keser, görüşme bitince yeniden bağlar. Çağrı denetimi gerektirir ve yalnızca kulaklıklar bu bilgisayara bağlıyken geçerlidir."
+
+#: src/gtk/devices_view.cpp
 msgid "Bluetooth needs one-time system setup"
 msgstr "Bluetooth tek seferlik sistem kurulumu gerektiriyor"
 
@@ -1762,10 +1955,6 @@ msgstr "Çık"
 #: src/gtk/main.cpp
 msgid "Devices"
 msgstr "Aygıtlar"
-
-#: src/gtk/main.cpp
-msgid "Calls"
-msgstr "Çağrılar"
 
 #: src/gtk/main.cpp
 msgid "Start hidden in the system tray"
@@ -2007,6 +2196,7 @@ msgstr "bağlı"
 msgid "not connected"
 msgstr "bağlı değil"
 
+#. TRANSLATORS: {} is a transport name, "Wi-Fi" or "Bluetooth", or a device name.
 #. TRANSLATORS: {} is a transport name, "Wi-Fi" or "Bluetooth".
 #: src/gtk/tray.cpp src/gtk/ui_util.cpp
 #, c++-format

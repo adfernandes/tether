@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: tether\n"
 "Report-Msgid-Bugs-To: zack@bartel.com\n"
-"POT-Creation-Date: 2026-09-07 17:37-0700\n"
+"POT-Creation-Date: 2026-09-08 17:21-0700\n"
 "PO-Revision-Date: 2026-08-23\n"
 "Last-Translator: Tether project\n"
 "Language-Team: Swedish\n"
@@ -87,6 +87,26 @@ msgstr "Lista de Bluetooth-enheter som BlueZ känner till."
 #: src/cli/main.cpp
 msgid "Show Bluetooth link and profile connection state."
 msgstr "Visa status för Bluetooth-länken och profilerna."
+
+#: src/cli/main.cpp
+msgid "Show AirPods and case battery."
+msgstr "Visa batterinivå för AirPods och etui."
+
+#: src/cli/main.cpp
+msgid "Set the AirPods listening mode: off, anc, transparency, adaptive."
+msgstr "Ställ in AirPods lyssningsläge: off, anc, transparency, adaptive."
+
+#: src/cli/main.cpp
+msgid ""
+"Pause local playback when an AirPod is removed: never, one-removed, both-"
+"removed."
+msgstr ""
+"Pausa lokal uppspelning när en AirPod tas ur: never, one-removed, both-"
+"removed."
+
+#: src/cli/main.cpp
+msgid "Hand the AirPods to the iPhone during a call: on or off."
+msgstr "Lämna över AirPods till iPhone under ett samtal: on eller off."
 
 #: src/cli/main.cpp
 msgid "List iPhone message conversations."
@@ -429,8 +449,64 @@ msgid "No Bluetooth devices known to BlueZ.\n"
 msgstr "BlueZ känner inte till några Bluetooth-enheter.\n"
 
 #: src/cli/main.cpp
+msgid "Could not read the AirPods battery from the daemon.\n"
+msgstr "Kunde inte läsa AirPods batterinivå från demonen.\n"
+
+#: src/cli/main.cpp
+#, c-format
+msgid "No AirPods connected.\n"
+msgstr "Inga AirPods anslutna.\n"
+
+#: src/cli/main.cpp
+msgid "Left"
+msgstr "Vänster"
+
+#: src/cli/main.cpp
+msgid "Right"
+msgstr "Höger"
+
+#. TRANSLATORS: The AirPods charging case, on the device row beside the two earbuds.
+#: src/cli/main.cpp src/gtk/devices_view.cpp
+msgid "Case"
+msgstr "Etui"
+
+#: src/cli/main.cpp
+msgid "Worn"
+msgstr "Bärs"
+
+#: src/cli/main.cpp
 msgid "Could not reach the daemon.\n"
 msgstr "Kunde inte nå demonen.\n"
+
+#: src/cli/main.cpp
+#, c-format
+msgid "Listening mode set to %s.\n"
+msgstr "Lyssningsläget är inställt på %s.\n"
+
+#: src/cli/main.cpp
+msgid "The listening mode could not be set."
+msgstr "Lyssningsläget kunde inte ställas in."
+
+#: src/cli/main.cpp
+msgid "Use never, one-removed or both-removed.\n"
+msgstr "Använd never, one-removed eller both-removed.\n"
+
+#: src/cli/main.cpp
+#, c-format
+msgid "Pause on removal set to %s.\n"
+msgstr "Paus vid urtagning inställd på %s.\n"
+
+#: src/cli/main.cpp
+msgid "Use on or off.\n"
+msgstr "Använd on eller off.\n"
+
+#: src/cli/main.cpp
+msgid "An iPhone call will hand the AirPods to the phone and take them back after."
+msgstr "Ett samtal på iPhone lämnar över AirPods till telefonen och tar tillbaka dem efteråt."
+
+#: src/cli/main.cpp
+msgid "AirPods handoff is off."
+msgstr "Överlämning av AirPods är av."
 
 #: src/cli/main.cpp
 msgid "Daemon closed the connection before the operation finished.\n"
@@ -778,6 +854,18 @@ msgstr "Adaptervalet är automatiskt: den första påslagna.\n"
 msgid "Using controller {}."
 msgstr "Använder adapter {}."
 
+#: src/core/src/bluetooth/airpods.cpp
+msgid "The AirPods address could not be read."
+msgstr "Kunde inte läsa AirPods-adressen."
+
+#: src/core/src/bluetooth/airpods.cpp
+msgid "Bluetooth sockets are unavailable on this system."
+msgstr "Bluetooth-socketar är inte tillgängliga på det här systemet."
+
+#: src/core/src/bluetooth/airpods.cpp
+msgid "Another program is using the AirPods channel."
+msgstr "Ett annat program använder AirPods-kanalen."
+
 #: src/core/src/bluetooth/bearer_supervisor.cpp
 msgid ""
 "Messages and contacts are connected. BlueZ reports the Bluetooth link down "
@@ -810,7 +898,10 @@ msgid ""
 "come up within a minute. Nothing on the iPhone changes this and re-pairing "
 "will not either."
 msgstr ""
-"Den här datorn hade låst kopplingen till BR/EDR, vilket avvisar den LE-länk som iPhone öppnar för att bära aviseringar. Det håller på att ångras nu; LE bör komma upp inom en minut. Inget på iPhone ändrar detta, och att koppla om gör det inte heller."
+"Den här datorn hade låst kopplingen till BR/EDR, vilket avvisar den LE-länk "
+"som iPhone öppnar för att bära aviseringar. Det håller på att ångras nu; LE "
+"bör komma upp inom en minut. Inget på iPhone ändrar detta, och att koppla om "
+"gör det inte heller."
 
 #: src/core/src/bluetooth/bearer_supervisor.cpp
 msgid ""
@@ -1192,6 +1283,14 @@ msgid "Not a DTMF sequence."
 msgstr "Inte en DTMF-sekvens."
 
 #: src/core/src/net.cpp
+msgid "Unknown listening mode."
+msgstr "Okänt lyssningsläge."
+
+#: src/core/src/net.cpp src/gtk/devices_view.cpp
+msgid "No AirPods are connected."
+msgstr "Inga AirPods anslutna."
+
+#: src/core/src/net.cpp
 msgid "Notification mirroring is already active; nothing to do."
 msgstr "Spegling av aviseringar är redan aktiv, inget att göra."
 
@@ -1373,6 +1472,20 @@ msgstr "Tether-demonen körs inte."
 msgid "Daemon Online"
 msgstr "Demonen är online"
 
+#. TRANSLATORS: Left earbud, abbreviated to fit the device row. One or two letters.
+#: src/gtk/devices_view.cpp
+msgid "L"
+msgstr "V"
+
+#. TRANSLATORS: Right earbud, abbreviated to fit the device row. One or two letters.
+#: src/gtk/devices_view.cpp
+msgid "R"
+msgstr "H"
+
+#: src/gtk/devices_view.cpp
+msgid "Reading battery…"
+msgstr "Läser batterinivå…"
+
 #: src/gtk/devices_view.cpp
 msgid "Connected."
 msgstr "Ansluten."
@@ -1388,6 +1501,42 @@ msgstr "Bluetooth är otillgängligt på den här maskinen."
 #: src/gtk/devices_view.cpp
 msgid "Scanning for nearby devices..."
 msgstr "Söker efter enheter i närheten..."
+
+#: src/gtk/devices_view.cpp
+msgid "Off"
+msgstr "Av"
+
+#: src/gtk/devices_view.cpp
+msgid "Transparency"
+msgstr "Genomsläpp"
+
+#: src/gtk/devices_view.cpp
+msgid "Adaptive"
+msgstr "Adaptivt"
+
+#: src/gtk/devices_view.cpp
+msgid "Noise Cancellation"
+msgstr "Brusreducering"
+
+#: src/gtk/devices_view.cpp
+msgid "These AirPods do not report a listening mode."
+msgstr "De här AirPods rapporterar inget lyssningsläge."
+
+#: src/gtk/devices_view.cpp
+msgid "These AirPods do not report whether they are being worn."
+msgstr "De här AirPods rapporterar inte om de bärs."
+
+#: src/gtk/devices_view.cpp
+msgid "Both buds are in."
+msgstr "Båda propparna sitter i."
+
+#: src/gtk/devices_view.cpp
+msgid "One bud is in."
+msgstr "En propp sitter i."
+
+#: src/gtk/devices_view.cpp
+msgid "Neither bud is in."
+msgstr "Ingen propp sitter i."
 
 #: src/gtk/devices_view.cpp
 msgid "Full mode — messages, contacts, and notifications."
@@ -1681,6 +1830,50 @@ msgid "Scan for devices"
 msgstr "Sök efter enheter"
 
 #: src/gtk/devices_view.cpp
+msgid "Listening mode"
+msgstr "Lyssningsläge"
+
+#: src/gtk/devices_view.cpp
+msgid "In-ear detection"
+msgstr "Bärdetektering"
+
+#: src/gtk/devices_view.cpp
+msgid "Pause playback when:"
+msgstr "Pausa uppspelning när:"
+
+#: src/gtk/devices_view.cpp
+msgid "Never"
+msgstr "Aldrig"
+
+#: src/gtk/devices_view.cpp
+msgid "One bud is removed"
+msgstr "En propp tas ur"
+
+#: src/gtk/devices_view.cpp
+msgid "Both buds are removed"
+msgstr "Båda propparna tas ur"
+
+#: src/gtk/devices_view.cpp
+msgid ""
+"Pauses whatever is playing on this computer, and starts it again when the "
+"buds go back in. Only playback Tether paused is resumed."
+msgstr ""
+"Pausar det som spelas på den här datorn och startar det igen när propparna "
+"sätts i. Endast uppspelning som Tether pausat återupptas."
+
+#: src/gtk/devices_view.cpp src/gtk/main.cpp
+msgid "Calls"
+msgstr "Samtal"
+
+#: src/gtk/devices_view.cpp
+msgid "Hand the AirPods to the iPhone during a call"
+msgstr "Lämna över AirPods till iPhone under ett samtal"
+
+#: src/gtk/devices_view.cpp
+msgid "Pauses playback and disconnects the AirPods so the iPhone can take them, then reconnects them when the call ends. Needs call control, and only applies while the buds are connected to this computer."
+msgstr "Pausar uppspelningen och kopplar från AirPods så att iPhone kan ta över dem, och ansluter dem igen när samtalet är slut. Kräver samtalsstyrning och gäller bara medan propparna är anslutna till den här datorn."
+
+#: src/gtk/devices_view.cpp
 msgid "Bluetooth needs one-time system setup"
 msgstr "Bluetooth kräver en engångsinställning av systemet"
 
@@ -1766,10 +1959,6 @@ msgstr "Avsluta"
 #: src/gtk/main.cpp
 msgid "Devices"
 msgstr "Enheter"
-
-#: src/gtk/main.cpp
-msgid "Calls"
-msgstr "Samtal"
 
 #: src/gtk/main.cpp
 msgid "Start hidden in the system tray"
@@ -2009,6 +2198,7 @@ msgstr "ansluten"
 msgid "not connected"
 msgstr "inte ansluten"
 
+#. TRANSLATORS: {} is a transport name, "Wi-Fi" or "Bluetooth", or a device name.
 #. TRANSLATORS: {} is a transport name, "Wi-Fi" or "Bluetooth".
 #: src/gtk/tray.cpp src/gtk/ui_util.cpp
 #, c++-format

@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: tether\n"
 "Report-Msgid-Bugs-To: zack@bartel.com\n"
-"POT-Creation-Date: 2026-09-07 17:37-0700\n"
+"POT-Creation-Date: 2026-09-08 17:21-0700\n"
 "PO-Revision-Date: 2026-08-23\n"
 "Last-Translator: Tether project\n"
 "Language-Team: Korean\n"
@@ -85,6 +85,26 @@ msgstr "BlueZ가 알고 있는 Bluetooth 기기를 나열합니다."
 #: src/cli/main.cpp
 msgid "Show Bluetooth link and profile connection state."
 msgstr "Bluetooth 링크와 프로파일의 연결 상태를 표시합니다."
+
+#: src/cli/main.cpp
+msgid "Show AirPods and case battery."
+msgstr "AirPods 및 케이스 배터리를 표시합니다."
+
+#: src/cli/main.cpp
+msgid "Set the AirPods listening mode: off, anc, transparency, adaptive."
+msgstr "AirPods 청취 모드를 설정합니다: off, anc, transparency, adaptive."
+
+#: src/cli/main.cpp
+msgid ""
+"Pause local playback when an AirPod is removed: never, one-removed, both-"
+"removed."
+msgstr ""
+"AirPod을 뺐을 때 로컬 재생을 일시정지합니다: never, one-removed, both-"
+"removed."
+
+#: src/cli/main.cpp
+msgid "Hand the AirPods to the iPhone during a call: on or off."
+msgstr "통화 중에 AirPods를 iPhone에 넘깁니다: on 또는 off."
 
 #: src/cli/main.cpp
 msgid "List iPhone message conversations."
@@ -421,8 +441,64 @@ msgid "No Bluetooth devices known to BlueZ.\n"
 msgstr "BlueZ가 알고 있는 Bluetooth 기기가 없습니다.\n"
 
 #: src/cli/main.cpp
+msgid "Could not read the AirPods battery from the daemon.\n"
+msgstr "데몬에서 AirPods 배터리를 읽을 수 없습니다.\n"
+
+#: src/cli/main.cpp
+#, c-format
+msgid "No AirPods connected.\n"
+msgstr "연결된 AirPods가 없습니다.\n"
+
+#: src/cli/main.cpp
+msgid "Left"
+msgstr "왼쪽"
+
+#: src/cli/main.cpp
+msgid "Right"
+msgstr "오른쪽"
+
+#. TRANSLATORS: The AirPods charging case, on the device row beside the two earbuds.
+#: src/cli/main.cpp src/gtk/devices_view.cpp
+msgid "Case"
+msgstr "케이스"
+
+#: src/cli/main.cpp
+msgid "Worn"
+msgstr "착용"
+
+#: src/cli/main.cpp
 msgid "Could not reach the daemon.\n"
 msgstr "데몬에 연결하지 못했습니다.\n"
+
+#: src/cli/main.cpp
+#, c-format
+msgid "Listening mode set to %s.\n"
+msgstr "청취 모드를 %s(으)로 설정했습니다.\n"
+
+#: src/cli/main.cpp
+msgid "The listening mode could not be set."
+msgstr "청취 모드를 설정할 수 없습니다."
+
+#: src/cli/main.cpp
+msgid "Use never, one-removed or both-removed.\n"
+msgstr "never, one-removed 또는 both-removed 중에서 선택하세요.\n"
+
+#: src/cli/main.cpp
+#, c-format
+msgid "Pause on removal set to %s.\n"
+msgstr "제거 시 일시정지를 %s(으)로 설정했습니다.\n"
+
+#: src/cli/main.cpp
+msgid "Use on or off.\n"
+msgstr "on 또는 off를 사용하세요.\n"
+
+#: src/cli/main.cpp
+msgid "An iPhone call will hand the AirPods to the phone and take them back after."
+msgstr "iPhone 통화 시 AirPods를 전화기에 넘기고 통화가 끝나면 다시 가져옵니다."
+
+#: src/cli/main.cpp
+msgid "AirPods handoff is off."
+msgstr "AirPods 전환이 꺼져 있습니다."
 
 #: src/cli/main.cpp
 msgid "Daemon closed the connection before the operation finished.\n"
@@ -763,6 +839,18 @@ msgstr "어댑터 선택은 자동입니다. 전원이 켜진 첫 번째 어댑�
 msgid "Using controller {}."
 msgstr "어댑터 {}을(를) 사용합니다."
 
+#: src/core/src/bluetooth/airpods.cpp
+msgid "The AirPods address could not be read."
+msgstr "AirPods 주소를 읽을 수 없습니다."
+
+#: src/core/src/bluetooth/airpods.cpp
+msgid "Bluetooth sockets are unavailable on this system."
+msgstr "이 시스템에서는 Bluetooth 소켓을 사용할 수 없습니다."
+
+#: src/core/src/bluetooth/airpods.cpp
+msgid "Another program is using the AirPods channel."
+msgstr "다른 프로그램이 AirPods 채널을 사용 중입니다."
+
 #: src/core/src/bluetooth/bearer_supervisor.cpp
 msgid ""
 "Messages and contacts are connected. BlueZ reports the Bluetooth link down "
@@ -794,7 +882,9 @@ msgid ""
 "come up within a minute. Nothing on the iPhone changes this and re-pairing "
 "will not either."
 msgstr ""
-"이 컴퓨터가 페어링을 BR/EDR로 고정해 두어, iPhone이 알림을 전달하려고 여는 LE 링크가 거부되고 있습니다. 지금 되돌리는 중이며, LE는 1분 이내에 연결될 것입니다. iPhone에서 바꿀 수 있는 것은 없으며, 다시 페어링해도 마찬가지입니다."
+"이 컴퓨터가 페어링을 BR/EDR로 고정해 두어, iPhone이 알림을 전달하려고 여는 "
+"LE 링크가 거부되고 있습니다. 지금 되돌리는 중이며, LE는 1분 이내에 연결될 것"
+"입니다. iPhone에서 바꿀 수 있는 것은 없으며, 다시 페어링해도 마찬가지입니다."
 
 #: src/core/src/bluetooth/bearer_supervisor.cpp
 msgid ""
@@ -1173,6 +1263,14 @@ msgid "Not a DTMF sequence."
 msgstr "DTMF 시퀀스가 아닙니다."
 
 #: src/core/src/net.cpp
+msgid "Unknown listening mode."
+msgstr "알 수 없는 청취 모드입니다."
+
+#: src/core/src/net.cpp src/gtk/devices_view.cpp
+msgid "No AirPods are connected."
+msgstr "연결된 AirPods가 없습니다."
+
+#: src/core/src/net.cpp
 msgid "Notification mirroring is already active; nothing to do."
 msgstr "알림 미러링이 이미 활성 상태입니다. 할 일이 없습니다."
 
@@ -1353,6 +1451,20 @@ msgstr "Tether 데몬이 실행 중이 아닙니다."
 msgid "Daemon Online"
 msgstr "데몬 온라인"
 
+#. TRANSLATORS: Left earbud, abbreviated to fit the device row. One or two letters.
+#: src/gtk/devices_view.cpp
+msgid "L"
+msgstr "좌"
+
+#. TRANSLATORS: Right earbud, abbreviated to fit the device row. One or two letters.
+#: src/gtk/devices_view.cpp
+msgid "R"
+msgstr "우"
+
+#: src/gtk/devices_view.cpp
+msgid "Reading battery…"
+msgstr "배터리를 읽는 중…"
+
 #: src/gtk/devices_view.cpp
 msgid "Connected."
 msgstr "연결되었습니다."
@@ -1368,6 +1480,42 @@ msgstr "이 컴퓨터에서는 Bluetooth를 사용할 수 없습니다."
 #: src/gtk/devices_view.cpp
 msgid "Scanning for nearby devices..."
 msgstr "근처 기기를 검색하는 중..."
+
+#: src/gtk/devices_view.cpp
+msgid "Off"
+msgstr "끔"
+
+#: src/gtk/devices_view.cpp
+msgid "Transparency"
+msgstr "주변음 허용"
+
+#: src/gtk/devices_view.cpp
+msgid "Adaptive"
+msgstr "적응형"
+
+#: src/gtk/devices_view.cpp
+msgid "Noise Cancellation"
+msgstr "노이즈 캔슬링"
+
+#: src/gtk/devices_view.cpp
+msgid "These AirPods do not report a listening mode."
+msgstr "이 AirPods는 청취 모드를 보고하지 않습니다."
+
+#: src/gtk/devices_view.cpp
+msgid "These AirPods do not report whether they are being worn."
+msgstr "이 AirPods는 착용 여부를 보고하지 않습니다."
+
+#: src/gtk/devices_view.cpp
+msgid "Both buds are in."
+msgstr "양쪽 이어버드를 착용 중입니다."
+
+#: src/gtk/devices_view.cpp
+msgid "One bud is in."
+msgstr "한쪽 이어버드를 착용 중입니다."
+
+#: src/gtk/devices_view.cpp
+msgid "Neither bud is in."
+msgstr "이어버드를 착용하지 않았습니다."
 
 #: src/gtk/devices_view.cpp
 msgid "Full mode — messages, contacts, and notifications."
@@ -1656,6 +1804,50 @@ msgid "Scan for devices"
 msgstr "기기 검색"
 
 #: src/gtk/devices_view.cpp
+msgid "Listening mode"
+msgstr "청취 모드"
+
+#: src/gtk/devices_view.cpp
+msgid "In-ear detection"
+msgstr "착용 감지"
+
+#: src/gtk/devices_view.cpp
+msgid "Pause playback when:"
+msgstr "재생을 일시정지할 때:"
+
+#: src/gtk/devices_view.cpp
+msgid "Never"
+msgstr "안 함"
+
+#: src/gtk/devices_view.cpp
+msgid "One bud is removed"
+msgstr "한쪽을 뺐을 때"
+
+#: src/gtk/devices_view.cpp
+msgid "Both buds are removed"
+msgstr "양쪽을 뺐을 때"
+
+#: src/gtk/devices_view.cpp
+msgid ""
+"Pauses whatever is playing on this computer, and starts it again when the "
+"buds go back in. Only playback Tether paused is resumed."
+msgstr ""
+"이 컴퓨터에서 재생 중인 것을 일시정지하고, 이어버드를 다시 착용하면 재생을 재"
+"개합니다. Tether가 일시정지한 재생만 재개됩니다."
+
+#: src/gtk/devices_view.cpp src/gtk/main.cpp
+msgid "Calls"
+msgstr "통화"
+
+#: src/gtk/devices_view.cpp
+msgid "Hand the AirPods to the iPhone during a call"
+msgstr "통화 중에 AirPods를 iPhone에 넘기기"
+
+#: src/gtk/devices_view.cpp
+msgid "Pauses playback and disconnects the AirPods so the iPhone can take them, then reconnects them when the call ends. Needs call control, and only applies while the buds are connected to this computer."
+msgstr "재생을 일시정지하고 AirPods 연결을 끊어 iPhone이 사용할 수 있게 한 뒤, 통화가 끝나면 다시 연결합니다. 통화 제어가 필요하며 이어버드가 이 컴퓨터에 연결되어 있을 때만 적용됩니다."
+
+#: src/gtk/devices_view.cpp
 msgid "Bluetooth needs one-time system setup"
 msgstr "Bluetooth에는 일회성 시스템 설정이 필요합니다"
 
@@ -1739,10 +1931,6 @@ msgstr "종료"
 #: src/gtk/main.cpp
 msgid "Devices"
 msgstr "기기"
-
-#: src/gtk/main.cpp
-msgid "Calls"
-msgstr "통화"
 
 #: src/gtk/main.cpp
 msgid "Start hidden in the system tray"
@@ -1980,6 +2168,7 @@ msgstr "연결됨"
 msgid "not connected"
 msgstr "연결 안 됨"
 
+#. TRANSLATORS: {} is a transport name, "Wi-Fi" or "Bluetooth", or a device name.
 #. TRANSLATORS: {} is a transport name, "Wi-Fi" or "Bluetooth".
 #: src/gtk/tray.cpp src/gtk/ui_util.cpp
 #, c++-format

@@ -41,6 +41,7 @@ namespace tether {
     // Bluetooth state, read from the BluezMonitor snapshot.
     nlohmann::json build_bt_status();
     nlohmann::json build_bt_devices();
+    nlohmann::json build_bt_airpods();
 
     // How many contacts a bt_list_contacts answers with when the caller does not say.
     inline constexpr size_t BT_CONTACTS_DEFAULT_LIMIT = 100;

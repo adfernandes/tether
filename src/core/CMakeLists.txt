@@ -12,6 +12,7 @@ add_library(tether STATIC
     src/client.cpp
     src/extension_host.cpp
     src/discovery.cpp
+    src/mpris.cpp
     src/bluetooth/objects.cpp
     src/bluetooth/monitor.cpp
     src/bluetooth/config.cpp
@@ -35,6 +36,7 @@ add_library(tether STATIC
     src/bluetooth/groups.cpp
     src/bluetooth/telephony.cpp
     src/bluetooth/telephony_pipewire.cpp
+    src/bluetooth/airpods.cpp
     src/bluetooth/connection.cpp
     src/bluetooth/diagnostics.cpp
     src/wayland.cpp

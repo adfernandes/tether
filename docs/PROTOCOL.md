@@ -333,6 +333,71 @@ The two `*_reason` strings are written for display (permission is off or a trans
 `map_error` and `pbap_error` name the classification: `forbidden` means the toggle on the phone is off,
 `busy` means another computer holds the phone's single MAP session.
 
+### AirPods
+
+Battery does not come from BlueZ. It arrives over Apple's AAP protocol on an L2CAP
+channel the daemon opens itself, so it is reported separately from `bt_devices` — whose
+entries only gain an `airpods` boolean saying which device the battery belongs to.
+
+#### `bt_airpods` (Client -> Daemon, answered directly; also Daemon -> Clients)
+**Payload**: `{"command": "bt_airpods"}`
+
+```json
+{
+  "command": "bt_airpods",
+  "address": "AA:BB:CC:DD:EE:FF",
+  "name": "AirPods Pro",
+  "left": 82,
+  "right": 79,
+  "case": 45,
+  "anc": "transparency",
+  "ear": {"primary": "in_ear", "secondary": "out_of_ear"},
+  "in_ear": 1,
+  "status": "live",
+  "reason": ""
+}
+```
+
+Broadcast when the published state changes, not on a timer. A level of `-1` means the
+component is not reporting — a bud in the case, or a shut case — and is not the same as
+a flat battery. An empty `address` means no AirPods are connected.
+
+`status` is `idle`, `connecting`, `live`, `busy` or `failed`. `busy` means another
+program holds the channel, which allows only one client at a time; `reason` carries the
+sentence to show.
+
+`anc` is the listening mode: `off`, `anc`, `transparency`, `adaptive`, or null on a model
+that does not report one. It always reflects what the buds say they are doing, never what
+was last requested.
+
+`ear` is where each bud is: `in_ear`, `out_of_ear`, `in_case` or `unknown`. They are a
+primary and a secondary rather than a left and a right, and which is which moves between
+them, so `in_ear` carries the count and nothing names a side.
+
+#### `bt_airpods_pause` (Client -> Daemon)
+**Payload**: `{"command": "bt_airpods_pause", "mode": "one-removed"}`
+
+Whether removing a bud pauses local playback: `never` (the default), `one-removed` or
+`both-removed`. Persisted, and reported back as `airpods_pause` in `bt_status`.
+
+#### `bt_airpods_handoff` (Client -> Daemon)
+**Payload**: `{"command": "bt_airpods_handoff", "enabled": true}`
+
+Whether an iPhone call hands the AirPods to the phone and takes them back after. Off by
+default, needs call control, and reported as `airpods_handoff` in `bt_status`.
+
+#### `bt_airpods_mode` (Client -> Daemon, answered directly)
+**Payload**: `{"command": "bt_airpods_mode", "mode": "transparency"}`
+**Response**: `{"command": "bt_airpods_mode_result", "success": true}`, or `success` false
+with a `message`.
+
+Note the name: `bt_set_ancs` elsewhere in this file is Apple Notification Center Service,
+an unrelated feature.
+
+Success means the request reached the buds, not that they applied it. They decline a mode
+they are not configured for and report nothing, so the confirmation is the next
+`bt_airpods` broadcast carrying the mode that is actually in effect.
+
 ### Messages
 
 #### `bt_list_threads` (Client -> Daemon, answered directly)

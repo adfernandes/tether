@@ -1,5 +1,6 @@
 add_executable(tether_test
     test_base64.cpp
+    test_airpods.cpp
     test_bluetooth_objects.cpp
     test_bluetooth_monitor.cpp
     test_bluetooth_pairing.cpp

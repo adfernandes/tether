@@ -788,6 +788,36 @@ namespace tether::bluetooth {
         return result;
     }
 
+    namespace {
+        constexpr int DEVICE_CALL_TIMEOUT_MS = 15000;
+
+        bool call_device_by_address(BluezMonitor& monitor,
+                                    const std::string& address,
+                                    const char* method,
+                                    std::string& err) {
+            GDBusConnection* conn = monitor.connection();
+            if (!conn) {
+                err = "no system bus";
+                return false;
+            }
+            const auto objects = monitor.snapshot();
+            const Device* device = find_by_address(objects, normalize_address(address));
+            if (!device) {
+                err = "no such device";
+                return false;
+            }
+            return call_device(conn, device->path, method, DEVICE_CALL_TIMEOUT_MS, err);
+        }
+    } // namespace
+
+    bool connect_device(BluezMonitor& monitor, const std::string& address, std::string& err) {
+        return call_device_by_address(monitor, address, "Connect", err);
+    }
+
+    bool disconnect_device(BluezMonitor& monitor, const std::string& address, std::string& err) {
+        return call_device_by_address(monitor, address, "Disconnect", err);
+    }
+
     bool scan_devices(BluezMonitor& monitor, int seconds, const std::function<void()>& on_tick, std::string& err) {
         GDBusConnection* conn = monitor.connection();
         if (!conn) {

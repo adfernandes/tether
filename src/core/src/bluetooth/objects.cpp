@@ -211,6 +211,7 @@ namespace tether::bluetooth {
             d.trusted = get_bool(props, "Trusted");
             d.connected = get_bool(props, "Connected");
             d.uuids = get_strv(props, "UUIDs");
+            d.modalias = get_string(props, "Modalias");
             d.preferred_bearer = get_string(props, "PreferredBearer");
             d.services_resolved = get_bool(props, "ServicesResolved");
             g_variant_unref(props);
@@ -250,6 +251,24 @@ namespace tether::bluetooth {
     }
 
     bool Device::looks_like_iphone() const { return supports_ancs() || (supports_map() && supports_pbap()); }
+
+    bool Device::looks_like_airpods() const {
+        // An iPhone carries the same vendor id, so the audio profile is what separates them.
+        if (looks_like_iphone() || !has_uuid(UUID_A2DP_SINK))
+            return false;
+        std::string lowered = modalias;
+        std::transform(lowered.begin(), lowered.end(), lowered.begin(), [](unsigned char c) {
+            return static_cast<char>(std::tolower(c));
+        });
+        if (lowered.rfind(MODALIAS_APPLE, 0) == 0)
+            return true;
+        // Modalias is absent until SDP has been read at least once.
+        lowered = name;
+        std::transform(lowered.begin(), lowered.end(), lowered.begin(), [](unsigned char c) {
+            return static_cast<char>(std::tolower(c));
+        });
+        return lowered.find("airpod") != std::string::npos;
+    }
 
     const Adapter* BluezObjects::find_adapter(const std::string& path) const {
         auto it = std::find_if(adapters.begin(), adapters.end(), [&](const Adapter& a) { return a.path == path; });
@@ -581,6 +600,7 @@ namespace tether::bluetooth {
             {"ancs_notifying", d.ancs_notifying},
             {"services_resolved", d.services_resolved},
             {"iphone", d.looks_like_iphone()},
+            {"airpods", d.looks_like_airpods()},
         };
     }
 

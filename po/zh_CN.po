@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: tether\n"
 "Report-Msgid-Bugs-To: zack@bartel.com\n"
-"POT-Creation-Date: 2026-09-07 17:37-0700\n"
+"POT-Creation-Date: 2026-09-08 17:21-0700\n"
 "PO-Revision-Date: 2026-08-23\n"
 "Last-Translator: Tether project\n"
 "Language-Team: Simplified Chinese\n"
@@ -85,6 +85,24 @@ msgstr "列出 BlueZ 已知的蓝牙设备。"
 #: src/cli/main.cpp
 msgid "Show Bluetooth link and profile connection state."
 msgstr "显示蓝牙链路和配置文件的连接状态。"
+
+#: src/cli/main.cpp
+msgid "Show AirPods and case battery."
+msgstr "显示 AirPods 和充电盒电量。"
+
+#: src/cli/main.cpp
+msgid "Set the AirPods listening mode: off, anc, transparency, adaptive."
+msgstr "设置 AirPods 聆听模式：off、anc、transparency、adaptive。"
+
+#: src/cli/main.cpp
+msgid ""
+"Pause local playback when an AirPod is removed: never, one-removed, both-"
+"removed."
+msgstr "取下 AirPod 时暂停本机播放：never、one-removed、both-removed。"
+
+#: src/cli/main.cpp
+msgid "Hand the AirPods to the iPhone during a call: on or off."
+msgstr "通话期间将 AirPods 交给 iPhone：on 或 off。"
 
 #: src/cli/main.cpp
 msgid "List iPhone message conversations."
@@ -413,8 +431,64 @@ msgid "No Bluetooth devices known to BlueZ.\n"
 msgstr "BlueZ 没有已知的蓝牙设备。\n"
 
 #: src/cli/main.cpp
+msgid "Could not read the AirPods battery from the daemon.\n"
+msgstr "无法从守护进程读取 AirPods 电量。\n"
+
+#: src/cli/main.cpp
+#, c-format
+msgid "No AirPods connected.\n"
+msgstr "未连接 AirPods。\n"
+
+#: src/cli/main.cpp
+msgid "Left"
+msgstr "左"
+
+#: src/cli/main.cpp
+msgid "Right"
+msgstr "右"
+
+#. TRANSLATORS: The AirPods charging case, on the device row beside the two earbuds.
+#: src/cli/main.cpp src/gtk/devices_view.cpp
+msgid "Case"
+msgstr "充电盒"
+
+#: src/cli/main.cpp
+msgid "Worn"
+msgstr "佩戴"
+
+#: src/cli/main.cpp
 msgid "Could not reach the daemon.\n"
 msgstr "无法连接到守护进程。\n"
+
+#: src/cli/main.cpp
+#, c-format
+msgid "Listening mode set to %s.\n"
+msgstr "聆听模式已设为 %s。\n"
+
+#: src/cli/main.cpp
+msgid "The listening mode could not be set."
+msgstr "无法设置聆听模式。"
+
+#: src/cli/main.cpp
+msgid "Use never, one-removed or both-removed.\n"
+msgstr "请使用 never、one-removed 或 both-removed。\n"
+
+#: src/cli/main.cpp
+#, c-format
+msgid "Pause on removal set to %s.\n"
+msgstr "取下时暂停已设为 %s。\n"
+
+#: src/cli/main.cpp
+msgid "Use on or off.\n"
+msgstr "请使用 on 或 off。\n"
+
+#: src/cli/main.cpp
+msgid "An iPhone call will hand the AirPods to the phone and take them back after."
+msgstr "iPhone 来电时会将 AirPods 交给手机，通话结束后再取回。"
+
+#: src/cli/main.cpp
+msgid "AirPods handoff is off."
+msgstr "AirPods 交接已关闭。"
 
 #: src/cli/main.cpp
 msgid "Daemon closed the connection before the operation finished.\n"
@@ -752,6 +826,18 @@ msgstr "适配器选择为自动：第一个已开启的适配器。\n"
 msgid "Using controller {}."
 msgstr "正在使用适配器 {}。"
 
+#: src/core/src/bluetooth/airpods.cpp
+msgid "The AirPods address could not be read."
+msgstr "无法读取 AirPods 地址。"
+
+#: src/core/src/bluetooth/airpods.cpp
+msgid "Bluetooth sockets are unavailable on this system."
+msgstr "此系统不支持 Bluetooth 套接字。"
+
+#: src/core/src/bluetooth/airpods.cpp
+msgid "Another program is using the AirPods channel."
+msgstr "另一个程序正在使用 AirPods 通道。"
+
 #: src/core/src/bluetooth/bearer_supervisor.cpp
 msgid ""
 "Messages and contacts are connected. BlueZ reports the Bluetooth link down "
@@ -781,7 +867,9 @@ msgid ""
 "come up within a minute. Nothing on the iPhone changes this and re-pairing "
 "will not either."
 msgstr ""
-"这台电脑此前把配对固定在了 BR/EDR，因而拒绝了 iPhone 为传送通知而打开的 LE 链路。现在正在撤销；LE 应在一分钟内建立。在 iPhone 上做任何操作都改变不了这一点，重新配对也不行。"
+"这台电脑此前把配对固定在了 BR/EDR，因而拒绝了 iPhone 为传送通知而打开的 LE 链"
+"路。现在正在撤销；LE 应在一分钟内建立。在 iPhone 上做任何操作都改变不了这一"
+"点，重新配对也不行。"
 
 #: src/core/src/bluetooth/bearer_supervisor.cpp
 msgid ""
@@ -1141,6 +1229,14 @@ msgid "Not a DTMF sequence."
 msgstr "不是 DTMF 序列。"
 
 #: src/core/src/net.cpp
+msgid "Unknown listening mode."
+msgstr "未知的聆听模式。"
+
+#: src/core/src/net.cpp src/gtk/devices_view.cpp
+msgid "No AirPods are connected."
+msgstr "未连接 AirPods。"
+
+#: src/core/src/net.cpp
 msgid "Notification mirroring is already active; nothing to do."
 msgstr "通知镜像已在运行，无需操作。"
 
@@ -1320,6 +1416,20 @@ msgstr "Tether 守护进程未在运行。"
 msgid "Daemon Online"
 msgstr "守护进程在线"
 
+#. TRANSLATORS: Left earbud, abbreviated to fit the device row. One or two letters.
+#: src/gtk/devices_view.cpp
+msgid "L"
+msgstr "左"
+
+#. TRANSLATORS: Right earbud, abbreviated to fit the device row. One or two letters.
+#: src/gtk/devices_view.cpp
+msgid "R"
+msgstr "右"
+
+#: src/gtk/devices_view.cpp
+msgid "Reading battery…"
+msgstr "正在读取电量…"
+
 #: src/gtk/devices_view.cpp
 msgid "Connected."
 msgstr "已连接。"
@@ -1335,6 +1445,42 @@ msgstr "这台机器上蓝牙不可用。"
 #: src/gtk/devices_view.cpp
 msgid "Scanning for nearby devices..."
 msgstr "正在搜索附近的设备……"
+
+#: src/gtk/devices_view.cpp
+msgid "Off"
+msgstr "关闭"
+
+#: src/gtk/devices_view.cpp
+msgid "Transparency"
+msgstr "通透模式"
+
+#: src/gtk/devices_view.cpp
+msgid "Adaptive"
+msgstr "自适应"
+
+#: src/gtk/devices_view.cpp
+msgid "Noise Cancellation"
+msgstr "降噪"
+
+#: src/gtk/devices_view.cpp
+msgid "These AirPods do not report a listening mode."
+msgstr "此 AirPods 不报告聆听模式。"
+
+#: src/gtk/devices_view.cpp
+msgid "These AirPods do not report whether they are being worn."
+msgstr "此 AirPods 不报告是否正在佩戴。"
+
+#: src/gtk/devices_view.cpp
+msgid "Both buds are in."
+msgstr "两只耳机均已佩戴。"
+
+#: src/gtk/devices_view.cpp
+msgid "One bud is in."
+msgstr "已佩戴一只耳机。"
+
+#: src/gtk/devices_view.cpp
+msgid "Neither bud is in."
+msgstr "未佩戴耳机。"
 
 #: src/gtk/devices_view.cpp
 msgid "Full mode — messages, contacts, and notifications."
@@ -1618,6 +1764,50 @@ msgid "Scan for devices"
 msgstr "搜索设备"
 
 #: src/gtk/devices_view.cpp
+msgid "Listening mode"
+msgstr "聆听模式"
+
+#: src/gtk/devices_view.cpp
+msgid "In-ear detection"
+msgstr "入耳检测"
+
+#: src/gtk/devices_view.cpp
+msgid "Pause playback when:"
+msgstr "暂停播放的时机："
+
+#: src/gtk/devices_view.cpp
+msgid "Never"
+msgstr "从不"
+
+#: src/gtk/devices_view.cpp
+msgid "One bud is removed"
+msgstr "取下一只耳机时"
+
+#: src/gtk/devices_view.cpp
+msgid "Both buds are removed"
+msgstr "取下两只耳机时"
+
+#: src/gtk/devices_view.cpp
+msgid ""
+"Pauses whatever is playing on this computer, and starts it again when the "
+"buds go back in. Only playback Tether paused is resumed."
+msgstr ""
+"暂停本机正在播放的内容，并在耳机重新戴上时继续播放。仅恢复由 Tether 暂停的播"
+"放。"
+
+#: src/gtk/devices_view.cpp src/gtk/main.cpp
+msgid "Calls"
+msgstr "通话"
+
+#: src/gtk/devices_view.cpp
+msgid "Hand the AirPods to the iPhone during a call"
+msgstr "通话期间将 AirPods 交给 iPhone"
+
+#: src/gtk/devices_view.cpp
+msgid "Pauses playback and disconnects the AirPods so the iPhone can take them, then reconnects them when the call ends. Needs call control, and only applies while the buds are connected to this computer."
+msgstr "暂停播放并断开 AirPods，让 iPhone 可以接管，通话结束后再重新连接。需要通话控制，且仅在耳机连接到本机时生效。"
+
+#: src/gtk/devices_view.cpp
 msgid "Bluetooth needs one-time system setup"
 msgstr "蓝牙需要一次性的系统设置"
 
@@ -1700,10 +1890,6 @@ msgstr "退出"
 #: src/gtk/main.cpp
 msgid "Devices"
 msgstr "设备"
-
-#: src/gtk/main.cpp
-msgid "Calls"
-msgstr "通话"
 
 #: src/gtk/main.cpp
 msgid "Start hidden in the system tray"
@@ -1935,6 +2121,7 @@ msgstr "已连接"
 msgid "not connected"
 msgstr "未连接"
 
+#. TRANSLATORS: {} is a transport name, "Wi-Fi" or "Bluetooth", or a device name.
 #. TRANSLATORS: {} is a transport name, "Wi-Fi" or "Bluetooth".
 #: src/gtk/tray.cpp src/gtk/ui_util.cpp
 #, c++-format

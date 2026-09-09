@@ -11,6 +11,7 @@
 #include <string>
 #include <strings.h>
 #include <sys/ioctl.h>
+#include <tether/bluetooth/config.hpp>
 #include <tether/client.hpp>
 #include <tether/core.hpp>
 #include <tether/crypto.hpp>
@@ -190,6 +191,10 @@ static const Opt kOptions[] = {
     {"--bt-status", N_("Show Bluetooth adapter capability and delivery mode.")},
     {"--bt-devices", N_("List Bluetooth devices known to BlueZ.")},
     {"--bt-connection", N_("Show Bluetooth link and profile connection state.")},
+    {"--bt-airpods", N_("Show AirPods and case battery.")},
+    {"--bt-airpods-mode", N_("Set the AirPods listening mode: off, anc, transparency, adaptive.")},
+    {"--bt-airpods-pause", N_("Pause local playback when an AirPod is removed: never, one-removed, both-removed.")},
+    {"--bt-airpods-handoff", N_("Hand the AirPods to the iPhone during a call: on or off.")},
     {"--bt-threads", N_("List iPhone message conversations.")},
     {"--bt-messages <thread>", N_("Show messages in one conversation.")},
     {"--bt-send <thread> <text>", N_("Reply in one conversation.")},
@@ -484,6 +489,8 @@ static int print_bt_devices(tether::Client& client) {
             add("pbap");
         if (d.value("ancs", false))
             add("ancs");
+        if (d.value("airpods", false))
+            add("airpods");
         if (d.value("preferred_bearer", std::string()) == "bredr" && !d.value("le_connected", false))
             add("pinned-bredr");
 
@@ -494,6 +501,97 @@ static int print_bt_devices(tether::Client& client) {
                 flags.c_str(),
                 d.value("iphone", false) ? "  <- iPhone" : "");
     }
+    return 0;
+}
+
+static int print_bt_airpods(tether::Client& client) {
+    nlohmann::json resp;
+    try {
+        resp = nlohmann::json::parse(client.send_and_wait("{\"command\":\"bt_airpods\"}\n"));
+    } catch (const std::exception&) {
+        debug::log(ERR, _("Could not read the AirPods battery from the daemon.\n"));
+        return 1;
+    }
+
+    if (resp.value("address", "").empty()) {
+        fprintf(stdout, _("No AirPods connected.\n"));
+        return 0;
+    }
+
+    fprintf(stdout, "%s  (%s)\n", resp.value("name", "").c_str(), resp.value("address", "").c_str());
+
+    const auto level = [&](const char* label, const char* key) {
+        const int percent = resp.value(key, -1);
+        if (percent >= 0)
+            fprintf(stdout, "  %-6s %d%%\n", label, percent);
+        else
+            fprintf(stdout, "  %-6s --\n", label);
+    };
+    level(_("Left"), "left");
+    level(_("Right"), "right");
+    level(_("Case"), "case");
+
+    if (resp.contains("anc") && resp["anc"].is_string())
+        fprintf(stdout, "  %-6s %s\n", _("Mode"), resp["anc"].get<std::string>().c_str());
+
+    if (resp.contains("ear") && resp["ear"].is_object()) {
+        const std::string primary = resp["ear"].value("primary", "unknown");
+        const std::string secondary = resp["ear"].value("secondary", "unknown");
+        if (primary != "unknown" || secondary != "unknown")
+            fprintf(stdout, "  %-6s %s, %s\n", _("Worn"), primary.c_str(), secondary.c_str());
+    }
+
+    const std::string reason = resp.value("reason", "");
+    if (!reason.empty())
+        fprintf(stdout, "  %s\n", reason.c_str());
+    return 0;
+}
+
+static int set_bt_airpods_mode(tether::Client& client, const std::string& mode) {
+    nlohmann::json request;
+    request["command"] = "bt_airpods_mode";
+    request["mode"] = mode;
+    nlohmann::json resp;
+    try {
+        resp = nlohmann::json::parse(client.send_and_wait(request.dump() + "\n"));
+    } catch (const std::exception&) {
+        debug::log(ERR, _("Could not reach the daemon.\n"));
+        return 1;
+    }
+    if (resp.value("success", false)) {
+        fprintf(stdout, _("Listening mode set to %s.\n"), mode.c_str());
+        return 0;
+    }
+    debug::log(ERR, "{}\n", resp.value("message", std::string(_("The listening mode could not be set."))));
+    return 1;
+}
+
+static int set_bt_airpods_pause(tether::Client& client, const std::string& mode) {
+    if (tether::bluetooth::to_string(tether::bluetooth::pause_mode_from_string(mode)) != mode) {
+        debug::log(ERR, _("Use never, one-removed or both-removed.\n"));
+        return 1;
+    }
+    if (!client.send(nlohmann::json{{"command", "bt_airpods_pause"}, {"mode", mode}}.dump() + "\n")) {
+        debug::log(ERR, _("Could not reach the daemon.\n"));
+        return 1;
+    }
+    fprintf(stdout, _("Pause on removal set to %s.\n"), mode.c_str());
+    return 0;
+}
+
+static int set_bt_airpods_handoff(tether::Client& client, const std::string& value) {
+    if (value != "on" && value != "off") {
+        debug::log(ERR, _("Use on or off.\n"));
+        return 1;
+    }
+    if (!client.send(nlohmann::json{{"command", "bt_airpods_handoff"}, {"enabled", value == "on"}}.dump() + "\n")) {
+        debug::log(ERR, _("Could not reach the daemon.\n"));
+        return 1;
+    }
+    fprintf(stdout,
+            "%s\n",
+            value == "on" ? _("An iPhone call will hand the AirPods to the phone and take them back after.")
+                          : _("AirPods handoff is off."));
     return 0;
 }
 
@@ -944,6 +1042,20 @@ int main(int argc, char* argv[]) {
             action = "bt_devices";
         } else if (arg == "--bt-connection") {
             action = "bt_connection";
+        } else if (arg == "--bt-airpods") {
+            action = "bt_airpods";
+        } else if (arg == "--bt-airpods-mode") {
+            action = "bt_airpods_mode";
+            if (i + 1 < argc && argv[i + 1][0] != '-')
+                arg_val = argv[++i];
+        } else if (arg == "--bt-airpods-pause") {
+            action = "bt_airpods_pause";
+            if (i + 1 < argc && argv[i + 1][0] != '-')
+                arg_val = argv[++i];
+        } else if (arg == "--bt-airpods-handoff") {
+            action = "bt_airpods_handoff";
+            if (i + 1 < argc && argv[i + 1][0] != '-')
+                arg_val = argv[++i];
         } else if (arg == "--bt-diagnostics") {
             action = "bt_diagnostics";
         } else if (arg == "--bt-threads") {
@@ -1179,6 +1291,14 @@ int main(int argc, char* argv[]) {
         return print_bt_devices(client);
     } else if (action == "bt_connection") {
         return print_bt_connection(client);
+    } else if (action == "bt_airpods") {
+        return print_bt_airpods(client);
+    } else if (action == "bt_airpods_mode") {
+        return set_bt_airpods_mode(client, arg_val);
+    } else if (action == "bt_airpods_pause") {
+        return set_bt_airpods_pause(client, arg_val);
+    } else if (action == "bt_airpods_handoff") {
+        return set_bt_airpods_handoff(client, arg_val);
     } else if (action == "bt_diagnostics") {
         return print_bt_diagnostics(client);
     } else if (action == "bt_threads") {

@@ -17,6 +17,12 @@ namespace tether::bluetooth {
     // prompt, so it stays available as a workaround.
     enum class AuthStrategy { ConnectFirst, ExplicitPair };
 
+    // When taking AirPods out should pause whatever is playing locally.
+    enum class PauseMode { Never, OneRemoved, BothRemoved };
+
+    const char* to_string(PauseMode mode);
+    PauseMode pause_mode_from_string(const std::string& value);
+
     // Persisted at ~/.config/tether/bluetooth.json.
     struct Config {
         // Address of the selected iPhone, e.g. "81:71:C8:30:6A:F3".
@@ -42,6 +48,10 @@ namespace tether::bluetooth {
         Retention retention = Retention::Encrypted;
         // Whether the daemon shows desktop popups at all.
         bool desktop_popups_enabled = true;
+        // Whether removing an AirPod pauses local playback.
+        PauseMode airpods_pause = PauseMode::Never;
+        // Whether an iPhone call hands the AirPods to the phone and takes them back after.
+        bool airpods_handoff = false;
 
         bool operator==(const Config&) const = default;
     };

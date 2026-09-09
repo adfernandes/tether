@@ -15,6 +15,7 @@
 #include <sys/wait.h>
 #include <unistd.h>
 
+#include "tether/bluetooth/airpods.hpp"
 #include "tether/bluetooth/config.hpp"
 #include "tether/bluetooth/connection.hpp"
 #include "tether/bluetooth/contacts.hpp"
@@ -309,6 +310,8 @@ namespace tether {
         status["retention"] = to_string(config.retention);
         status["retention_ready"] = secret::have_key();
         status["desktop_popups_enabled"] = config.desktop_popups_enabled;
+        status["airpods_pause"] = to_string(config.airpods_pause);
+        status["airpods_handoff"] = config.airpods_handoff;
         status["version"] = TETHER_VERSION;
         if (!bluetooth::g_bluez) {
             status["capability"] = nullptr;
@@ -669,6 +672,12 @@ namespace tether {
         return result;
     }
 
+    nlohmann::json build_bt_airpods() {
+        if (!bluetooth::g_airpods)
+            return bluetooth::to_json(bluetooth::AirPodsState{});
+        return bluetooth::to_json(bluetooth::g_airpods->state());
+    }
+
     static nlohmann::json build_local_state_snapshot() {
         nlohmann::json snapshot;
         snapshot["command"] = "state_snapshot";
@@ -947,6 +956,38 @@ namespace tether {
                         continue;
                     } else if (j.contains("command") && j["command"] == "bt_scan") {
                         std::thread(run_bt_scan).detach();
+                    } else if (j.contains("command") && j["command"] == "bt_airpods") {
+                        std::string payload = build_bt_airpods().dump() + "\n";
+                        write_plain_packet(client_fd, payload);
+                        continue;
+                    } else if (j.contains("command") && j["command"] == "bt_airpods_handoff" && j.contains("enabled")) {
+                        auto config = bluetooth::load_config();
+                        config.airpods_handoff = j.value("enabled", false);
+                        bluetooth::save_config(config);
+                        broadcast_local_event(build_bt_status().dump());
+                        continue;
+                    } else if (j.contains("command") && j["command"] == "bt_airpods_pause" && j.contains("mode")) {
+                        auto config = bluetooth::load_config();
+                        config.airpods_pause = bluetooth::pause_mode_from_string(j["mode"]);
+                        bluetooth::save_config(config);
+                        broadcast_local_event(build_bt_status().dump());
+                        continue;
+                    } else if (j.contains("command") && j["command"] == "bt_airpods_mode" && j.contains("mode")) {
+                        const auto mode = bluetooth::anc_mode_from_string(j.value("mode", ""));
+                        nlohmann::json reply;
+                        reply["command"] = "bt_airpods_mode_result";
+                        if (!mode) {
+                            reply["success"] = false;
+                            reply["message"] = _("Unknown listening mode.");
+                        } else if (!bluetooth::g_airpods || bluetooth::g_airpods->state().address.empty()) {
+                            reply["success"] = false;
+                            reply["message"] = _("No AirPods are connected.");
+                        } else {
+                            bluetooth::g_airpods->set_anc(*mode);
+                            reply["success"] = true;
+                        }
+                        write_plain_packet(client_fd, reply.dump() + "\n");
+                        continue;
                     } else if (j.contains("command") && j["command"] == "bt_list_devices") {
                         std::string payload = build_bt_devices().dump() + "\n";
                         write_plain_packet(client_fd, payload);
