@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: tether\n"
 "Report-Msgid-Bugs-To: zack@bartel.com\n"
-"POT-Creation-Date: 2026-09-08 17:21-0700\n"
+"POT-Creation-Date: 2026-09-08 22:55-0700\n"
 "PO-Revision-Date: 2026-08-23\n"
 "Last-Translator: Tether project\n"
 "Language-Team: Korean\n"
@@ -105,6 +105,10 @@ msgstr ""
 #: src/cli/main.cpp
 msgid "Hand the AirPods to the iPhone during a call: on or off."
 msgstr "통화 중에 AirPods를 iPhone에 넘깁니다: on 또는 off."
+
+#: src/cli/main.cpp
+msgid "Lock the session when the iPhone goes out of range: on or off."
+msgstr "iPhone이 범위를 벗어나면 세션을 잠급니다: on 또는 off."
 
 #: src/cli/main.cpp
 msgid "List iPhone message conversations."
@@ -493,12 +497,22 @@ msgid "Use on or off.\n"
 msgstr "on 또는 off를 사용하세요.\n"
 
 #: src/cli/main.cpp
-msgid "An iPhone call will hand the AirPods to the phone and take them back after."
-msgstr "iPhone 통화 시 AirPods를 전화기에 넘기고 통화가 끝나면 다시 가져옵니다."
+msgid ""
+"An iPhone call will hand the AirPods to the phone and take them back after."
+msgstr ""
+"iPhone 통화 시 AirPods를 전화기에 넘기고 통화가 끝나면 다시 가져옵니다."
 
 #: src/cli/main.cpp
 msgid "AirPods handoff is off."
 msgstr "AirPods 전환이 꺼져 있습니다."
+
+#: src/cli/main.cpp
+msgid "The session will lock when the iPhone goes out of range."
+msgstr "iPhone이 범위를 벗어나면 세션을 잠급니다."
+
+#: src/cli/main.cpp
+msgid "Locking on the iPhone going out of range is off."
+msgstr "iPhone이 범위를 벗어날 때 잠그는 기능이 꺼져 있습니다."
 
 #: src/cli/main.cpp
 msgid "Daemon closed the connection before the operation finished.\n"
@@ -1844,8 +1858,14 @@ msgid "Hand the AirPods to the iPhone during a call"
 msgstr "통화 중에 AirPods를 iPhone에 넘기기"
 
 #: src/gtk/devices_view.cpp
-msgid "Pauses playback and disconnects the AirPods so the iPhone can take them, then reconnects them when the call ends. Needs call control, and only applies while the buds are connected to this computer."
-msgstr "재생을 일시정지하고 AirPods 연결을 끊어 iPhone이 사용할 수 있게 한 뒤, 통화가 끝나면 다시 연결합니다. 통화 제어가 필요하며 이어버드가 이 컴퓨터에 연결되어 있을 때만 적용됩니다."
+msgid ""
+"Pauses playback and disconnects the AirPods so the iPhone can take them, "
+"then reconnects them when the call ends. Needs call control, and only "
+"applies while the buds are connected to this computer."
+msgstr ""
+"재생을 일시정지하고 AirPods 연결을 끊어 iPhone이 사용할 수 있게 한 뒤, 통화"
+"가 끝나면 다시 연결합니다. 통화 제어가 필요하며 이어버드가 이 컴퓨터에 연결되"
+"어 있을 때만 적용됩니다."
 
 #: src/gtk/devices_view.cpp
 msgid "Bluetooth needs one-time system setup"
@@ -2108,6 +2128,24 @@ msgstr "데스크톱 팝업 표시"
 #: src/gtk/settings_view.cpp
 msgid "Off silences iPhone alerts, new messages and arriving files."
 msgstr "끄면 iPhone 알림, 새 메시지, 도착한 파일이 모두 표시되지 않습니다."
+
+#: src/gtk/settings_view.cpp
+msgid "Security"
+msgstr "보안"
+
+#: src/gtk/settings_view.cpp
+msgid "What Tether does when the iPhone leaves."
+msgstr "iPhone이 멀어질 때 Tether가 하는 일."
+
+#: src/gtk/settings_view.cpp
+msgid "Lock the session when the iPhone goes out of range"
+msgstr "iPhone이 범위를 벗어나면 세션 잠그기"
+
+#: src/gtk/settings_view.cpp
+msgid ""
+"Locks about half a minute after the link times out. Switching Bluetooth off "
+"on the iPhone does not lock, and neither does suspending this machine."
+msgstr "링크가 시간 초과된 뒤 약 30초 후에 잠급니다. iPhone에서 Bluetooth를 꺼도 잠기지 않으며, 이 기기를 절전 모드로 두어도 잠기지 않습니다."
 
 #: src/gtk/settings_view.cpp
 msgid "SMS and iMessage conversations synced over Bluetooth."

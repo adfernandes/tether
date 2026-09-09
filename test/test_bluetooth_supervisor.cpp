@@ -1068,3 +1068,74 @@ TEST(BearerSupervisor, NeverCyclesClassicWhileHandsFreeIsPresent) {
         sup.tick(now);
     EXPECT_EQ(ops.classic_disconnects, 0);
 }
+
+namespace {
+
+    // A phone that is bonded and reachable on neither bearer.
+    BearerStatus gone_bearer() {
+        BearerStatus s;
+        s.device_present = true;
+        s.device_paired = true;
+        return s;
+    }
+
+} // namespace
+
+TEST(AwayLock, LocksOnceTheGraceHasPassedAfterASupervisionTimeout) {
+    const BearerStatus gone = gone_bearer();
+    EXPECT_TRUE(should_lock_on_away(true, gone, false, REASON_TIMEOUT, 30, 0, 30));
+}
+
+TEST(AwayLock, WaitsOutTheGraceBeforeLocking) {
+    const BearerStatus gone = gone_bearer();
+    EXPECT_FALSE(should_lock_on_away(true, gone, false, REASON_TIMEOUT, 29, 0, 30));
+}
+
+// LE flaps on its own while BR/EDR carries on; that is not an absence.
+TEST(AwayLock, NeverLocksWhileEitherBearerIsUp) {
+    BearerStatus bearer = gone_bearer();
+    bearer.classic_connected = true;
+    EXPECT_FALSE(should_lock_on_away(true, bearer, false, REASON_TIMEOUT, 300, 0, 30));
+
+    bearer.classic_connected = false;
+    bearer.le_connected = true;
+    EXPECT_FALSE(should_lock_on_away(true, bearer, false, REASON_TIMEOUT, 300, 0, 30));
+}
+
+// An open MAP or PBAP session reaches the phone whatever BlueZ reports.
+TEST(AwayLock, NeverLocksWhileAnObexSessionIsOpen) {
+    const BearerStatus gone = gone_bearer();
+    EXPECT_FALSE(should_lock_on_away(true, gone, true, REASON_TIMEOUT, 300, 0, 30));
+}
+
+// Only a supervision timeout means the phone left. Local covers the daemon's own
+// disconnects and the adapter powering off, Remote the phone's Bluetooth being
+// switched off, Suspend this machine going to sleep.
+TEST(AwayLock, LocksOnNoOtherDisconnectReason) {
+    const BearerStatus gone = gone_bearer();
+    for (const char* reason : {"org.bluez.Reason.Local",
+                               "org.bluez.Reason.Remote",
+                               "org.bluez.Reason.Suspend",
+                               "org.bluez.Reason.Authentication",
+                               "org.bluez.Reason.Unknown",
+                               ""})
+        EXPECT_FALSE(should_lock_on_away(true, gone, false, reason, 300, 0, 30)) << reason;
+}
+
+// An unpaired or removed device is not a phone that walked away.
+TEST(AwayLock, NeverLocksForADeviceThatIsNoLongerPaired) {
+    BearerStatus bearer = gone_bearer();
+    bearer.device_paired = false;
+    EXPECT_FALSE(should_lock_on_away(true, bearer, false, REASON_TIMEOUT, 300, 0, 30));
+}
+
+TEST(AwayLock, NeverLocksWhenTheSettingIsOff) {
+    const BearerStatus gone = gone_bearer();
+    EXPECT_FALSE(should_lock_on_away(false, gone, false, REASON_TIMEOUT, 300, 0, 30));
+}
+
+// Nothing has gone down yet, so there is no absence to time.
+TEST(AwayLock, NeverLocksBeforeAnythingHasGoneDown) {
+    const BearerStatus gone = gone_bearer();
+    EXPECT_FALSE(should_lock_on_away(true, gone, false, REASON_TIMEOUT, 300, -1, 30));
+}

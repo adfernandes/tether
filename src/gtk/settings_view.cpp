@@ -35,6 +35,8 @@ namespace tether::ui {
             GtkWidget* row_calls = nullptr;
             GtkWidget* sw_calls = nullptr;
 
+            GtkWidget* sw_lock_away = nullptr;
+
             nlohmann::json bt_status = nlohmann::json::object();
         };
 
@@ -127,6 +129,10 @@ namespace tether::ui {
             daemon_send({{"command", "bt_set_calls"}, {"enabled", gtk_switch_get_active(widget) == TRUE}});
         }
 
+        void on_lock_away_toggled(GtkSwitch* widget, GParamSpec*, gpointer) {
+            daemon_send({{"command", "bt_set_lock_on_away"}, {"enabled", gtk_switch_get_active(widget) == TRUE}});
+        }
+
         void on_retention_changed(GtkComboBox* combo, gpointer) {
             if (const gchar* id = gtk_combo_box_get_active_id(combo))
                 daemon_send({{"command", "bt_set_retention"}, {"retention", id}});
@@ -173,6 +179,10 @@ namespace tether::ui {
             set_switch(g_settings.sw_popups,
                        reinterpret_cast<gpointer>(on_popups_toggled),
                        status.value("desktop_popups_enabled", true));
+
+            set_switch(g_settings.sw_lock_away,
+                       reinterpret_cast<gpointer>(on_lock_away_toggled),
+                       status.value("lock_on_away", false));
 
             const std::string retention = status.value("retention", "encrypted");
             set_combo(g_settings.cmb_retention, reinterpret_cast<gpointer>(on_retention_changed), retention);
@@ -260,6 +270,17 @@ namespace tether::ui {
                     _("Show desktop popups"),
                     _("Off silences iPhone alerts, new messages and arriving files."),
                     g_settings.sw_popups);
+
+            // Security
+            GtkWidget* security = add_group(column, _("Security"), _("What Tether does when the iPhone leaves."));
+
+            g_settings.sw_lock_away = new_switch();
+            g_signal_connect(g_settings.sw_lock_away, "notify::active", G_CALLBACK(on_lock_away_toggled), nullptr);
+            add_row(security,
+                    _("Lock the session when the iPhone goes out of range"),
+                    _("Locks about half a minute after the link times out. Switching Bluetooth off on the "
+                      "iPhone does not lock, and neither does suspending this machine."),
+                    g_settings.sw_lock_away);
 
             // Messages
             GtkWidget* messages =

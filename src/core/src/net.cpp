@@ -312,6 +312,8 @@ namespace tether {
         status["desktop_popups_enabled"] = config.desktop_popups_enabled;
         status["airpods_pause"] = to_string(config.airpods_pause);
         status["airpods_handoff"] = config.airpods_handoff;
+        status["lock_on_away"] = config.lock_on_away;
+        status["lock_away_seconds"] = config.lock_away_seconds;
         status["version"] = TETHER_VERSION;
         if (!bluetooth::g_bluez) {
             status["capability"] = nullptr;
@@ -1161,6 +1163,16 @@ namespace tether {
                         bluetooth::save_config(config);
                         if (bluetooth::g_bt_connections)
                             bluetooth::g_bt_connections->set_calls_enabled(config.calls_enabled);
+                        broadcast_local_event(build_bt_status().dump());
+                    } else if (j.contains("command") && j["command"] == "bt_set_lock_on_away") {
+                        auto config = bluetooth::load_config();
+                        config.lock_on_away = j.value("enabled", false);
+                        config.lock_away_seconds =
+                            std::max(1, j.value("grace_seconds", bluetooth::AWAY_LOCK_GRACE_SECONDS));
+                        bluetooth::save_config(config);
+                        if (bluetooth::g_bt_connections)
+                            bluetooth::g_bt_connections->set_lock_on_away(config.lock_on_away,
+                                                                          config.lock_away_seconds);
                         broadcast_local_event(build_bt_status().dump());
                     } else if (j.contains("command") && j["command"] == "set_desktop_popups") {
                         auto config = bluetooth::load_config();

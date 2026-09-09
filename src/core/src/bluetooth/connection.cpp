@@ -10,6 +10,7 @@
 #include "tether/bluetooth/pbap_session.hpp"
 #include "tether/log.hpp"
 #include "tether/secret_store.hpp"
+#include "tether/session_lock.hpp"
 #include <tether/i18n.hpp>
 
 #include <algorithm>
@@ -644,6 +645,13 @@ namespace tether::bluetooth {
         bool ancs_enabled = true;
         bool link_was_ready = false;
         bool device_was_present = false;
+        // Whether losing the phone to a supervision timeout locks the session
+        std::atomic<bool> lock_on_away{false};
+        std::atomic<int> lock_away_seconds{AWAY_LOCK_GRACE_SECONDS};
+        // When the last path to the phone went down, -1 while any is up.
+        int64_t gone_since = -1;
+        // Whether the away lock has already fired for this absence.
+        bool lock_fired = false;
         // When the LE bearer was last seen down, so a blip can be told from a
         // session that is really gone. -1 while it is up.
         int64_t le_down_since = -1;
@@ -693,6 +701,10 @@ namespace tether::bluetooth {
         }
 
         void run();
+
+        // Locks the session once the phone has been out of range long enough.
+        void supervise_away_lock(int64_t now, bool obex_up);
+
         void sync_messages(int64_t now);
         void sync_contacts();
         void sync_ancs(int64_t now);
@@ -1180,6 +1192,36 @@ namespace tether::bluetooth {
             on_calls(std::move(calls));
     }
 
+    void ConnectionState::supervise_away_lock(int64_t now, bool obex_up) {
+        const auto& bearer = bearers->status();
+        const bool reachable = bearer.classic_connected || bearer.le_connected || obex_up;
+
+        if (reachable) {
+            gone_since = -1;
+            lock_fired = false;
+            // A link that came back must not be judged on why the last one ended.
+            if (monitor)
+                monitor->clear_disconnect_reason(address);
+            return;
+        }
+
+        if (gone_since < 0)
+            gone_since = now;
+
+        const bool enabled = lock_on_away.load();
+        if (!enabled || lock_fired || !monitor)
+            return;
+
+        const std::string reason = monitor->last_disconnect_reason(address);
+        if (!should_lock_on_away(enabled, bearer, obex_up, reason, now, gone_since, lock_away_seconds.load()))
+            return;
+
+        lock_fired = true;
+        debug::log(INFO, "bluetooth: iPhone out of range for {}s, locking the session", now - gone_since);
+        if (!lock_session(load_config().lock_command))
+            debug::log(WARN, "bluetooth: could not lock the session");
+    }
+
     void ConnectionState::run() {
         using namespace std::chrono;
         const auto started = steady_clock::now();
@@ -1214,6 +1256,8 @@ namespace tether::bluetooth {
             profiles->tick(now, bearers->status().device_paired);
 
             const auto& bearer = bearers->status();
+
+            supervise_away_lock(now, obex_up);
 
             supervise_ancs_solicitation(*monitor, should_solicit_ancs(ancs_enabled, bearer, now, ancs_absent_since));
 
@@ -1265,6 +1309,8 @@ namespace tether::bluetooth {
         const Config config = load_config();
         state_->ancs_content_wanted = config.ancs_content_enabled;
         state_->calls_wanted = config.calls_enabled;
+        state_->lock_on_away = config.lock_on_away;
+        state_->lock_away_seconds = config.lock_away_seconds;
         // Read the controller's capability here rather than letting each caller
         // latch its own copy. At startup BlueZ may not have finished enumerating
         // the adapter, and its free advertising-instance count drops to zero
@@ -1390,6 +1436,11 @@ namespace tether::bluetooth {
     void ConnectionManager::set_call_handler(CallsFn on_calls) { state_->on_calls = std::move(on_calls); }
 
     void ConnectionManager::set_calls_enabled(bool enabled) { state_->calls_wanted = enabled; }
+
+    void ConnectionManager::set_lock_on_away(bool enabled, int grace_seconds) {
+        state_->lock_on_away = enabled;
+        state_->lock_away_seconds = grace_seconds;
+    }
 
     bool ConnectionManager::dial(const std::string& number, std::string& err) {
         auto client = state_->calls_client();

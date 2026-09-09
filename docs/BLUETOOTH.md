@@ -659,6 +659,8 @@ These are properties of what iOS exposes:
 - ANCS supports positive/negative notification actions only. There is no free-text reply over ANCS, replies go through MAP.
 - No attachments, reactions, typing indicators, or read receipts.
 - MAP gives no conversation identifier and no participant list for group messages, so group support is a guess and is conservative by default.
+- No RSSI for a connected device, so proximity is a yes/no, never a distance. See the 2026-09-08 entry below.
+- A phone that switches Bluetooth off, goes into airplane mode or runs out of battery reports `Reason.Remote`, which is indistinguishable from the user doing it deliberately. Locking on away therefore does not cover it.
 
 ## Troubleshooting
 
@@ -2848,3 +2850,70 @@ its tests pass both before and after this change. They exercise
 untestable without a phone, is *when* the registry is told a session began -- and
 that was the whole defect. A test that calls `begin_session()` directly can never
 catch a `begin_session()` that is never called.
+
+### 2026-09-08 - Out-of-range locking, and why RSSI is not how you find range
+
+Issue #153 asked for the session to lock when the phone leaves, with an RSSI
+threshold as the trigger. RSSI is not available to this daemon, measured against
+BlueZ 5.87 with the phone bonded and connected:
+
+```
+$ busctl --system get-property org.bluez /org/bluez/hci0/dev_60_57_C8_30_6A_F7 \
+    org.bluez.Device1 RSSI
+Failed to get property RSSI on interface org.bluez.Device1: No such property 'RSSI'
+```
+
+`Device1.RSSI` is *declared* in the interface's introspection, which makes it look
+available; it is only ever set from discovery reports, and never for a device that
+is connected. It is absent from `GetManagedObjects` for all three devices on this
+machine, including the connected iPhone, and stays absent through eight seconds of
+active discovery. The kernel does hold the number, and it is out of reach:
+
+```
+$ btmgmt --index 0 conn-info 60:57:C8:30:6A:F7
+Get Conn Info failed, status 0x14 (Permission Denied)
+```
+
+mgmt `Get Conn Info` wants `CAP_NET_ADMIN`. Reading connected RSSI at all means a
+privileged helper, for a number that would still only be a proxy for the question.
+
+BlueZ answers the question outright instead. `Disconnected(name, message)` carries
+the kernel's mgmt disconnect reason, on `org.bluez.Device1` and, with the
+experimental bearer API up, on `org.bluez.Bearer.LE1` and `Bearer.BREDR1` -- all
+three on the same device object path:
+
+| Reason | Kernel event | What it means here |
+|---|---|---|
+| `org.bluez.Reason.Timeout` | `MGMT_DEV_DISCONN_TIMEOUT` | link supervision timeout: the phone left |
+| `org.bluez.Reason.Local` | `MGMT_DEV_DISCONN_LOCAL_HOST` | we hung up: `disconnect_classic`, adapter powered off, rfkill |
+| `org.bluez.Reason.Remote` | `MGMT_DEV_DISCONN_REMOTE` | the phone hung up: Bluetooth off, airplane mode, battery |
+| `org.bluez.Reason.Suspend` | `MGMT_DEV_DISCONN_LOCAL_HOST_SUSPEND` | this machine is going to sleep |
+| `org.bluez.Reason.Authentication`, `Unknown` | | auth failure, controller catch-all |
+
+Only `Timeout` locks. That the other reasons exist is what makes the feature small:
+`Local` already covers the HFP bearer cycle this daemon performs on itself
+(`HFP_ABSENT_SECONDS`, once per daemon life) and the radio being switched off, and
+`Suspend` already covers sleep -- so there is no "we initiated this" latch to keep
+and no `PrepareForSleep` hook to add. Both were in the first design and both came
+back out.
+
+`Device1.Disconnected` is a plain `GDBUS_SIGNAL`, not experimental-gated, so it is
+there in compatibility mode too. One subscription with a null interface filter and
+member `Disconnected` catches all three interfaces, and the handler reads which one
+fired from its `interface_name` argument. This is the first thing in `monitor.cpp`
+that reads a signal's payload rather than treating it as a "something moved" ping.
+
+Locking waits for every path to be down -- BR/EDR, LE, and any open OBEX session --
+and then for `lock_away_seconds` (30 by default). A bearer that times out while the
+other carries on is a flap, which is the same thing `ANCS_BEARER_GRACE_SECONDS`
+exists for. Coming back inside the window clears the arm and forgets the reason, so
+a returning phone is never judged on why its previous link ended.
+
+The lock itself is `org.freedesktop.login1.Session.Lock` on
+`/org/freedesktop/login1/session/auto`, on the *system* bus, which resolves to the
+daemon's own session with no session id to look up. `LockedHint` is read first so an
+already-locked session is left alone. logind only emits a signal, so a compositor
+with no lock handler configured -- hypridle, swayidle -- will do nothing with it;
+`lock_command` in `bluetooth.json` runs a command instead for those setups. No
+Wayland protocol is involved: implementing `ext-session-lock-v1` would mean shipping
+a screen locker, which is not this daemon's job.

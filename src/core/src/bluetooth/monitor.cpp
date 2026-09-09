@@ -12,6 +12,7 @@
 #include <filesystem>
 #include <fstream>
 #include <gio/gio.h>
+#include <map>
 #include <mutex>
 #include <optional>
 #include <poll.h>
@@ -48,6 +49,7 @@ namespace tether::bluetooth {
         mutable std::mutex mutex;
         BluezObjects objects;
         Capability cap;
+        std::map<std::string, std::string> disconnect_reasons;
         std::string preferred_adapter_id;
         std::string secure_adapter;
         std::optional<bool> secure_connections;
@@ -72,6 +74,33 @@ namespace tether::bluetooth {
         void on_bluez_signal(
             GDBusConnection*, const gchar*, const gchar*, const gchar*, const gchar*, GVariant*, gpointer user_data) {
             static_cast<MonitorState*>(user_data)->schedule_refresh();
+        }
+
+        void on_disconnected(GDBusConnection*,
+                             const gchar*,
+                             const gchar* object_path,
+                             const gchar* interface_name,
+                             const gchar*,
+                             GVariant* parameters,
+                             gpointer user_data) {
+            const gchar* reason = nullptr;
+            const gchar* message = nullptr;
+            g_variant_get(parameters, "(&s&s)", &reason, &message);
+            if (!reason || !object_path)
+                return;
+
+            auto* impl = static_cast<MonitorState*>(user_data);
+            {
+                std::lock_guard<std::mutex> lock(impl->mutex);
+                impl->disconnect_reasons[object_path] = reason;
+            }
+            debug::log(INFO,
+                       "bluetooth: {} disconnected from {}: {} ({})",
+                       interface_name ? interface_name : "?",
+                       object_path,
+                       reason,
+                       message ? message : "");
+            impl->schedule_refresh();
         }
 
         // on watcher thread once it iterates its context
@@ -349,6 +378,16 @@ namespace tether::bluetooth {
                                                                    on_bluez_signal,
                                                                    this,
                                                                    nullptr));
+        subscriptions.push_back(g_dbus_connection_signal_subscribe(conn,
+                                                                   BLUEZ_NAME,
+                                                                   nullptr,
+                                                                   "Disconnected",
+                                                                   nullptr,
+                                                                   nullptr,
+                                                                   G_DBUS_SIGNAL_FLAGS_NONE,
+                                                                   on_disconnected,
+                                                                   this,
+                                                                   nullptr));
 
         refresh();
 
@@ -502,6 +541,25 @@ namespace tether::bluetooth {
     Capability BluezMonitor::capability() const {
         std::lock_guard<std::mutex> lock(impl_->mutex);
         return impl_->cap;
+    }
+
+    std::string BluezMonitor::last_disconnect_reason(const std::string& address) const {
+        std::lock_guard<std::mutex> lock(impl_->mutex);
+        for (const auto& device : impl_->objects.devices) {
+            if (device.address != address)
+                continue;
+            auto it = impl_->disconnect_reasons.find(device.path);
+            return it == impl_->disconnect_reasons.end() ? std::string{} : it->second;
+        }
+        return {};
+    }
+
+    void BluezMonitor::clear_disconnect_reason(const std::string& address) {
+        std::lock_guard<std::mutex> lock(impl_->mutex);
+        for (const auto& device : impl_->objects.devices) {
+            if (device.address == address)
+                impl_->disconnect_reasons.erase(device.path);
+        }
     }
 
     void BluezMonitor::set_preferred_adapter(std::string id) {
