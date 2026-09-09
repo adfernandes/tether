@@ -148,19 +148,21 @@ namespace tether::bluetooth {
     }
 
     nlohmann::json to_json(const AirPodsState& s) {
-        return {
+        nlohmann::json j = {
             {"command", "bt_airpods"},
             {"address", s.address},
             {"name", s.name},
             {"left", s.battery.left},
             {"right", s.battery.right},
             {"case", s.battery.case_},
-            {"anc", s.anc ? nlohmann::json(to_string(*s.anc)) : nlohmann::json()},
             {"ear", {{"primary", to_string(s.ear.primary)}, {"secondary", to_string(s.ear.secondary)}}},
             {"in_ear", s.ear.in_ear()},
             {"status", to_string(s.status)},
             {"reason", s.reason},
         };
+        if (s.anc)
+            j["anc"] = to_string(*s.anc);
+        return j;
     }
 
     const char* to_string(AncMode mode) {

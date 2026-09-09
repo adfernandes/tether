@@ -250,3 +250,16 @@ TEST(AirPods, DistinguishesAirPodsFromAnIPhone) {
     speaker.uuids = {UUID_A2DP_SINK};
     EXPECT_FALSE(speaker.looks_like_airpods());
 }
+
+TEST(AirPods, JsonOmitsUnknownListeningMode) {
+    AirPodsState state;
+    ASSERT_FALSE(state.anc.has_value());
+
+    const nlohmann::json j = to_json(state);
+    EXPECT_FALSE(j.contains("anc"));
+    // Readers ask for it as a string; a null would throw instead of defaulting.
+    EXPECT_EQ(j.value("anc", ""), "");
+
+    state.anc = AncMode::Transparency;
+    EXPECT_EQ(to_json(state).value("anc", ""), "transparency");
+}
