@@ -694,6 +694,7 @@ checks the daemon does not make.
 | `tether --bt-connection` reports LE and messages up but `Notifications: no`, for hours | Fixed. The LE link was opened by the dial and carries no ANCS. A connected link used to take the solicitation off air, so the phone was never asked for the service | Nothing. The advert goes back on air over a link that has stayed up without ANCS -- see 2026-08-23. To clear it by hand on an older build, `tether --bt-solicit`; do not re-pair, and do not cycle the phone's Bluetooth |
 | LE never comes up on a `BR/EDR + LE` bond, the advert is on air, and cycling the phone's Bluetooth changes nothing | The bond is pinned to `PreferredBearer=bredr`, so the inbound LE link the iPhone opens is never accepted | Fixed. The supervisor hands the preference back to `le` once the Classic link has settled, on every bond including older ones. **Re-pairing was never the fix** -- the Classic fallback re-pinned it on the next drop -- see 2026-09-07 below. `tether --bt-diagnostics` reports `preferred_bearer`; by hand it is `busctl set-property org.bluez /org/bluez/hci0/dev_<ADDR> org.bluez.Device1 PreferredBearer s le` |
 | `tether --bt-connection` says `LE: yes` and `Notifications: yes`, but nothing arrives, and only toggling Bluetooth on the iPhone fixes it | The LE bearer dropped while Classic stayed up, and BlueZ left `Notifying` set on the ANCS characteristics, so the daemon read the dead link as live and stopped trying to recover it | Fixed. `le_link_up()` now requires `ServicesResolved` alongside `Notifying` -- see 2026-09-07 below. On an older build, toggling the phone's Bluetooth is the only remedy, which is why it was the only one that ever worked |
+| Notifications go quiet after a reconnect and dismissing one logs `ATT error: 0xa2`, with `ancs_ready: true` | Fixed. ANCS UIDs are per-connection counters, and the reset for them was bound to the device path -- which the bearer grace window deliberately holds across exactly the reconnect that rotates them | Nothing. The reset now runs when the notification subscription comes up -- see 2026-09-08 below. On an older build, restarting the daemon clears it until the next reconnect |
 | The status says the iPhone is not answering on LE, and its permission is on | The phone's Bluetooth stack is wedged, which the granted permission does not prevent | Turn Bluetooth off and back on **on the iPhone**. Re-pairing and re-toggling the permission do not clear this |
 | The status says this computer is not putting the notification request on air | The adapter reports LE advertising support and BlueZ is holding no advertising instance for it, so the iPhone is never asked for the service | Nothing on the iPhone, and re-pairing will not help. Check `controller` in `tether --bt-diagnostics` and try another with `tether --bt-adapter <hciN>` -- see 2026-09-04 below |
 | Everything connects but `ancs_ready` stays false | Compatibility mode, or iOS has not authorized notification content yet | Check `Mode:` in `tether --bt-status`. In full mode the daemon retries, the first request returns `NotPermitted` until the prompt on the phone is approved |
@@ -2776,3 +2777,74 @@ was largely invisible behind it. A link that came back only after someone toggle
 Bluetooth on the phone rotated sessions rarely; one that reconnects on its own
 rotates them constantly, and the stale dedupe fills up in hours. Fixing the link
 is what surfaced it.
+
+### 2026-09-08 - The session reset was bound to the one event that does not fire
+
+| | |
+|---|---|
+| Controller | MediaTek `usb:v0E8Dp0717`, HCI version 13 |
+| BlueZ | 5.87 with `--experimental` |
+| Phone | iPhone 15 Pro, iOS 26 |
+
+The entry above got the diagnosis right and the trigger wrong. Notifications
+still stopped arriving after a reconnect, and dismissing one still answered:
+
+```
+ancs: control point write failed: GDBus.Error:org.bluez.Error.Failed: Operation failed with ATT error: 0xa2
+```
+
+`begin_session()` had exactly one call site, `AncsClient::set_device()`, and that
+function opens with:
+
+```cpp
+if (state_->device_path == device_path)
+    return;
+```
+
+`sync_ancs()` is built to keep that path steady. The comment there says so
+plainly -- the LE bearer flaps faster than a GATT subscription can be rebuilt, so
+the path is held for `ANCS_BEARER_GRACE_SECONDS` (30) rather than dropped on
+every blip:
+
+```cpp
+const bool hold = ready || le_up || now - le_down_since < ANCS_BEARER_GRACE_SECONDS;
+```
+
+So the reconnect that rotates the phone's UIDs hands `set_device()` the same
+string it already holds, and the function returns before reaching the reset. The
+two safeguards were installed on the one path that a healthy link does not take.
+
+Two more session boundaries never went near `set_device()` at all:
+
+| Path | What it does | Went through `set_device()` |
+|---|---|---|
+| `verify_subscription()`, `BlueZ cleared Notifying` | `subscribed = false`, `tick()` resubscribes | no |
+| `verify_subscription()`, characteristics gone | `drop_gatt_paths()`, rediscover, resubscribe | no |
+| `subscribe()` answering `UnknownObject` | `drop_gatt_paths()` | no |
+| LE down past the grace window | path empties, then returns | yes |
+
+Only the last row -- a link down for more than 30 seconds -- ever reset anything.
+`initial_sync` sat on the same trigger and had the same hole, so a silent
+resubscribe also stopped recognising the phone's replayed backlog as a backlog.
+
+The boundary is the subscription, not the path. ANCS numbers notifications per
+GATT connection, so the UID space is new exactly when `StartNotify` succeeds
+again. `begin_session()` and `initial_sync = true` now run there, in `tick()`,
+which is the single place `subscribed` goes from false to true, and every row of
+the table above passes through it. The `set_device()` call is kept for the case
+where BlueZ leaves `Notifying` set on a dead link and the path is what drops
+first; a redundant bump costs a cleared dedupe, which the `initial_sync` reset
+makes harmless.
+
+The log now marks the boundary that had none:
+
+```
+ancs: notification session 3 started
+```
+
+Worth separating from the fix: nothing about the earlier diagnosis was wrong, and
+its tests pass both before and after this change. They exercise
+`NotificationRegistry`, which was already correct. What was untested, and
+untestable without a phone, is *when* the registry is told a session began -- and
+that was the whole defect. A test that calls `begin_session()` directly can never
+catch a `begin_session()` that is never called.

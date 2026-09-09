@@ -643,6 +643,14 @@ namespace tether::bluetooth::ancs {
                 return;
             }
             s->subscribed = true;
+            s->initial_sync = true;
+            uint64_t session = 0;
+            {
+                std::lock_guard<std::mutex> lock(s->registry_mutex);
+                s->registry.begin_session();
+                session = s->registry.session();
+            }
+            debug::log(INFO, "ancs: notification session {} started", session);
         }
 
         // Drain what the other threads buffered.
