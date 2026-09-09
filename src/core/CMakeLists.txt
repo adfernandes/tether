@@ -39,6 +39,7 @@ add_library(tether STATIC
     src/bluetooth/airpods.cpp
     src/bluetooth/connection.cpp
     src/bluetooth/diagnostics.cpp
+    src/session_lock.cpp
     src/wayland.cpp
     src/wayland_protocols/wayland.cpp
     src/wayland_protocols/wlr-data-control-unstable-v1.cpp

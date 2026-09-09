@@ -36,6 +36,12 @@ namespace tether::bluetooth {
         BluezObjects snapshot() const;
         Capability capability() const;
 
+        // Reason from the last org.bluez Disconnected signal for the device
+        std::string last_disconnect_reason(const std::string& address) const;
+
+        // Clears the last disconnect reason for the device, so that the next disconnect will be reported.
+        void clear_disconnect_reason(const std::string& address);
+
         // Which controller to use: "hciN" or an address, empty for the first powered one.
         void set_preferred_adapter(std::string id);
         std::string preferred_adapter_id() const;

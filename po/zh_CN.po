@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: tether\n"
 "Report-Msgid-Bugs-To: zack@bartel.com\n"
-"POT-Creation-Date: 2026-09-08 17:21-0700\n"
+"POT-Creation-Date: 2026-09-08 22:55-0700\n"
 "PO-Revision-Date: 2026-08-23\n"
 "Last-Translator: Tether project\n"
 "Language-Team: Simplified Chinese\n"
@@ -103,6 +103,10 @@ msgstr "取下 AirPod 时暂停本机播放：never、one-removed、both-removed
 #: src/cli/main.cpp
 msgid "Hand the AirPods to the iPhone during a call: on or off."
 msgstr "通话期间将 AirPods 交给 iPhone：on 或 off。"
+
+#: src/cli/main.cpp
+msgid "Lock the session when the iPhone goes out of range: on or off."
+msgstr "当 iPhone 超出范围时锁定会话：on 或 off。"
 
 #: src/cli/main.cpp
 msgid "List iPhone message conversations."
@@ -483,12 +487,21 @@ msgid "Use on or off.\n"
 msgstr "请使用 on 或 off。\n"
 
 #: src/cli/main.cpp
-msgid "An iPhone call will hand the AirPods to the phone and take them back after."
+msgid ""
+"An iPhone call will hand the AirPods to the phone and take them back after."
 msgstr "iPhone 来电时会将 AirPods 交给手机，通话结束后再取回。"
 
 #: src/cli/main.cpp
 msgid "AirPods handoff is off."
 msgstr "AirPods 交接已关闭。"
+
+#: src/cli/main.cpp
+msgid "The session will lock when the iPhone goes out of range."
+msgstr "当 iPhone 超出范围时将锁定会话。"
+
+#: src/cli/main.cpp
+msgid "Locking on the iPhone going out of range is off."
+msgstr "iPhone 超出范围时锁定已关闭。"
 
 #: src/cli/main.cpp
 msgid "Daemon closed the connection before the operation finished.\n"
@@ -1804,8 +1817,13 @@ msgid "Hand the AirPods to the iPhone during a call"
 msgstr "通话期间将 AirPods 交给 iPhone"
 
 #: src/gtk/devices_view.cpp
-msgid "Pauses playback and disconnects the AirPods so the iPhone can take them, then reconnects them when the call ends. Needs call control, and only applies while the buds are connected to this computer."
-msgstr "暂停播放并断开 AirPods，让 iPhone 可以接管，通话结束后再重新连接。需要通话控制，且仅在耳机连接到本机时生效。"
+msgid ""
+"Pauses playback and disconnects the AirPods so the iPhone can take them, "
+"then reconnects them when the call ends. Needs call control, and only "
+"applies while the buds are connected to this computer."
+msgstr ""
+"暂停播放并断开 AirPods，让 iPhone 可以接管，通话结束后再重新连接。需要通话控"
+"制，且仅在耳机连接到本机时生效。"
 
 #: src/gtk/devices_view.cpp
 msgid "Bluetooth needs one-time system setup"
@@ -2065,6 +2083,24 @@ msgstr "显示桌面弹窗"
 #: src/gtk/settings_view.cpp
 msgid "Off silences iPhone alerts, new messages and arriving files."
 msgstr "关闭后将不显示 iPhone 提醒、新消息和收到的文件。"
+
+#: src/gtk/settings_view.cpp
+msgid "Security"
+msgstr "安全"
+
+#: src/gtk/settings_view.cpp
+msgid "What Tether does when the iPhone leaves."
+msgstr "iPhone 离开时 Tether 的行为。"
+
+#: src/gtk/settings_view.cpp
+msgid "Lock the session when the iPhone goes out of range"
+msgstr "当 iPhone 超出范围时锁定会话"
+
+#: src/gtk/settings_view.cpp
+msgid ""
+"Locks about half a minute after the link times out. Switching Bluetooth off "
+"on the iPhone does not lock, and neither does suspending this machine."
+msgstr "在链路超时约半分钟后锁定。在 iPhone 上关闭蓝牙不会锁定，将本机挂起也不会。"
 
 #: src/gtk/settings_view.cpp
 msgid "SMS and iMessage conversations synced over Bluetooth."

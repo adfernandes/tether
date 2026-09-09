@@ -1,5 +1,6 @@
 #pragma once
 
+#include "tether/bluetooth/bearer_supervisor.hpp"
 #include "tether/secret_store.hpp"
 
 #include <string>
@@ -52,6 +53,12 @@ namespace tether::bluetooth {
         PauseMode airpods_pause = PauseMode::Never;
         // Whether an iPhone call hands the AirPods to the phone and takes them back after.
         bool airpods_handoff = false;
+        // Whether losing the iPhone to a link supervision timeout locks the session.
+        bool lock_on_away = false;
+        // How long every bearer must stay down before the session is locked.
+        int lock_away_seconds = AWAY_LOCK_GRACE_SECONDS;
+        // What performs the lock. Empty uses logind.
+        std::string lock_command;
 
         bool operator==(const Config&) const = default;
     };

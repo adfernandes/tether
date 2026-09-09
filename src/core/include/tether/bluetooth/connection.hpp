@@ -51,6 +51,9 @@ namespace tether::bluetooth {
         // which app sent them. Takes effect on the next notification.
         void set_ancs_content_enabled(bool enabled);
 
+        // Whether the session locks when the phone drops out of range.
+        void set_lock_on_away(bool enabled, int grace_seconds);
+
         // Invokes a mirrored notification's action.
         bool perform_notification_action(uint32_t uid, ancs::ActionId action);
 

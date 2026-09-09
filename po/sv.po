@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: tether\n"
 "Report-Msgid-Bugs-To: zack@bartel.com\n"
-"POT-Creation-Date: 2026-09-08 17:21-0700\n"
+"POT-Creation-Date: 2026-09-08 22:55-0700\n"
 "PO-Revision-Date: 2026-08-23\n"
 "Last-Translator: Tether project\n"
 "Language-Team: Swedish\n"
@@ -107,6 +107,10 @@ msgstr ""
 #: src/cli/main.cpp
 msgid "Hand the AirPods to the iPhone during a call: on or off."
 msgstr "Lämna över AirPods till iPhone under ett samtal: on eller off."
+
+#: src/cli/main.cpp
+msgid "Lock the session when the iPhone goes out of range: on or off."
+msgstr "Lås sessionen när iPhonen hamnar utom räckhåll: on eller off."
 
 #: src/cli/main.cpp
 msgid "List iPhone message conversations."
@@ -501,12 +505,23 @@ msgid "Use on or off.\n"
 msgstr "Använd on eller off.\n"
 
 #: src/cli/main.cpp
-msgid "An iPhone call will hand the AirPods to the phone and take them back after."
-msgstr "Ett samtal på iPhone lämnar över AirPods till telefonen och tar tillbaka dem efteråt."
+msgid ""
+"An iPhone call will hand the AirPods to the phone and take them back after."
+msgstr ""
+"Ett samtal på iPhone lämnar över AirPods till telefonen och tar tillbaka dem "
+"efteråt."
 
 #: src/cli/main.cpp
 msgid "AirPods handoff is off."
 msgstr "Överlämning av AirPods är av."
+
+#: src/cli/main.cpp
+msgid "The session will lock when the iPhone goes out of range."
+msgstr "Sessionen låses när iPhonen hamnar utom räckhåll."
+
+#: src/cli/main.cpp
+msgid "Locking on the iPhone going out of range is off."
+msgstr "Låsning när iPhonen hamnar utom räckhåll är avstängd."
 
 #: src/cli/main.cpp
 msgid "Daemon closed the connection before the operation finished.\n"
@@ -1870,8 +1885,14 @@ msgid "Hand the AirPods to the iPhone during a call"
 msgstr "Lämna över AirPods till iPhone under ett samtal"
 
 #: src/gtk/devices_view.cpp
-msgid "Pauses playback and disconnects the AirPods so the iPhone can take them, then reconnects them when the call ends. Needs call control, and only applies while the buds are connected to this computer."
-msgstr "Pausar uppspelningen och kopplar från AirPods så att iPhone kan ta över dem, och ansluter dem igen när samtalet är slut. Kräver samtalsstyrning och gäller bara medan propparna är anslutna till den här datorn."
+msgid ""
+"Pauses playback and disconnects the AirPods so the iPhone can take them, "
+"then reconnects them when the call ends. Needs call control, and only "
+"applies while the buds are connected to this computer."
+msgstr ""
+"Pausar uppspelningen och kopplar från AirPods så att iPhone kan ta över dem, "
+"och ansluter dem igen när samtalet är slut. Kräver samtalsstyrning och "
+"gäller bara medan propparna är anslutna till den här datorn."
 
 #: src/gtk/devices_view.cpp
 msgid "Bluetooth needs one-time system setup"
@@ -2139,6 +2160,24 @@ msgstr "Visa skrivbordsnotiser"
 #: src/gtk/settings_view.cpp
 msgid "Off silences iPhone alerts, new messages and arriving files."
 msgstr "Av tystar iPhone-aviseringar, nya meddelanden och inkommande filer."
+
+#: src/gtk/settings_view.cpp
+msgid "Security"
+msgstr "Säkerhet"
+
+#: src/gtk/settings_view.cpp
+msgid "What Tether does when the iPhone leaves."
+msgstr "Vad Tether gör när iPhonen försvinner."
+
+#: src/gtk/settings_view.cpp
+msgid "Lock the session when the iPhone goes out of range"
+msgstr "Lås sessionen när iPhonen hamnar utom räckhåll"
+
+#: src/gtk/settings_view.cpp
+msgid ""
+"Locks about half a minute after the link times out. Switching Bluetooth off "
+"on the iPhone does not lock, and neither does suspending this machine."
+msgstr "Låser ungefär en halv minut efter att länken gått ut. Att stänga av Bluetooth på iPhonen låser inte, och inte heller att försätta den här maskinen i vila."
 
 #: src/gtk/settings_view.cpp
 msgid "SMS and iMessage conversations synced over Bluetooth."

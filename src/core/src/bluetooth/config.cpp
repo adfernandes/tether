@@ -2,6 +2,7 @@
 #include "tether/log.hpp"
 #include "tether/paths.hpp"
 
+#include <algorithm>
 #include <cstdlib>
 #include <filesystem>
 #include <fstream>
@@ -65,6 +66,9 @@ namespace tether::bluetooth {
         j["desktop_popups_enabled"] = config.desktop_popups_enabled;
         j["airpods_pause"] = to_string(config.airpods_pause);
         j["airpods_handoff"] = config.airpods_handoff;
+        j["lock_on_away"] = config.lock_on_away;
+        j["lock_away_seconds"] = config.lock_away_seconds;
+        j["lock_command"] = config.lock_command;
         return j.dump(2);
     }
 
@@ -87,6 +91,10 @@ namespace tether::bluetooth {
             config.desktop_popups_enabled = j.value("desktop_popups_enabled", true);
             config.airpods_pause = pause_mode_from_string(j.value("airpods_pause", ""));
             config.airpods_handoff = j.value("airpods_handoff", false);
+            config.lock_on_away = j.value("lock_on_away", false);
+            // A zero or negative grace would lock on the first flap.
+            config.lock_away_seconds = std::max(1, j.value("lock_away_seconds", AWAY_LOCK_GRACE_SECONDS));
+            config.lock_command = j.value("lock_command", "");
         } catch (const std::exception&) {
             // A corrupt file must not stop the daemon; defaults are safe.
         }

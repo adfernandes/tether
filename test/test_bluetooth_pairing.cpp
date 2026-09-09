@@ -78,6 +78,9 @@ TEST(BluetoothConfig, RoundTrips) {
     config.adapter = "hci1";
     config.calls_enabled = true;
     config.desktop_popups_enabled = false;
+    config.lock_on_away = true;
+    config.lock_away_seconds = 45;
+    config.lock_command = "hyprlock";
 
     EXPECT_EQ(deserialize_config(serialize_config(config)), config);
 }
@@ -95,6 +98,16 @@ TEST(BluetoothConfig, DefaultsToConnectFirstAndAncsEnabled) {
     EXPECT_FALSE(config.calls_enabled);
     // A config written before the switch existed keeps showing popups.
     EXPECT_TRUE(config.desktop_popups_enabled);
+    // Locking the screen is never assumed; logind performs it once switched on.
+    EXPECT_FALSE(config.lock_on_away);
+    EXPECT_EQ(config.lock_away_seconds, AWAY_LOCK_GRACE_SECONDS);
+    EXPECT_TRUE(config.lock_command.empty());
+}
+
+// A zero or negative grace would lock on the first flap.
+TEST(BluetoothConfig, ClampsTheAwayGraceToAtLeastASecond) {
+    EXPECT_EQ(deserialize_config(R"({"lock_away_seconds": 0})").lock_away_seconds, 1);
+    EXPECT_EQ(deserialize_config(R"({"lock_away_seconds": -5})").lock_away_seconds, 1);
 }
 
 // Switching Bluetooth off supervises no device, which is what stops the daemon

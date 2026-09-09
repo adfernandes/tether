@@ -36,6 +36,13 @@ namespace tether::bluetooth {
     // GATT discovery on a freshly opened link, which runs to about a minute.
     inline constexpr int ANCS_ABSENT_GRACE_SECONDS = 75;
 
+    // How long every bearer must stay down, after a link supervision timeout,
+    // before the phone counts as gone rather than flapping.
+    inline constexpr int AWAY_LOCK_GRACE_SECONDS = 30;
+
+    // org.bluez Disconnected reasons.
+    inline constexpr const char* REASON_TIMEOUT = "org.bluez.Reason.Timeout";
+
     // What BlueZ did with a request to bring a bearer up. Accepting a request is
     // not a link: only an observed Connected is that.
     enum class ConnectResult {
@@ -99,6 +106,24 @@ namespace tether::bluetooth {
         should_solicit_ancs(bool ancs_enabled, const BearerStatus& bearer, int64_t now, int64_t ancs_absent_since) {
         const bool link_dead = ancs_absent_since >= 0 && now - ancs_absent_since >= ANCS_ABSENT_GRACE_SECONDS;
         return ancs_enabled && bearer.le_available && !bearer.le_dialling && (!bearer.le_connected || link_dead);
+    }
+
+    // Whether the phone has been gone long enough, and for the right reason, to
+    // lock the session.
+    inline bool should_lock_on_away(bool enabled,
+                                    const BearerStatus& bearer,
+                                    bool obex_up,
+                                    const std::string& reason,
+                                    int64_t now,
+                                    int64_t gone_since,
+                                    int grace_seconds) {
+        if (!enabled || gone_since < 0 || obex_up)
+            return false;
+        if (!bearer.device_paired || bearer.classic_connected || bearer.le_connected)
+            return false;
+        if (reason != REASON_TIMEOUT)
+            return false;
+        return now - gone_since >= grace_seconds;
     }
 
     // Keeps the Classic and LE halves of one bond connected.

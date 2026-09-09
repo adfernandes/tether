@@ -6,9 +6,9 @@
 #, fuzzy
 msgid ""
 msgstr ""
-"Project-Id-Version: tether 0.2.27\n"
+"Project-Id-Version: tether 0.2.28\n"
 "Report-Msgid-Bugs-To: zack@bartel.com\n"
-"POT-Creation-Date: 2026-09-08 17:21-0700\n"
+"POT-Creation-Date: 2026-09-08 22:55-0700\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -102,6 +102,10 @@ msgstr ""
 
 #: src/cli/main.cpp
 msgid "Hand the AirPods to the iPhone during a call: on or off."
+msgstr ""
+
+#: src/cli/main.cpp
+msgid "Lock the session when the iPhone goes out of range: on or off."
 msgstr ""
 
 #: src/cli/main.cpp
@@ -466,6 +470,14 @@ msgstr ""
 
 #: src/cli/main.cpp
 msgid "AirPods handoff is off."
+msgstr ""
+
+#: src/cli/main.cpp
+msgid "The session will lock when the iPhone goes out of range."
+msgstr ""
+
+#: src/cli/main.cpp
+msgid "Locking on the iPhone going out of range is off."
 msgstr ""
 
 #: src/cli/main.cpp
@@ -1967,6 +1979,24 @@ msgstr ""
 
 #: src/gtk/settings_view.cpp
 msgid "Off silences iPhone alerts, new messages and arriving files."
+msgstr ""
+
+#: src/gtk/settings_view.cpp
+msgid "Security"
+msgstr ""
+
+#: src/gtk/settings_view.cpp
+msgid "What Tether does when the iPhone leaves."
+msgstr ""
+
+#: src/gtk/settings_view.cpp
+msgid "Lock the session when the iPhone goes out of range"
+msgstr ""
+
+#: src/gtk/settings_view.cpp
+msgid ""
+"Locks about half a minute after the link times out. Switching Bluetooth off "
+"on the iPhone does not lock, and neither does suspending this machine."
 msgstr ""
 
 #: src/gtk/settings_view.cpp
