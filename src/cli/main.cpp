@@ -11,6 +11,7 @@
 #include <string>
 #include <strings.h>
 #include <sys/ioctl.h>
+#include <tether/bluetooth/config.hpp>
 #include <tether/client.hpp>
 #include <tether/core.hpp>
 #include <tether/crypto.hpp>
@@ -192,6 +193,7 @@ static const Opt kOptions[] = {
     {"--bt-connection", N_("Show Bluetooth link and profile connection state.")},
     {"--bt-airpods", N_("Show AirPods and case battery.")},
     {"--bt-airpods-mode", N_("Set the AirPods listening mode: off, anc, transparency, adaptive.")},
+    {"--bt-airpods-pause", N_("Pause local playback when an AirPod is removed: never, one-removed, both-removed.")},
     {"--bt-threads", N_("List iPhone message conversations.")},
     {"--bt-messages <thread>", N_("Show messages in one conversation.")},
     {"--bt-send <thread> <text>", N_("Reply in one conversation.")},
@@ -531,6 +533,13 @@ static int print_bt_airpods(tether::Client& client) {
     if (resp.contains("anc") && resp["anc"].is_string())
         fprintf(stdout, "  %-6s %s\n", _("Mode"), resp["anc"].get<std::string>().c_str());
 
+    if (resp.contains("ear") && resp["ear"].is_object()) {
+        const std::string primary = resp["ear"].value("primary", "unknown");
+        const std::string secondary = resp["ear"].value("secondary", "unknown");
+        if (primary != "unknown" || secondary != "unknown")
+            fprintf(stdout, "  %-6s %s, %s\n", _("Worn"), primary.c_str(), secondary.c_str());
+    }
+
     const std::string reason = resp.value("reason", "");
     if (!reason.empty())
         fprintf(stdout, "  %s\n", reason.c_str());
@@ -554,6 +563,19 @@ static int set_bt_airpods_mode(tether::Client& client, const std::string& mode) 
     }
     debug::log(ERR, "{}\n", resp.value("message", std::string(_("The listening mode could not be set."))));
     return 1;
+}
+
+static int set_bt_airpods_pause(tether::Client& client, const std::string& mode) {
+    if (tether::bluetooth::to_string(tether::bluetooth::pause_mode_from_string(mode)) != mode) {
+        debug::log(ERR, _("Use never, one-removed or both-removed.\n"));
+        return 1;
+    }
+    if (!client.send(nlohmann::json{{"command", "bt_airpods_pause"}, {"mode", mode}}.dump() + "\n")) {
+        debug::log(ERR, _("Could not reach the daemon.\n"));
+        return 1;
+    }
+    fprintf(stdout, _("Pause on removal set to %s.\n"), mode.c_str());
+    return 0;
 }
 
 // Pairing takes tens of seconds and reports progress as it goes, so this
@@ -1009,6 +1031,10 @@ int main(int argc, char* argv[]) {
             action = "bt_airpods_mode";
             if (i + 1 < argc && argv[i + 1][0] != '-')
                 arg_val = argv[++i];
+        } else if (arg == "--bt-airpods-pause") {
+            action = "bt_airpods_pause";
+            if (i + 1 < argc && argv[i + 1][0] != '-')
+                arg_val = argv[++i];
         } else if (arg == "--bt-diagnostics") {
             action = "bt_diagnostics";
         } else if (arg == "--bt-threads") {
@@ -1248,6 +1274,8 @@ int main(int argc, char* argv[]) {
         return print_bt_airpods(client);
     } else if (action == "bt_airpods_mode") {
         return set_bt_airpods_mode(client, arg_val);
+    } else if (action == "bt_airpods_pause") {
+        return set_bt_airpods_pause(client, arg_val);
     } else if (action == "bt_diagnostics") {
         return print_bt_diagnostics(client);
     } else if (action == "bt_threads") {

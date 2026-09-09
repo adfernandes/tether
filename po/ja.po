@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: tether\n"
 "Report-Msgid-Bugs-To: zack@bartel.com\n"
-"POT-Creation-Date: 2026-09-08 16:30-0700\n"
+"POT-Creation-Date: 2026-09-08 16:56-0700\n"
 "PO-Revision-Date: 2026-08-23\n"
 "Last-Translator: Tether project\n"
 "Language-Team: Japanese\n"
@@ -95,6 +95,10 @@ msgstr "AirPods とケースのバッテリーを表示します。"
 msgid "Set the AirPods listening mode: off, anc, transparency, adaptive."
 msgstr ""
 "AirPods のリスニングモードを設定します: off, anc, transparency, adaptive。"
+
+#: src/cli/main.cpp
+msgid "Pause local playback when an AirPod is removed: never, one-removed, both-removed."
+msgstr "AirPod を外したときにローカル再生を一時停止します: never, one-removed, both-removed。"
 
 #: src/cli/main.cpp
 msgid "List iPhone message conversations."
@@ -454,6 +458,10 @@ msgid "Case"
 msgstr "ケース"
 
 #: src/cli/main.cpp
+msgid "Worn"
+msgstr "装着"
+
+#: src/cli/main.cpp
 msgid "Could not reach the daemon.\n"
 msgstr "デーモンに接続できませんでした。\n"
 
@@ -465,6 +473,14 @@ msgstr "リスニングモードを %s に設定しました。\n"
 #: src/cli/main.cpp
 msgid "The listening mode could not be set."
 msgstr "リスニングモードを設定できませんでした。"
+
+#: src/cli/main.cpp
+msgid "Use never, one-removed or both-removed.\n"
+msgstr "never、one-removed、both-removed のいずれかを指定してください。\n"
+
+#: src/cli/main.cpp
+msgid "Pause on removal set to %s.\n"
+msgstr "取り外し時の一時停止を %s に設定しました。\n"
 
 #: src/cli/main.cpp
 msgid "Daemon closed the connection before the operation finished.\n"
@@ -1483,6 +1499,22 @@ msgid "These AirPods do not report a listening mode."
 msgstr "この AirPods はリスニングモードを報告しません。"
 
 #: src/gtk/devices_view.cpp
+msgid "These AirPods do not report whether they are being worn."
+msgstr "この AirPods は装着状態を報告しません。"
+
+#: src/gtk/devices_view.cpp
+msgid "Both buds are in."
+msgstr "両方のイヤホンを装着しています。"
+
+#: src/gtk/devices_view.cpp
+msgid "One bud is in."
+msgstr "片方のイヤホンを装着しています。"
+
+#: src/gtk/devices_view.cpp
+msgid "Neither bud is in."
+msgstr "イヤホンを装着していません。"
+
+#: src/gtk/devices_view.cpp
 msgid "Full mode — messages, contacts, and notifications."
 msgstr "フルモード — メッセージ、連絡先、通知。"
 
@@ -1775,6 +1807,30 @@ msgstr "デバイスを検索"
 #: src/gtk/devices_view.cpp
 msgid "Listening mode"
 msgstr "リスニングモード"
+
+#: src/gtk/devices_view.cpp
+msgid "In-ear detection"
+msgstr "装着検出"
+
+#: src/gtk/devices_view.cpp
+msgid "Pause playback when:"
+msgstr "再生を一時停止する条件:"
+
+#: src/gtk/devices_view.cpp
+msgid "Never"
+msgstr "しない"
+
+#: src/gtk/devices_view.cpp
+msgid "One bud is removed"
+msgstr "片方を外したとき"
+
+#: src/gtk/devices_view.cpp
+msgid "Both buds are removed"
+msgstr "両方を外したとき"
+
+#: src/gtk/devices_view.cpp
+msgid "Pauses whatever is playing on this computer, and starts it again when the buds go back in. Only playback Tether paused is resumed."
+msgstr "このコンピュータで再生中のものを一時停止し、イヤホンを装着し直すと再開します。Tether が一時停止した再生のみを再開します。"
 
 #: src/gtk/devices_view.cpp
 msgid "Bluetooth needs one-time system setup"

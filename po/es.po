@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: tether\n"
 "Report-Msgid-Bugs-To: zack@bartel.com\n"
-"POT-Creation-Date: 2026-09-08 16:30-0700\n"
+"POT-Creation-Date: 2026-09-08 16:56-0700\n"
 "PO-Revision-Date: 2026-08-22\n"
 "Last-Translator: Tether project\n"
 "Language-Team: Spanish\n"
@@ -97,6 +97,10 @@ msgid "Set the AirPods listening mode: off, anc, transparency, adaptive."
 msgstr ""
 "Establecer el modo de escucha de los AirPods: off, anc, transparency, "
 "adaptive."
+
+#: src/cli/main.cpp
+msgid "Pause local playback when an AirPod is removed: never, one-removed, both-removed."
+msgstr "Pausar la reproducción local al quitar un AirPod: never, one-removed, both-removed."
 
 #: src/cli/main.cpp
 msgid "List iPhone message conversations."
@@ -465,6 +469,10 @@ msgid "Case"
 msgstr "Estuche"
 
 #: src/cli/main.cpp
+msgid "Worn"
+msgstr "Puestos"
+
+#: src/cli/main.cpp
 msgid "Could not reach the daemon.\n"
 msgstr "No se pudo contactar con el daemon.\n"
 
@@ -476,6 +484,14 @@ msgstr "Modo de escucha establecido en %s.\n"
 #: src/cli/main.cpp
 msgid "The listening mode could not be set."
 msgstr "No se pudo establecer el modo de escucha."
+
+#: src/cli/main.cpp
+msgid "Use never, one-removed or both-removed.\n"
+msgstr "Use never, one-removed o both-removed.\n"
+
+#: src/cli/main.cpp
+msgid "Pause on removal set to %s.\n"
+msgstr "Pausa al quitarlos establecida en %s.\n"
 
 #: src/cli/main.cpp
 msgid "Daemon closed the connection before the operation finished.\n"
@@ -1513,6 +1529,22 @@ msgid "These AirPods do not report a listening mode."
 msgstr "Estos AirPods no informan de un modo de escucha."
 
 #: src/gtk/devices_view.cpp
+msgid "These AirPods do not report whether they are being worn."
+msgstr "Estos AirPods no informan de si se están llevando puestos."
+
+#: src/gtk/devices_view.cpp
+msgid "Both buds are in."
+msgstr "Ambos auriculares están puestos."
+
+#: src/gtk/devices_view.cpp
+msgid "One bud is in."
+msgstr "Un auricular está puesto."
+
+#: src/gtk/devices_view.cpp
+msgid "Neither bud is in."
+msgstr "Ningún auricular está puesto."
+
+#: src/gtk/devices_view.cpp
 msgid "Full mode — messages, contacts, and notifications."
 msgstr "Modo completo — mensajes, contactos y notificaciones."
 
@@ -1809,6 +1841,30 @@ msgstr "Buscar dispositivos"
 #: src/gtk/devices_view.cpp
 msgid "Listening mode"
 msgstr "Modo de escucha"
+
+#: src/gtk/devices_view.cpp
+msgid "In-ear detection"
+msgstr "Detección en el oído"
+
+#: src/gtk/devices_view.cpp
+msgid "Pause playback when:"
+msgstr "Pausar la reproducción cuando:"
+
+#: src/gtk/devices_view.cpp
+msgid "Never"
+msgstr "Nunca"
+
+#: src/gtk/devices_view.cpp
+msgid "One bud is removed"
+msgstr "Se quite un auricular"
+
+#: src/gtk/devices_view.cpp
+msgid "Both buds are removed"
+msgstr "Se quiten ambos auriculares"
+
+#: src/gtk/devices_view.cpp
+msgid "Pauses whatever is playing on this computer, and starts it again when the buds go back in. Only playback Tether paused is resumed."
+msgstr "Pausa lo que se esté reproduciendo en este equipo y lo reanuda cuando vuelvas a ponerte los auriculares. Solo se reanuda la reproducción que pausó Tether."
 
 #: src/gtk/devices_view.cpp
 msgid "Bluetooth needs one-time system setup"

@@ -94,6 +94,10 @@ Show AirPods battery, for each bud and the case, and the current listening mode.
 Set the AirPods listening mode. The buds decline a mode they are not configured for
 without reporting an error, so check the result with \fB\-\-bt-airpods\fR.
 .TP
+\fB\-\-bt-airpods-pause\fR \fInever\fR|\fIone-removed\fR|\fIboth-removed\fR
+Pause whatever is playing on this computer when an AirPod is removed, and start it again
+when the buds go back in. Off by default. Only playback Tether paused is resumed.
+.TP
 \fB\-\-bt-pair\fR \fIADDRESS\fR
 Pair with an iPhone over Bluetooth.
 .TP

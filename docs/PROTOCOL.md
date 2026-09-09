@@ -351,6 +351,8 @@ entries only gain an `airpods` boolean saying which device the battery belongs t
   "right": 79,
   "case": 45,
   "anc": "transparency",
+  "ear": {"primary": "in_ear", "secondary": "out_of_ear"},
+  "in_ear": 1,
   "status": "live",
   "reason": ""
 }
@@ -367,6 +369,16 @@ sentence to show.
 `anc` is the listening mode: `off`, `anc`, `transparency`, `adaptive`, or null on a model
 that does not report one. It always reflects what the buds say they are doing, never what
 was last requested.
+
+`ear` is where each bud is: `in_ear`, `out_of_ear`, `in_case` or `unknown`. They are a
+primary and a secondary rather than a left and a right, and which is which moves between
+them, so `in_ear` carries the count and nothing names a side.
+
+#### `bt_airpods_pause` (Client -> Daemon)
+**Payload**: `{"command": "bt_airpods_pause", "mode": "one-removed"}`
+
+Whether removing a bud pauses local playback: `never` (the default), `one-removed` or
+`both-removed`. Persisted, and reported back as `airpods_pause` in `bt_status`.
 
 #### `bt_airpods_mode` (Client -> Daemon, answered directly)
 **Payload**: `{"command": "bt_airpods_mode", "mode": "transparency"}`

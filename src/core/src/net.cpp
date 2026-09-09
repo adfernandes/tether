@@ -310,6 +310,7 @@ namespace tether {
         status["retention"] = to_string(config.retention);
         status["retention_ready"] = secret::have_key();
         status["desktop_popups_enabled"] = config.desktop_popups_enabled;
+        status["airpods_pause"] = to_string(config.airpods_pause);
         status["version"] = TETHER_VERSION;
         if (!bluetooth::g_bluez) {
             status["capability"] = nullptr;
@@ -957,6 +958,12 @@ namespace tether {
                     } else if (j.contains("command") && j["command"] == "bt_airpods") {
                         std::string payload = build_bt_airpods().dump() + "\n";
                         write_plain_packet(client_fd, payload);
+                        continue;
+                    } else if (j.contains("command") && j["command"] == "bt_airpods_pause" && j.contains("mode")) {
+                        auto config = bluetooth::load_config();
+                        config.airpods_pause = bluetooth::pause_mode_from_string(j["mode"]);
+                        bluetooth::save_config(config);
+                        broadcast_local_event(build_bt_status().dump());
                         continue;
                     } else if (j.contains("command") && j["command"] == "bt_airpods_mode" && j.contains("mode")) {
                         const auto mode = bluetooth::anc_mode_from_string(j.value("mode", ""));

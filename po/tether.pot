@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: tether 0.2.27\n"
 "Report-Msgid-Bugs-To: zack@bartel.com\n"
-"POT-Creation-Date: 2026-09-08 16:30-0700\n"
+"POT-Creation-Date: 2026-09-08 16:56-0700\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -92,6 +92,12 @@ msgstr ""
 
 #: src/cli/main.cpp
 msgid "Set the AirPods listening mode: off, anc, transparency, adaptive."
+msgstr ""
+
+#: src/cli/main.cpp
+msgid ""
+"Pause local playback when an AirPod is removed: never, one-removed, both-"
+"removed."
 msgstr ""
 
 #: src/cli/main.cpp
@@ -420,6 +426,10 @@ msgid "Case"
 msgstr ""
 
 #: src/cli/main.cpp
+msgid "Worn"
+msgstr ""
+
+#: src/cli/main.cpp
 msgid "Could not reach the daemon.\n"
 msgstr ""
 
@@ -430,6 +440,15 @@ msgstr ""
 
 #: src/cli/main.cpp
 msgid "The listening mode could not be set."
+msgstr ""
+
+#: src/cli/main.cpp
+msgid "Use never, one-removed or both-removed.\n"
+msgstr ""
+
+#: src/cli/main.cpp
+#, c-format
+msgid "Pause on removal set to %s.\n"
 msgstr ""
 
 #: src/cli/main.cpp
@@ -1357,6 +1376,22 @@ msgid "These AirPods do not report a listening mode."
 msgstr ""
 
 #: src/gtk/devices_view.cpp
+msgid "These AirPods do not report whether they are being worn."
+msgstr ""
+
+#: src/gtk/devices_view.cpp
+msgid "Both buds are in."
+msgstr ""
+
+#: src/gtk/devices_view.cpp
+msgid "One bud is in."
+msgstr ""
+
+#: src/gtk/devices_view.cpp
+msgid "Neither bud is in."
+msgstr ""
+
+#: src/gtk/devices_view.cpp
 msgid "Full mode — messages, contacts, and notifications."
 msgstr ""
 
@@ -1620,6 +1655,32 @@ msgstr ""
 
 #: src/gtk/devices_view.cpp
 msgid "Listening mode"
+msgstr ""
+
+#: src/gtk/devices_view.cpp
+msgid "In-ear detection"
+msgstr ""
+
+#: src/gtk/devices_view.cpp
+msgid "Pause playback when:"
+msgstr ""
+
+#: src/gtk/devices_view.cpp
+msgid "Never"
+msgstr ""
+
+#: src/gtk/devices_view.cpp
+msgid "One bud is removed"
+msgstr ""
+
+#: src/gtk/devices_view.cpp
+msgid "Both buds are removed"
+msgstr ""
+
+#: src/gtk/devices_view.cpp
+msgid ""
+"Pauses whatever is playing on this computer, and starts it again when the "
+"buds go back in. Only playback Tether paused is resumed."
 msgstr ""
 
 #: src/gtk/devices_view.cpp

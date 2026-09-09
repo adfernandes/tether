@@ -62,6 +62,8 @@ namespace tether::ui {
             GtkWidget* lbl_airpods_name = nullptr;
             GtkWidget* lbl_airpods_battery = nullptr;
             GtkWidget* lbl_airpods_reason = nullptr;
+            GtkWidget* lbl_airpods_worn = nullptr;
+            GtkWidget* cmb_airpods_pause = nullptr;
             GtkWidget* airpods_mode_buttons[4] = {nullptr, nullptr, nullptr, nullptr};
             bool airpods_syncing = false;
 
@@ -229,6 +231,19 @@ namespace tether::ui {
             {"anc", N_("Noise Cancellation")},
         };
 
+        // Wire values for the pause-on-removal setting, in the order they appear
+        // in the dropdown.
+        const char* const AIRPODS_PAUSE_MODES[3] = {"never", "one-removed", "both-removed"};
+
+        void on_airpods_pause_changed(GtkWidget* combo, gpointer) {
+            if (g_devices.airpods_syncing)
+                return;
+            const int index = gtk_combo_box_get_active(GTK_COMBO_BOX(combo));
+            if (index < 0 || index > 2)
+                return;
+            daemon_send({{"command", "bt_airpods_pause"}, {"mode", AIRPODS_PAUSE_MODES[index]}});
+        }
+
         void on_airpods_mode_toggled(GtkWidget* button, gpointer data) {
             if (g_devices.airpods_syncing || !gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(button)))
                 return;
@@ -258,6 +273,27 @@ namespace tether::ui {
                                      ? _("No AirPods are connected.")
                                      : _("These AirPods do not report a listening mode.");
             set_text(g_devices.lbl_airpods_reason, reason);
+
+            // Which bud is "primary" moves between them, so this counts rather
+            // than naming a side.
+            const int in_ear = airpods.value("in_ear", 0);
+            const nlohmann::json ear = airpods.value("ear", nlohmann::json::object());
+            const bool ear_known =
+                ear.value("primary", "unknown") != "unknown" || ear.value("secondary", "unknown") != "unknown";
+            set_text(g_devices.lbl_airpods_worn,
+                     !ear_known    ? _("These AirPods do not report whether they are being worn.")
+                     : in_ear == 2 ? _("Both buds are in.")
+                     : in_ear == 1 ? _("One bud is in.")
+                                   : _("Neither bud is in."));
+
+            const std::string pause = g_devices.bt_status.value("airpods_pause", "never");
+            g_devices.airpods_syncing = true;
+            for (int i = 0; i < 3; ++i) {
+                if (pause == AIRPODS_PAUSE_MODES[i])
+                    gtk_combo_box_set_active(GTK_COMBO_BOX(g_devices.cmb_airpods_pause), i);
+            }
+            gtk_widget_set_sensitive(g_devices.cmb_airpods_pause, ear_known);
+            g_devices.airpods_syncing = false;
         }
 
         void update_bt_pane() {
@@ -1433,6 +1469,30 @@ namespace tether::ui {
         gtk_label_set_line_wrap(GTK_LABEL(g_devices.lbl_airpods_reason), TRUE);
         gtk_style_context_add_class(gtk_widget_get_style_context(g_devices.lbl_airpods_reason), "muted");
         gtk_box_pack_start(GTK_BOX(airpods_box), g_devices.lbl_airpods_reason, FALSE, FALSE, 0);
+
+        GtkWidget* lbl_wear_title = gtk_label_new(nullptr);
+        gtk_label_set_xalign(GTK_LABEL(lbl_wear_title), 0.0);
+        set_markup(lbl_wear_title, "<b>" + escape_markup(_("In-ear detection")) + "</b>");
+        gtk_box_pack_start(GTK_BOX(airpods_box), lbl_wear_title, FALSE, FALSE, 0);
+
+        g_devices.lbl_airpods_worn = gtk_label_new(nullptr);
+        gtk_label_set_xalign(GTK_LABEL(g_devices.lbl_airpods_worn), 0.0);
+        gtk_label_set_line_wrap(GTK_LABEL(g_devices.lbl_airpods_worn), TRUE);
+        gtk_style_context_add_class(gtk_widget_get_style_context(g_devices.lbl_airpods_worn), "muted");
+        gtk_box_pack_start(GTK_BOX(airpods_box), g_devices.lbl_airpods_worn, FALSE, FALSE, 0);
+
+        GtkWidget* pause_row = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 8);
+        gtk_box_pack_start(GTK_BOX(pause_row), gtk_label_new(_("Pause playback when:")), FALSE, FALSE, 0);
+        g_devices.cmb_airpods_pause = gtk_combo_box_text_new();
+        gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(g_devices.cmb_airpods_pause), _("Never"));
+        gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(g_devices.cmb_airpods_pause), _("One bud is removed"));
+        gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(g_devices.cmb_airpods_pause), _("Both buds are removed"));
+        gtk_widget_set_tooltip_text(g_devices.cmb_airpods_pause,
+                                    _("Pauses whatever is playing on this computer, and starts it again when the "
+                                      "buds go back in. Only playback Tether paused is resumed."));
+        g_signal_connect(g_devices.cmb_airpods_pause, "changed", G_CALLBACK(on_airpods_pause_changed), nullptr);
+        gtk_box_pack_start(GTK_BOX(pause_row), g_devices.cmb_airpods_pause, FALSE, FALSE, 0);
+        gtk_box_pack_start(GTK_BOX(airpods_box), pause_row, FALSE, FALSE, 0);
 
         gtk_stack_add_named(GTK_STACK(g_devices.right_pane_stack), airpods_box, "airpods");
 

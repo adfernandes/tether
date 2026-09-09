@@ -1,5 +1,6 @@
 #pragma once
 
+#include "tether/bluetooth/config.hpp"
 #include "tether/bluetooth/objects.hpp"
 
 #include <cstdint>
@@ -32,6 +33,21 @@ namespace tether::bluetooth {
 
     const char* to_string(AncMode mode);
     std::optional<AncMode> anc_mode_from_string(const std::string& name);
+
+    // Where a bud is.
+    enum class EarStatus { Unknown, InEar, OutOfEar, InCase };
+
+    const char* to_string(EarStatus status);
+
+    struct EarState {
+        EarStatus primary = EarStatus::Unknown;
+        EarStatus secondary = EarStatus::Unknown;
+
+        int in_ear() const { return (primary == EarStatus::InEar ? 1 : 0) + (secondary == EarStatus::InEar ? 1 : 0); }
+        bool known() const { return primary != EarStatus::Unknown || secondary != EarStatus::Unknown; }
+
+        bool operator==(const EarState&) const = default;
+    };
 
     struct AirPodsBattery {
         // -1 when unknown.
@@ -73,6 +89,7 @@ namespace tether::bluetooth {
         AirPodsBattery battery;
         // Unset until the buds report one. Not every model has the feature.
         std::optional<AncMode> anc;
+        EarState ear;
         AirPodsStatus status = AirPodsStatus::Idle;
         // Written for display, shown verbatim.
         std::string reason;
@@ -89,9 +106,19 @@ namespace tether::bluetooth {
 
     void merge_battery(AirPodsBattery& into, const BatteryUpdate& update);
 
+    // Decodes an ear-detection notification, 8 bytes carrying the primary bud at
+    // offset 6 and the secondary at 7.
+    std::optional<EarState> parse_ear(const uint8_t* data, size_t len);
+
     // Decodes a listening-mode notification, 11 bytes carrying the mode at offset 7.
     // Returns no value for anything else, including an out-of-range mode.
     std::optional<AncMode> parse_anc(const uint8_t* data, size_t len);
+
+    // What an ear-state change should do to local playback.
+    enum class MediaAction { None, Pause, Resume };
+
+    // `holding` is whether the caller has a pause outstanding.
+    MediaAction ear_media_action(const EarState& before, const EarState& after, PauseMode mode, bool holding);
 
     // The connected AirPods worth opening a channel to, or null. Only one is
     // returned: the channel is single-client and so is the watcher.

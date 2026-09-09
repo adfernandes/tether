@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: tether\n"
 "Report-Msgid-Bugs-To: zack@bartel.com\n"
-"POT-Creation-Date: 2026-09-08 16:30-0700\n"
+"POT-Creation-Date: 2026-09-08 16:56-0700\n"
 "PO-Revision-Date: 2026-08-23\n"
 "Last-Translator: Tether project\n"
 "Language-Team: Swedish\n"
@@ -95,6 +95,10 @@ msgstr "Visa batterinivå för AirPods och etui."
 #: src/cli/main.cpp
 msgid "Set the AirPods listening mode: off, anc, transparency, adaptive."
 msgstr "Ställ in AirPods lyssningsläge: off, anc, transparency, adaptive."
+
+#: src/cli/main.cpp
+msgid "Pause local playback when an AirPod is removed: never, one-removed, both-removed."
+msgstr "Pausa lokal uppspelning när en AirPod tas ur: never, one-removed, both-removed."
 
 #: src/cli/main.cpp
 msgid "List iPhone message conversations."
@@ -459,6 +463,10 @@ msgid "Case"
 msgstr "Etui"
 
 #: src/cli/main.cpp
+msgid "Worn"
+msgstr "Bärs"
+
+#: src/cli/main.cpp
 msgid "Could not reach the daemon.\n"
 msgstr "Kunde inte nå demonen.\n"
 
@@ -470,6 +478,14 @@ msgstr "Lyssningsläget är inställt på %s.\n"
 #: src/cli/main.cpp
 msgid "The listening mode could not be set."
 msgstr "Lyssningsläget kunde inte ställas in."
+
+#: src/cli/main.cpp
+msgid "Use never, one-removed or both-removed.\n"
+msgstr "Använd never, one-removed eller both-removed.\n"
+
+#: src/cli/main.cpp
+msgid "Pause on removal set to %s.\n"
+msgstr "Paus vid urtagning inställd på %s.\n"
 
 #: src/cli/main.cpp
 msgid "Daemon closed the connection before the operation finished.\n"
@@ -1486,6 +1502,22 @@ msgid "These AirPods do not report a listening mode."
 msgstr "De här AirPods rapporterar inget lyssningsläge."
 
 #: src/gtk/devices_view.cpp
+msgid "These AirPods do not report whether they are being worn."
+msgstr "De här AirPods rapporterar inte om de bärs."
+
+#: src/gtk/devices_view.cpp
+msgid "Both buds are in."
+msgstr "Båda propparna sitter i."
+
+#: src/gtk/devices_view.cpp
+msgid "One bud is in."
+msgstr "En propp sitter i."
+
+#: src/gtk/devices_view.cpp
+msgid "Neither bud is in."
+msgstr "Ingen propp sitter i."
+
+#: src/gtk/devices_view.cpp
 msgid "Full mode — messages, contacts, and notifications."
 msgstr "Fullt läge — meddelanden, kontakter och aviseringar."
 
@@ -1779,6 +1811,30 @@ msgstr "Sök efter enheter"
 #: src/gtk/devices_view.cpp
 msgid "Listening mode"
 msgstr "Lyssningsläge"
+
+#: src/gtk/devices_view.cpp
+msgid "In-ear detection"
+msgstr "Bärdetektering"
+
+#: src/gtk/devices_view.cpp
+msgid "Pause playback when:"
+msgstr "Pausa uppspelning när:"
+
+#: src/gtk/devices_view.cpp
+msgid "Never"
+msgstr "Aldrig"
+
+#: src/gtk/devices_view.cpp
+msgid "One bud is removed"
+msgstr "En propp tas ur"
+
+#: src/gtk/devices_view.cpp
+msgid "Both buds are removed"
+msgstr "Båda propparna tas ur"
+
+#: src/gtk/devices_view.cpp
+msgid "Pauses whatever is playing on this computer, and starts it again when the buds go back in. Only playback Tether paused is resumed."
+msgstr "Pausar det som spelas på den här datorn och startar det igen när propparna sätts i. Endast uppspelning som Tether pausat återupptas."
 
 #: src/gtk/devices_view.cpp
 msgid "Bluetooth needs one-time system setup"

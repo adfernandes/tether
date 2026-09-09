@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: tether\n"
 "Report-Msgid-Bugs-To: zack@bartel.com\n"
-"POT-Creation-Date: 2026-09-08 16:30-0700\n"
+"POT-Creation-Date: 2026-09-08 16:56-0700\n"
 "PO-Revision-Date: 2026-08-23\n"
 "Last-Translator: Tether project\n"
 "Language-Team: Turkish\n"
@@ -93,6 +93,10 @@ msgstr "AirPods ve kutu pil durumunu göster."
 #: src/cli/main.cpp
 msgid "Set the AirPods listening mode: off, anc, transparency, adaptive."
 msgstr "AirPods dinleme modunu ayarla: off, anc, transparency, adaptive."
+
+#: src/cli/main.cpp
+msgid "Pause local playback when an AirPod is removed: never, one-removed, both-removed."
+msgstr "Bir AirPod çıkarıldığında yerel oynatmayı duraklat: never, one-removed, both-removed."
 
 #: src/cli/main.cpp
 msgid "List iPhone message conversations."
@@ -460,6 +464,10 @@ msgid "Case"
 msgstr "Kutu"
 
 #: src/cli/main.cpp
+msgid "Worn"
+msgstr "Takılı"
+
+#: src/cli/main.cpp
 msgid "Could not reach the daemon.\n"
 msgstr "Arka plan hizmetine ulaşılamadı.\n"
 
@@ -471,6 +479,14 @@ msgstr "Dinleme modu %s olarak ayarlandı.\n"
 #: src/cli/main.cpp
 msgid "The listening mode could not be set."
 msgstr "Dinleme modu ayarlanamadı."
+
+#: src/cli/main.cpp
+msgid "Use never, one-removed or both-removed.\n"
+msgstr "never, one-removed veya both-removed kullanın.\n"
+
+#: src/cli/main.cpp
+msgid "Pause on removal set to %s.\n"
+msgstr "Çıkarınca duraklatma %s olarak ayarlandı.\n"
 
 #: src/cli/main.cpp
 msgid "Daemon closed the connection before the operation finished.\n"
@@ -1486,6 +1502,22 @@ msgid "These AirPods do not report a listening mode."
 msgstr "Bu AirPods bir dinleme modu bildirmiyor."
 
 #: src/gtk/devices_view.cpp
+msgid "These AirPods do not report whether they are being worn."
+msgstr "Bu AirPods takılı olup olmadığını bildirmiyor."
+
+#: src/gtk/devices_view.cpp
+msgid "Both buds are in."
+msgstr "Her iki kulaklık da takılı."
+
+#: src/gtk/devices_view.cpp
+msgid "One bud is in."
+msgstr "Bir kulaklık takılı."
+
+#: src/gtk/devices_view.cpp
+msgid "Neither bud is in."
+msgstr "Hiçbir kulaklık takılı değil."
+
+#: src/gtk/devices_view.cpp
 msgid "Full mode — messages, contacts, and notifications."
 msgstr "Tam kip — mesajlar, kişiler ve bildirimler."
 
@@ -1775,6 +1807,30 @@ msgstr "Aygıtları tara"
 #: src/gtk/devices_view.cpp
 msgid "Listening mode"
 msgstr "Dinleme modu"
+
+#: src/gtk/devices_view.cpp
+msgid "In-ear detection"
+msgstr "Kulakta algılama"
+
+#: src/gtk/devices_view.cpp
+msgid "Pause playback when:"
+msgstr "Şu durumda oynatmayı duraklat:"
+
+#: src/gtk/devices_view.cpp
+msgid "Never"
+msgstr "Asla"
+
+#: src/gtk/devices_view.cpp
+msgid "One bud is removed"
+msgstr "Bir kulaklık çıkarıldığında"
+
+#: src/gtk/devices_view.cpp
+msgid "Both buds are removed"
+msgstr "Her iki kulaklık da çıkarıldığında"
+
+#: src/gtk/devices_view.cpp
+msgid "Pauses whatever is playing on this computer, and starts it again when the buds go back in. Only playback Tether paused is resumed."
+msgstr "Bu bilgisayarda çalan her şeyi duraklatır ve kulaklıklar geri takıldığında yeniden başlatır. Yalnızca Tether tarafından duraklatılan oynatma sürdürülür."
 
 #: src/gtk/devices_view.cpp
 msgid "Bluetooth needs one-time system setup"

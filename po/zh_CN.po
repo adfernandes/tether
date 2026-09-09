@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: tether\n"
 "Report-Msgid-Bugs-To: zack@bartel.com\n"
-"POT-Creation-Date: 2026-09-08 16:30-0700\n"
+"POT-Creation-Date: 2026-09-08 16:56-0700\n"
 "PO-Revision-Date: 2026-08-23\n"
 "Last-Translator: Tether project\n"
 "Language-Team: Simplified Chinese\n"
@@ -93,6 +93,10 @@ msgstr "显示 AirPods 和充电盒电量。"
 #: src/cli/main.cpp
 msgid "Set the AirPods listening mode: off, anc, transparency, adaptive."
 msgstr "设置 AirPods 聆听模式：off、anc、transparency、adaptive。"
+
+#: src/cli/main.cpp
+msgid "Pause local playback when an AirPod is removed: never, one-removed, both-removed."
+msgstr "取下 AirPod 时暂停本机播放：never、one-removed、both-removed。"
 
 #: src/cli/main.cpp
 msgid "List iPhone message conversations."
@@ -443,6 +447,10 @@ msgid "Case"
 msgstr "充电盒"
 
 #: src/cli/main.cpp
+msgid "Worn"
+msgstr "佩戴"
+
+#: src/cli/main.cpp
 msgid "Could not reach the daemon.\n"
 msgstr "无法连接到守护进程。\n"
 
@@ -454,6 +462,14 @@ msgstr "聆听模式已设为 %s。\n"
 #: src/cli/main.cpp
 msgid "The listening mode could not be set."
 msgstr "无法设置聆听模式。"
+
+#: src/cli/main.cpp
+msgid "Use never, one-removed or both-removed.\n"
+msgstr "请使用 never、one-removed 或 both-removed。\n"
+
+#: src/cli/main.cpp
+msgid "Pause on removal set to %s.\n"
+msgstr "取下时暂停已设为 %s。\n"
 
 #: src/cli/main.cpp
 msgid "Daemon closed the connection before the operation finished.\n"
@@ -1432,6 +1448,22 @@ msgid "These AirPods do not report a listening mode."
 msgstr "此 AirPods 不报告聆听模式。"
 
 #: src/gtk/devices_view.cpp
+msgid "These AirPods do not report whether they are being worn."
+msgstr "此 AirPods 不报告是否正在佩戴。"
+
+#: src/gtk/devices_view.cpp
+msgid "Both buds are in."
+msgstr "两只耳机均已佩戴。"
+
+#: src/gtk/devices_view.cpp
+msgid "One bud is in."
+msgstr "已佩戴一只耳机。"
+
+#: src/gtk/devices_view.cpp
+msgid "Neither bud is in."
+msgstr "未佩戴耳机。"
+
+#: src/gtk/devices_view.cpp
 msgid "Full mode — messages, contacts, and notifications."
 msgstr "完整模式 —— 信息、通讯录和通知。"
 
@@ -1715,6 +1747,30 @@ msgstr "搜索设备"
 #: src/gtk/devices_view.cpp
 msgid "Listening mode"
 msgstr "聆听模式"
+
+#: src/gtk/devices_view.cpp
+msgid "In-ear detection"
+msgstr "入耳检测"
+
+#: src/gtk/devices_view.cpp
+msgid "Pause playback when:"
+msgstr "暂停播放的时机："
+
+#: src/gtk/devices_view.cpp
+msgid "Never"
+msgstr "从不"
+
+#: src/gtk/devices_view.cpp
+msgid "One bud is removed"
+msgstr "取下一只耳机时"
+
+#: src/gtk/devices_view.cpp
+msgid "Both buds are removed"
+msgstr "取下两只耳机时"
+
+#: src/gtk/devices_view.cpp
+msgid "Pauses whatever is playing on this computer, and starts it again when the buds go back in. Only playback Tether paused is resumed."
+msgstr "暂停本机正在播放的内容，并在耳机重新戴上时继续播放。仅恢复由 Tether 暂停的播放。"
 
 #: src/gtk/devices_view.cpp
 msgid "Bluetooth needs one-time system setup"

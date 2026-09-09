@@ -23,6 +23,26 @@ namespace tether::bluetooth {
         return value == "explicit-pair" ? AuthStrategy::ExplicitPair : AuthStrategy::ConnectFirst;
     }
 
+    const char* to_string(PauseMode mode) {
+        switch (mode) {
+        case PauseMode::Never:
+            return "never";
+        case PauseMode::OneRemoved:
+            return "one-removed";
+        case PauseMode::BothRemoved:
+            return "both-removed";
+        }
+        return "never";
+    }
+
+    PauseMode pause_mode_from_string(const std::string& value) {
+        if (value == "one-removed")
+            return PauseMode::OneRemoved;
+        if (value == "both-removed")
+            return PauseMode::BothRemoved;
+        return PauseMode::Never;
+    }
+
     std::string config_path() {
         const std::filesystem::path dir = paths::config_dir();
         if (dir.empty())
@@ -43,6 +63,7 @@ namespace tether::bluetooth {
         j["adapter"] = config.adapter;
         j["retention"] = to_string(config.retention);
         j["desktop_popups_enabled"] = config.desktop_popups_enabled;
+        j["airpods_pause"] = to_string(config.airpods_pause);
         return j.dump(2);
     }
 
@@ -63,6 +84,7 @@ namespace tether::bluetooth {
             config.adapter = j.value("adapter", "");
             config.retention = retention_from_string(j.value("retention", "encrypted"));
             config.desktop_popups_enabled = j.value("desktop_popups_enabled", true);
+            config.airpods_pause = pause_mode_from_string(j.value("airpods_pause", ""));
         } catch (const std::exception&) {
             // A corrupt file must not stop the daemon; defaults are safe.
         }

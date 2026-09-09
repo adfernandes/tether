@@ -104,6 +104,83 @@ TEST(AirPods, RejectsMalformedListeningModes) {
     EXPECT_FALSE(anc_mode_from_string("ancs").has_value());
 }
 
+namespace {
+    std::optional<EarState> ear(std::initializer_list<uint8_t> bytes) {
+        std::vector<uint8_t> v(bytes);
+        return parse_ear(v.data(), v.size());
+    }
+    constexpr EarState WORN{EarStatus::InEar, EarStatus::InEar};
+    constexpr EarState ONE_OUT{EarStatus::InEar, EarStatus::OutOfEar};
+    constexpr EarState BOTH_OUT{EarStatus::OutOfEar, EarStatus::OutOfEar};
+    constexpr EarState UNKNOWN{};
+} // namespace
+
+TEST(AirPods, ParsesEarDetection) {
+    auto worn = ear({0x04, 0x00, 0x04, 0x00, 0x06, 0x00, 0x00, 0x00});
+    ASSERT_TRUE(worn.has_value());
+    EXPECT_EQ(worn->primary, EarStatus::InEar);
+    EXPECT_EQ(worn->secondary, EarStatus::InEar);
+    EXPECT_EQ(worn->in_ear(), 2);
+
+    auto mixed = ear({0x04, 0x00, 0x04, 0x00, 0x06, 0x00, 0x01, 0x02});
+    ASSERT_TRUE(mixed.has_value());
+    EXPECT_EQ(mixed->primary, EarStatus::OutOfEar);
+    EXPECT_EQ(mixed->secondary, EarStatus::InCase);
+    EXPECT_EQ(mixed->in_ear(), 0);
+    EXPECT_TRUE(mixed->known());
+
+    // An unrecognised status byte is unknown, not in-ear.
+    auto odd = ear({0x04, 0x00, 0x04, 0x00, 0x06, 0x00, 0x00, 0x7f});
+    ASSERT_TRUE(odd.has_value());
+    EXPECT_EQ(odd->secondary, EarStatus::Unknown);
+    EXPECT_EQ(odd->in_ear(), 1);
+}
+
+TEST(AirPods, RejectsMalformedEarDetection) {
+    // Right prefix, wrong length.
+    EXPECT_FALSE(ear({0x04, 0x00, 0x04, 0x00, 0x06, 0x00, 0x00}).has_value());
+    EXPECT_FALSE(ear({0x04, 0x00, 0x04, 0x00, 0x06, 0x00, 0x00, 0x00, 0x00}).has_value());
+    // A battery notification is 12 bytes, but check the prefix is what rejects it.
+    EXPECT_FALSE(ear({0x04, 0x00, 0x04, 0x00, 0x04, 0x00, 0x01, 0x02}).has_value());
+    EXPECT_FALSE(parse_ear(nullptr, 0).has_value());
+}
+
+TEST(AirPods, PauseModeNeverDoesNothing) {
+    EXPECT_EQ(ear_media_action(WORN, BOTH_OUT, PauseMode::Never, false), MediaAction::None);
+    EXPECT_EQ(ear_media_action(BOTH_OUT, WORN, PauseMode::Never, true), MediaAction::None);
+}
+
+// The first report after connecting says where the buds already are. Reading it
+// as a transition would pause music the moment a case is opened nearby.
+TEST(AirPods, FirstEarReportIsNotATransition) {
+    EXPECT_EQ(ear_media_action(UNKNOWN, BOTH_OUT, PauseMode::OneRemoved, false), MediaAction::None);
+    EXPECT_EQ(ear_media_action(UNKNOWN, WORN, PauseMode::OneRemoved, true), MediaAction::None);
+    EXPECT_EQ(ear_media_action(WORN, UNKNOWN, PauseMode::OneRemoved, false), MediaAction::None);
+}
+
+TEST(AirPods, PausesWhenOneBudComesOut) {
+    EXPECT_EQ(ear_media_action(WORN, ONE_OUT, PauseMode::OneRemoved, false), MediaAction::Pause);
+    EXPECT_EQ(ear_media_action(ONE_OUT, WORN, PauseMode::OneRemoved, true), MediaAction::Resume);
+
+    // Both-removed is the looser policy: one bud out is still "worn".
+    EXPECT_EQ(ear_media_action(WORN, ONE_OUT, PauseMode::BothRemoved, false), MediaAction::None);
+    EXPECT_EQ(ear_media_action(ONE_OUT, BOTH_OUT, PauseMode::BothRemoved, false), MediaAction::Pause);
+    EXPECT_EQ(ear_media_action(BOTH_OUT, ONE_OUT, PauseMode::BothRemoved, true), MediaAction::Resume);
+}
+
+// Only a pause this code made is undone. Music the user stopped by hand stays stopped.
+TEST(AirPods, DoesNotResumeWhatItDidNotPause) {
+    EXPECT_EQ(ear_media_action(BOTH_OUT, WORN, PauseMode::OneRemoved, false), MediaAction::None);
+    EXPECT_EQ(ear_media_action(BOTH_OUT, WORN, PauseMode::OneRemoved, true), MediaAction::Resume);
+}
+
+TEST(AirPods, PutsABudInTheCaseTheSameAsOutOfTheEar) {
+    const EarState in_case{EarStatus::InEar, EarStatus::InCase};
+    EXPECT_EQ(ear_media_action(WORN, in_case, PauseMode::OneRemoved, false), MediaAction::Pause);
+    // An unchanged state is never a trigger, however it is reported.
+    EXPECT_EQ(ear_media_action(in_case, in_case, PauseMode::OneRemoved, false), MediaAction::None);
+}
+
 TEST(AirPods, DistinguishesAirPodsFromAnIPhone) {
     Device buds;
     buds.name = "ZBZ AirPros";

@@ -71,6 +71,10 @@ namespace tether::bluetooth {
 
         // Listening mode, sent and received on the same 11-byte:
         // 04 00 04 00 09 00 0D [mode] 00 00 00
+        // Ear detection: 04 00 04 00 06 00 [primary] [secondary]
+        constexpr uint8_t EAR_PREFIX[] = {0x04, 0x00, 0x04, 0x00, 0x06, 0x00};
+        constexpr size_t EAR_PACKET_BYTES = 8;
+
         constexpr uint8_t ANC_PREFIX[] = {0x04, 0x00, 0x04, 0x00, 0x09, 0x00, 0x0d};
         constexpr size_t ANC_PACKET_BYTES = 11;
         constexpr size_t ANC_MODE_OFFSET = 7;
@@ -152,6 +156,8 @@ namespace tether::bluetooth {
             {"right", s.battery.right},
             {"case", s.battery.case_},
             {"anc", s.anc ? nlohmann::json(to_string(*s.anc)) : nlohmann::json()},
+            {"ear", {{"primary", to_string(s.ear.primary)}, {"secondary", to_string(s.ear.secondary)}}},
+            {"in_ear", s.ear.in_ear()},
             {"status", to_string(s.status)},
             {"reason", s.reason},
         };
@@ -176,6 +182,41 @@ namespace tether::bluetooth {
             if (name == to_string(mode))
                 return mode;
         return std::nullopt;
+    }
+
+    const char* to_string(EarStatus status) {
+        switch (status) {
+        case EarStatus::Unknown:
+            return "unknown";
+        case EarStatus::InEar:
+            return "in_ear";
+        case EarStatus::OutOfEar:
+            return "out_of_ear";
+        case EarStatus::InCase:
+            return "in_case";
+        }
+        return "unknown";
+    }
+
+    std::optional<EarState> parse_ear(const uint8_t* data, size_t len) {
+        if (data == nullptr || len != EAR_PACKET_BYTES)
+            return std::nullopt;
+        if (std::memcmp(data, EAR_PREFIX, sizeof(EAR_PREFIX)) != 0)
+            return std::nullopt;
+
+        const auto decode = [](uint8_t byte) {
+            switch (byte) {
+            case 0x00:
+                return EarStatus::InEar;
+            case 0x01:
+                return EarStatus::OutOfEar;
+            case 0x02:
+                return EarStatus::InCase;
+            default:
+                return EarStatus::Unknown;
+            }
+        };
+        return EarState{decode(data[6]), decode(data[7])};
     }
 
     std::optional<AncMode> parse_anc(const uint8_t* data, size_t len) {
@@ -226,6 +267,23 @@ namespace tether::bluetooth {
         if (!update.has_left && !update.has_right && !update.has_case)
             return std::nullopt;
         return update;
+    }
+
+    MediaAction ear_media_action(const EarState& before, const EarState& after, PauseMode mode, bool holding) {
+        if (mode == PauseMode::Never)
+            return MediaAction::None;
+        if (!before.known() || !after.known() || before == after)
+            return MediaAction::None;
+
+        const int needed = mode == PauseMode::OneRemoved ? 2 : 1;
+        const bool worn_before = before.in_ear() >= needed;
+        const bool worn_after = after.in_ear() >= needed;
+
+        if (worn_before && !worn_after)
+            return MediaAction::Pause;
+        if (!worn_before && worn_after && holding)
+            return MediaAction::Resume;
+        return MediaAction::None;
     }
 
     const Device* find_airpods(const BluezObjects& objects) {
@@ -403,6 +461,15 @@ namespace tether::bluetooth {
                     continue;
                 }
 
+                if (auto ear = parse_ear(buffer.data(), size)) {
+                    {
+                        std::lock_guard<std::mutex> lock(mutex);
+                        state.ear = *ear;
+                    }
+                    publish(delivered ? AirPodsStatus::Live : AirPodsStatus::Connecting, "");
+                    continue;
+                }
+
                 auto update = parse_battery(buffer.data(), size);
                 if (!update)
                     continue;
@@ -445,6 +512,7 @@ namespace tether::bluetooth {
                         state.name.clear();
                         state.battery = {};
                         state.anc.reset();
+                        state.ear = {};
                     }
                     publish(AirPodsStatus::Idle, "");
                     backoff_ms = BACKOFF_START_MS;
@@ -460,6 +528,7 @@ namespace tether::bluetooth {
                         state.address = address;
                         state.battery = {};
                         state.anc.reset();
+                        state.ear = {};
                     }
                     state.name = name;
                 }

@@ -17,6 +17,7 @@
 #include <tether/file_transfer.hpp>
 #include <tether/i18n.hpp>
 #include <tether/log.hpp>
+#include <tether/mpris.hpp>
 #include <tether/net.hpp>
 #include <tether/otp.hpp>
 #include <tether/secret_store.hpp>
@@ -248,7 +249,26 @@ int main(int argc, char** argv) {
     bluez.set_preferred_adapter(bt_config.adapter);
 
     // AirPods battery arrives on its own L2CAP channel, not through BlueZ.
-    tether::bluetooth::AirPodsWatcher airpods([](const tether::bluetooth::AirPodsState& state) {
+    tether::MediaControl media;
+    tether::bluetooth::EarState last_ear;
+    tether::bluetooth::AirPodsWatcher airpods([&media, &last_ear](const tether::bluetooth::AirPodsState& state) {
+        const auto mode = tether::bluetooth::load_config().airpods_pause;
+        switch (tether::bluetooth::ear_media_action(last_ear, state.ear, mode, media.holding())) {
+        case tether::bluetooth::MediaAction::Pause:
+            if (const size_t paused = media.pause())
+                debug::log(INFO, "airpods: paused {} player(s), a bud came out", paused);
+            break;
+        case tether::bluetooth::MediaAction::Resume:
+            if (const size_t resumed = media.resume())
+                debug::log(INFO, "airpods: resumed {} player(s), the buds went back in", resumed);
+            break;
+        case tether::bluetooth::MediaAction::None:
+            break;
+        }
+        if (state.address.empty())
+            media.forget();
+        last_ear = state.ear;
+
         tether::broadcast_local_event(tether::bluetooth::to_json(state).dump());
     });
     const auto follow_airpods = [&bluez, &airpods]() {

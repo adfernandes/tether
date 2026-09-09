@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: tether\n"
 "Report-Msgid-Bugs-To: zack@bartel.com\n"
-"POT-Creation-Date: 2026-09-08 16:30-0700\n"
+"POT-Creation-Date: 2026-09-08 16:56-0700\n"
 "PO-Revision-Date: 2026-08-23\n"
 "Last-Translator: Tether project\n"
 "Language-Team: Korean\n"
@@ -93,6 +93,10 @@ msgstr "AirPods 및 케이스 배터리를 표시합니다."
 #: src/cli/main.cpp
 msgid "Set the AirPods listening mode: off, anc, transparency, adaptive."
 msgstr "AirPods 청취 모드를 설정합니다: off, anc, transparency, adaptive."
+
+#: src/cli/main.cpp
+msgid "Pause local playback when an AirPod is removed: never, one-removed, both-removed."
+msgstr "AirPod을 뺐을 때 로컬 재생을 일시정지합니다: never, one-removed, both-removed."
 
 #: src/cli/main.cpp
 msgid "List iPhone message conversations."
@@ -451,6 +455,10 @@ msgid "Case"
 msgstr "케이스"
 
 #: src/cli/main.cpp
+msgid "Worn"
+msgstr "착용"
+
+#: src/cli/main.cpp
 msgid "Could not reach the daemon.\n"
 msgstr "데몬에 연결하지 못했습니다.\n"
 
@@ -462,6 +470,14 @@ msgstr "청취 모드를 %s(으)로 설정했습니다.\n"
 #: src/cli/main.cpp
 msgid "The listening mode could not be set."
 msgstr "청취 모드를 설정할 수 없습니다."
+
+#: src/cli/main.cpp
+msgid "Use never, one-removed or both-removed.\n"
+msgstr "never, one-removed 또는 both-removed 중에서 선택하세요.\n"
+
+#: src/cli/main.cpp
+msgid "Pause on removal set to %s.\n"
+msgstr "제거 시 일시정지를 %s(으)로 설정했습니다.\n"
 
 #: src/cli/main.cpp
 msgid "Daemon closed the connection before the operation finished.\n"
@@ -1465,6 +1481,22 @@ msgid "These AirPods do not report a listening mode."
 msgstr "이 AirPods는 청취 모드를 보고하지 않습니다."
 
 #: src/gtk/devices_view.cpp
+msgid "These AirPods do not report whether they are being worn."
+msgstr "이 AirPods는 착용 여부를 보고하지 않습니다."
+
+#: src/gtk/devices_view.cpp
+msgid "Both buds are in."
+msgstr "양쪽 이어버드를 착용 중입니다."
+
+#: src/gtk/devices_view.cpp
+msgid "One bud is in."
+msgstr "한쪽 이어버드를 착용 중입니다."
+
+#: src/gtk/devices_view.cpp
+msgid "Neither bud is in."
+msgstr "이어버드를 착용하지 않았습니다."
+
+#: src/gtk/devices_view.cpp
 msgid "Full mode — messages, contacts, and notifications."
 msgstr "전체 모드 — 메시지, 연락처, 알림."
 
@@ -1753,6 +1785,30 @@ msgstr "기기 검색"
 #: src/gtk/devices_view.cpp
 msgid "Listening mode"
 msgstr "청취 모드"
+
+#: src/gtk/devices_view.cpp
+msgid "In-ear detection"
+msgstr "착용 감지"
+
+#: src/gtk/devices_view.cpp
+msgid "Pause playback when:"
+msgstr "재생을 일시정지할 때:"
+
+#: src/gtk/devices_view.cpp
+msgid "Never"
+msgstr "안 함"
+
+#: src/gtk/devices_view.cpp
+msgid "One bud is removed"
+msgstr "한쪽을 뺐을 때"
+
+#: src/gtk/devices_view.cpp
+msgid "Both buds are removed"
+msgstr "양쪽을 뺐을 때"
+
+#: src/gtk/devices_view.cpp
+msgid "Pauses whatever is playing on this computer, and starts it again when the buds go back in. Only playback Tether paused is resumed."
+msgstr "이 컴퓨터에서 재생 중인 것을 일시정지하고, 이어버드를 다시 착용하면 재생을 재개합니다. Tether가 일시정지한 재생만 재개됩니다."
 
 #: src/gtk/devices_view.cpp
 msgid "Bluetooth needs one-time system setup"

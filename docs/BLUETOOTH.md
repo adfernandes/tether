@@ -10,7 +10,7 @@ Bluetooth accessory. No iOS-side code is involved.
 | Contacts, for sender names | **PBAP** (Phonebook Access Profile) via `obexd` | BR/EDR | OBEX client |
 | Notifications from any app | **ANCS** (Apple Notification Center Service) | BLE / GATT | GATT central |
 | Phone calls, place + answer | **HFP** (Hands-Free Profile) via BlueZ | BR/EDR | Hands-free unit |
-| AirPods battery + listening mode | **AAP** (Apple Accessory Protocol) | BR/EDR / L2CAP | L2CAP client |
+| AirPods battery, listening mode, in-ear | **AAP** (Apple Accessory Protocol) | BR/EDR / L2CAP | L2CAP client |
 
 The Tether iOS app is unrelated to these features and just keeps handling clipboard sync and file transfer over TCP + mTLS.
 
@@ -479,8 +479,8 @@ the narrower check; it rules out the `*`/`#` supplementary-service codes deliber
 
 ## AirPods
 
-Battery for the buds and the case, and the listening mode, in the Devices list and from
-`tether --bt-airpods`. No ear detection or stem control yet.
+Battery for the buds and the case, the listening mode, and in-ear detection, in the
+Devices list and from `tether --bt-airpods`. No stem control yet.
 
 It is the one feature here that does not go through BlueZ. AirPods report battery over
 Apple's Accessory Protocol on an L2CAP channel, PSM `0x1001`, the same source an iPhone
@@ -536,6 +536,40 @@ and a model with no listening mode at all reports none and the buttons stay disa
 Writes are queued for the reader thread rather than sent from the caller's, because the
 socket belongs to the session and closing it out from under a write is the one race worth
 not having. A queued change does not outlive the channel it was meant for.
+
+### In-ear detection, and pausing
+
+Eight bytes, `04 00 04 00 06 00 [primary] [secondary]`, with `00` in the ear, `01` out of
+it, `02` in the case and anything else unknown.
+
+They are a **primary and a secondary, not a left and a right**, and which bud is which
+moves between them. So nothing here names a side; the count of buds in ears is what the
+policy and the UI use.
+
+Taking a bud out can pause whatever is playing locally, over MPRIS. It is **off by
+default** -- `airpods_pause` in `bluetooth.json`, `never`, `one-removed` or `both-removed`
+-- for the same reason call control is: nothing reaches out and touches the user's session
+until they ask for it. `tether --bt-airpods-pause one-removed`, or the dropdown on the
+AirPods page.
+
+The policy is `ear_media_action()`, kept pure so its awkward cases are settled by tests
+rather than by taking earbuds out repeatedly:
+
+- **The first ear report after connecting is not a transition.** The buds say where they
+  already are as soon as the channel opens, and reading that as a change would pause the
+  music the moment a case is opened near the machine.
+- **Only a pause Tether made is undone.** Playback the user stopped by hand stays stopped.
+- A bud in the case counts the same as a bud out of the ear.
+- **Buds that disconnect entirely leave the pause in place.** Resuming there would move
+  the audio to the machine's own speakers, which is not what taking an earbud out asked
+  for.
+
+MPRIS itself is `src/core/src/mpris.cpp`, a plain session-bus client: `ListNames`, keep
+the `org.mpris.MediaPlayer2.` ones, pause the players reporting `Playing`, remember them,
+play those back. Calls carry `G_DBUS_CALL_FLAGS_NO_AUTO_START` and a one-second timeout,
+because a bus name can be *activatable* rather than running -- `playerctld` usually is --
+and neither starting a media player to interrogate it nor blocking the Bluetooth reader
+thread on one is acceptable.
 
 The constants come from librepods `linux/airpods_packets.h`. The prose
 `docs/AAP Definitions.md` in the same repository disagrees with the header and is wrong.
@@ -622,6 +656,8 @@ checks the daemon does not make.
 | `tether --bt-calls` reports call control off | PipeWire took the profile *and* its telephony D-Bus service is off, the iPhone reconnected on its own and never opened hands-free, or `bluetoothd` is running without `--experimental` | Either give BlueZ the profile by dropping `hfp_hf` from `bluez5.roles`, or set `bluez5.telephony-dbus-service = true` and let Tether drive PipeWire's gateway -- see "Calls". The daemon cycles the BR/EDR bearer once per outage for the second cause; confirm with `busctl --system tree org.bluez \| grep telephony` and `busctl --user tree org.pipewire.Telephony` |
 | AirPods are listed but the battery stays blank, and the row says another program is using the channel | The AAP channel takes one client, and something else has it | Stop the other AirPods program (LibrePods, AirPods Center, a status-bar widget that reads battery). Nothing else releases it |
 | Setting the AirPods listening mode to `off` does nothing, while the other three work | The buds declined it. Apple leaves Off out of the noise-control rotation by default on Pro models, and there is no refusal to report | Add Off to the rotation on the phone, under Settings > Bluetooth > (i) > Noise Control. Tether keeps showing the mode the buds are actually in |
+| Playback does not pause when a bud comes out | Pause on removal is off, which is the default | Set it on the AirPods page, or `tether --bt-airpods-pause one-removed` |
+| Playback pauses on removal but never resumes | Something else paused or stopped it in between, so the pause is no longer Tether's to undo. Or the buds disconnected, which deliberately leaves it paused | Press play. Both are working as designed |
 | AirPods do not appear in the Devices list at all | They are not connected, or BlueZ has never read their SDP record so there is no Modalias and the name does not contain "airpod" | Connect them, then `tether --bt-devices` -- the row carries an `airpods` flag when Tether recognizes them |
 | Calls work but the audio is on the iPhone | Working as designed. BlueZ signals the call and never opens the voice link, so there is nothing to route here | Nothing. `./scripts/bt-probe.sh --calls` during a call shows the evidence; "Getting the call audio onto the desktop instead" is the trade if you want it |
 | The Calls page is empty after configuring PipeWire for call audio | PipeWire's telephony D-Bus service is off, so neither stack exports anything Tether can read | Set `bluez5.telephony-dbus-service = true` and reconnect. With it on, Tether drives PipeWire's gateway directly and the Calls page works, minus carrier and signal |
