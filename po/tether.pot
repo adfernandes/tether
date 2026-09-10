@@ -6,9 +6,9 @@
 #, fuzzy
 msgid ""
 msgstr ""
-"Project-Id-Version: tether 0.2.28\n"
+"Project-Id-Version: tether 0.2.29\n"
 "Report-Msgid-Bugs-To: zack@bartel.com\n"
-"POT-Creation-Date: 2026-09-09 20:19-0700\n"
+"POT-Creation-Date: 2026-09-10 07:05+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -241,6 +241,14 @@ msgid "Options:"
 msgstr ""
 
 #: src/cli/main.cpp
+msgid "Commands:"
+msgstr ""
+
+#: src/cli/main.cpp
+msgid "Any --bt-<name> flag, as a subcommand."
+msgstr ""
+
+#: src/cli/main.cpp
 msgid "Examples:"
 msgstr ""
 
@@ -420,11 +428,11 @@ msgid "Could not read the AirPods battery from the daemon.\n"
 msgstr ""
 
 #: src/cli/main.cpp
-msgid "No AirPods connected.\n"
+msgid "AirPods management is off.\n"
 msgstr ""
 
 #: src/cli/main.cpp
-msgid "AirPods management is off.\n"
+msgid "No AirPods connected.\n"
 msgstr ""
 
 #: src/cli/main.cpp

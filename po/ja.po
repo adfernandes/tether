@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: tether\n"
 "Report-Msgid-Bugs-To: zack@bartel.com\n"
-"POT-Creation-Date: 2026-09-09 20:19-0700\n"
+"POT-Creation-Date: 2026-09-10 07:05+0000\n"
 "PO-Revision-Date: 2026-08-23\n"
 "Last-Translator: Tether project\n"
 "Language-Team: Japanese\n"
@@ -263,6 +263,14 @@ msgid "Options:"
 msgstr "オプション:"
 
 #: src/cli/main.cpp
+msgid "Commands:"
+msgstr "コマンド:"
+
+#: src/cli/main.cpp
+msgid "Any --bt-<name> flag, as a subcommand."
+msgstr "任意の --bt-<name> フラグをサブコマンドとして。"
+
+#: src/cli/main.cpp
 msgid "Examples:"
 msgstr "例:"
 
@@ -456,12 +464,12 @@ msgid "Could not read the AirPods battery from the daemon.\n"
 msgstr "デーモンから AirPods のバッテリーを読み取れませんでした。\n"
 
 #: src/cli/main.cpp
-msgid "No AirPods connected.\n"
-msgstr "AirPods は接続されていません。\n"
-
-#: src/cli/main.cpp
 msgid "AirPods management is off.\n"
 msgstr "AirPods の管理はオフです。\n"
+
+#: src/cli/main.cpp
+msgid "No AirPods connected.\n"
+msgstr "AirPods は接続されていません。\n"
 
 #: src/cli/main.cpp
 msgid "Left"
