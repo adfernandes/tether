@@ -11,6 +11,7 @@ import SwiftUI
 import UniformTypeIdentifiers
 import UIKit
 import TetherFramework
+internal import Network
 
 // High-level app state.
 enum AppConnectionState: Equatable {
