@@ -44,6 +44,7 @@ namespace tether::bluetooth {
 
         bool has_role(const std::string& role) const;
         bool class_is_handsfree() const { return (device_class & COD_MASK) == COD_TARGET; }
+        bool presents_as_apple() const;
 
         bool operator==(const Adapter&) const = default;
     };

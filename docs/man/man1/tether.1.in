@@ -90,6 +90,11 @@ Show Bluetooth link and profile connection state.
 \fB\-\-bt-airpods\fR
 Show AirPods battery, for each bud and the case, and the current listening mode.
 .TP
+\fB\-\-bt-airpods-enable\fR \fIon\fR|\fIoff\fR
+Manage AirPods from Tether at all: battery, listening mode, in-ear pausing and handoff.
+Off by default, because the AAP channel takes one program per computer and opening it takes
+the buds away from any other AirPods program.
+.TP
 \fB\-\-bt-airpods-mode\fR \fIoff\fR|\fIanc\fR|\fItransparency\fR|\fIadaptive\fR
 Set the AirPods listening mode. The buds decline a mode they are not configured for
 without reporting an error, so check the result with \fB\-\-bt-airpods\fR.

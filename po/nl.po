@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: tether\n"
 "Report-Msgid-Bugs-To: zack@bartel.com\n"
-"POT-Creation-Date: 2026-09-08 22:55-0700\n"
+"POT-Creation-Date: 2026-09-09 20:19-0700\n"
 "PO-Revision-Date: 2026-08-23\n"
 "Last-Translator: Tether project\n"
 "Language-Team: Dutch\n"
@@ -92,6 +92,10 @@ msgid "Show AirPods and case battery."
 msgstr "Accu van de AirPods en de case tonen."
 
 #: src/cli/main.cpp
+msgid "Manage AirPods from Tether at all: on or off."
+msgstr "AirPods door Tether laten beheren: on of off."
+
+#: src/cli/main.cpp
 msgid "Set the AirPods listening mode: off, anc, transparency, adaptive."
 msgstr ""
 "De luistermodus van de AirPods instellen: off, anc, transparency, adaptive."
@@ -110,7 +114,8 @@ msgstr "De AirPods tijdens een gesprek aan de iPhone geven: on of off."
 
 #: src/cli/main.cpp
 msgid "Lock the session when the iPhone goes out of range: on or off."
-msgstr "De sessie vergrendelen wanneer de iPhone buiten bereik raakt: on of off."
+msgstr ""
+"De sessie vergrendelen wanneer de iPhone buiten bereik raakt: on of off."
 
 #: src/cli/main.cpp
 msgid "List iPhone message conversations."
@@ -460,9 +465,12 @@ msgid "Could not read the AirPods battery from the daemon.\n"
 msgstr "Kon de accu van de AirPods niet uitlezen via de daemon.\n"
 
 #: src/cli/main.cpp
-#, c-format
 msgid "No AirPods connected.\n"
 msgstr "Geen AirPods verbonden.\n"
+
+#: src/cli/main.cpp
+msgid "AirPods management is off.\n"
+msgstr "AirPods-beheer staat uit.\n"
 
 #: src/cli/main.cpp
 msgid "Left"
@@ -480,6 +488,15 @@ msgstr "Case"
 #: src/cli/main.cpp
 msgid "Worn"
 msgstr "Gedragen"
+
+#: src/cli/main.cpp
+msgid ""
+"This computer does not present itself as Apple hardware, so a call hands the "
+"buds over by disconnecting them. See DeviceID in /etc/bluetooth/main.conf."
+msgstr ""
+"Deze computer presenteert zich niet als Apple-hardware, dus een gesprek "
+"geeft de AirPods over door ze te ontkoppelen. Zie DeviceID in /etc/bluetooth/"
+"main.conf."
 
 #: src/cli/main.cpp
 msgid "Could not reach the daemon.\n"
@@ -506,6 +523,14 @@ msgstr "Pauzeren bij uitnemen ingesteld op %s.\n"
 #: src/cli/main.cpp
 msgid "Use on or off.\n"
 msgstr "Gebruik on of off.\n"
+
+#: src/cli/main.cpp
+msgid "Tether is managing the AirPods."
+msgstr "Tether beheert de AirPods."
+
+#: src/cli/main.cpp
+msgid "Tether has released the AirPods channel for another program."
+msgstr "Tether heeft het AirPods-kanaal vrijgegeven voor een ander programma."
 
 #: src/cli/main.cpp
 msgid ""
@@ -763,6 +788,14 @@ msgstr "Bezig met kiezen."
 #: src/cli/main.cpp
 msgid "Answering."
 msgstr "Wordt beantwoord."
+
+#: src/cli/main.cpp
+msgid "Call audio comes to this computer."
+msgstr "Het gespreksgeluid komt naar deze computer."
+
+#: src/cli/main.cpp
+msgid "Call audio stays on the iPhone."
+msgstr "Het gespreksgeluid blijft op de iPhone."
 
 #: src/cli/main.cpp
 msgid "Hanging up."
@@ -1287,6 +1320,10 @@ msgid "Calls are controlled here; the audio plays on the iPhone."
 msgstr "Oproepen worden hier bediend; het geluid speelt op de iPhone."
 
 #: src/core/src/bluetooth/telephony.cpp
+msgid "This computer is not carrying the call audio; it plays on the iPhone."
+msgstr "Deze computer voert de gespreksaudio niet; die speelt op de iPhone."
+
+#: src/core/src/bluetooth/telephony.cpp
 msgid "Not a dialable number."
 msgstr "Geen belbaar nummer."
 
@@ -1297,10 +1334,6 @@ msgstr "Geen oproep opgegeven."
 #: src/core/src/bluetooth/telephony.cpp
 msgid "That call is no longer active."
 msgstr "Die oproep is niet meer actief."
-
-#: src/core/src/bluetooth/telephony.cpp
-msgid "This computer is not carrying the call audio; it plays on the iPhone."
-msgstr "Deze computer voert de gespreksaudio niet; die speelt op de iPhone."
 
 #: src/core/src/bluetooth/telephony.cpp
 msgid "Unknown call action."
@@ -1551,6 +1584,10 @@ msgid "Noise Cancellation"
 msgstr "Ruisonderdrukking"
 
 #: src/gtk/devices_view.cpp
+msgid "Tether is not managing the AirPods, so another program can use them."
+msgstr "Tether beheert de AirPods niet, een ander programma kan ze gebruiken."
+
+#: src/gtk/devices_view.cpp
 msgid "These AirPods do not report a listening mode."
 msgstr "Deze AirPods melden geen luistermodus."
 
@@ -1569,6 +1606,20 @@ msgstr "Eén oordopje is in."
 #: src/gtk/devices_view.cpp
 msgid "Neither bud is in."
 msgstr "Geen enkel oordopje is in."
+
+#: src/gtk/devices_view.cpp
+msgid "The buds are handed over with Apple's own handoff."
+msgstr "De AirPods worden overgedragen met Apple's eigen overdracht."
+
+#: src/gtk/devices_view.cpp
+msgid ""
+"The buds are handed over by disconnecting them. For Apple's own handoff, put "
+"DeviceID = bluetooth:004C:0000:0000 under [General] in /etc/bluetooth/"
+"main.conf and restart bluetooth."
+msgstr ""
+"De AirPods worden overgedragen door ze te ontkoppelen. Zet voor Apple's "
+"eigen overdracht DeviceID = bluetooth:004C:0000:0000 onder [General] in /etc/"
+"bluetooth/main.conf en start bluetooth opnieuw."
 
 #: src/gtk/devices_view.cpp
 msgid "Full mode — messages, contacts, and notifications."
@@ -1861,6 +1912,18 @@ msgstr ""
 #: src/gtk/devices_view.cpp
 msgid "Scan for devices"
 msgstr "Zoek apparaten"
+
+#: src/gtk/devices_view.cpp
+msgid "Manage AirPods from Tether"
+msgstr "AirPods door Tether laten beheren"
+
+#: src/gtk/devices_view.cpp
+msgid ""
+"The AirPods channel takes one program per computer. Turning this off "
+"releases it, so another AirPods program can use it."
+msgstr ""
+"Het AirPods-kanaal neemt één programma per computer aan. Uitschakelen geeft "
+"het vrij, zodat een ander AirPods-programma het kan gebruiken."
 
 #: src/gtk/devices_view.cpp
 msgid "Listening mode"
@@ -2195,7 +2258,10 @@ msgstr "De sessie vergrendelen wanneer de iPhone buiten bereik raakt"
 msgid ""
 "Locks about half a minute after the link times out. Switching Bluetooth off "
 "on the iPhone does not lock, and neither does suspending this machine."
-msgstr "Vergrendelt ongeveer een halve minuut nadat de verbinding verlopen is. Bluetooth uitzetten op de iPhone vergrendelt niet, en deze machine in slaapstand zetten evenmin."
+msgstr ""
+"Vergrendelt ongeveer een halve minuut nadat de verbinding verlopen is. "
+"Bluetooth uitzetten op de iPhone vergrendelt niet, en deze machine in "
+"slaapstand zetten evenmin."
 
 #: src/gtk/settings_view.cpp
 msgid "SMS and iMessage conversations synced over Bluetooth."
@@ -2329,9 +2395,6 @@ msgstr "Apparaten koppelen en het klembord over het netwerk synchroniseren"
 #~ msgstr ""
 #~ "Oproepbediening in- of uitschakelen. Vereist de rol hfp_hf en de "
 #~ "telefoniedienst in WirePlumber; zie docs/BLUETOOTH.md."
-
-#~ msgid "Call audio moved to this computer."
-#~ msgstr "Oproepaudio naar deze computer verplaatst."
 
 #~ msgid ""
 #~ "Play the call through this computer's speakers and microphone. Handing it "

@@ -181,9 +181,96 @@ TEST(AirPods, PutsABudInTheCaseTheSameAsOutOfTheEar) {
     EXPECT_EQ(ear_media_action(in_case, in_case, PauseMode::OneRemoved, false), MediaAction::None);
 }
 
-TEST(AirPods, HandoffIsOffUnlessEnabled) {
-    EXPECT_EQ(handoff_action(true, true, false, false), HandoffAction::None);
-    EXPECT_EQ(handoff_action(false, false, true, false), HandoffAction::None);
+// A pod charging inside an open case reports charging|disconnected, so the status
+// byte only ever means anything as a bitmask.
+TEST(AirPods, TreatsTheBatteryStatusAsABitmask) {
+    const std::vector<uint8_t> charging_in_case = {
+        0x04, 0x00, 0x04, 0x00, 0x04, 0x00, 0x01, 0x04, 0x01, 0x63, 0x05, 0x01};
+    auto update = parse(charging_in_case);
+    ASSERT_TRUE(update.has_value());
+    EXPECT_TRUE(update->has_left);
+    EXPECT_EQ(update->levels.left, -1);
+}
+
+TEST(AirPods, ParsesTheConnectedDeviceList) {
+    // Two hosts: this machine, then an iPhone sitting idle. Addresses are stored
+    // least-significant byte first.
+    const std::vector<uint8_t> packet = {0x04, 0x00, 0x04, 0x00, 0x2e, 0x00, 0x02, 0x9c, 0x52, 0xaf, 0x3c, 0xf2,
+                                         0xac, 0x01, 0x03, 0xf3, 0x6a, 0x30, 0xc8, 0x71, 0x81, 0x02, 0x15};
+    auto peers = parse_connected_devices(packet.data(), packet.size());
+    ASSERT_TRUE(peers.has_value());
+    ASSERT_EQ(peers->size(), 2u);
+    EXPECT_EQ((*peers)[0].address, "AC:F2:3C:AF:52:9C");
+    EXPECT_EQ((*peers)[0].state, 0x03);
+    EXPECT_FALSE((*peers)[0].taking_over());
+    EXPECT_EQ((*peers)[1].address, "81:71:C8:30:6A:F3");
+    // 0x15 is an iPhone sitting there doing nothing, which is the state this machine
+    // claims the buds out of. Reading it as "taken" means never claiming at all.
+    EXPECT_FALSE((*peers)[1].taking_over());
+    EXPECT_FALSE((*peers)[1].active());
+
+    // A truncated list is not a list.
+    EXPECT_FALSE(parse_connected_devices(packet.data(), packet.size() - 1).has_value());
+    EXPECT_FALSE(parse_connected_devices(packet.data(), 4).has_value());
+}
+
+// A peer on its way to the buds blocks a claim; one already holding them also ends
+// local playback. An idle peer does neither.
+TEST(AirPods, SeparatesAnIdlePeerFromOneTakingTheBuds) {
+    const auto peer = [](uint8_t state) { return AapPeer{"81:71:C8:30:6A:F3", 0x02, state}; };
+    EXPECT_FALSE(peer(0x15).taking_over());
+    EXPECT_TRUE(peer(0x12).taking_over());
+    EXPECT_TRUE(peer(0x17).taking_over());
+    EXPECT_TRUE(peer(0x17).active());
+    EXPECT_FALSE(peer(0x15).active());
+    // AirPods Pro 1 leaves a healthy iPhone at 0x01 forever.
+    EXPECT_FALSE(peer(0x01).taking_over());
+}
+
+// This machine's own entry rises with its own ownership and is never a peer.
+TEST(AirPods, SummarisesPeersWithoutCountingItself) {
+    const std::vector<AapPeer> peers = {{"AC:F2:3C:AF:52:9C", 0x01, 0x17}, {"81:71:C8:30:6A:F3", 0x02, 0x12}};
+    const auto summary = summarize_peers(peers, "AC:F2:3C:AF:52:9C");
+    EXPECT_TRUE(summary.taking_over);
+    EXPECT_FALSE(summary.active);
+
+    // A phone on a call is the case handoff exists for.
+    const std::vector<AapPeer> on_a_call = {{"81:71:C8:30:6A:F3", 0x02, 0x17}};
+    EXPECT_TRUE(summarize_peers(on_a_call, "AC:F2:3C:AF:52:9C").active);
+
+    // Without a local address every entry counts, which is the safe way round.
+    EXPECT_TRUE(summarize_peers(peers, "").active);
+}
+
+TEST(AirPods, ParsesTheAudioSource) {
+    // Here the address is not reversed.
+    const std::vector<uint8_t> packet = {0x04, 0x00, 0x04, 0x00, 0x0e, 0x00, 0x81, 0x71, 0xc8, 0x30, 0x6a, 0xf3, 0x01};
+    auto event = parse_audio_source(packet.data(), packet.size());
+    ASSERT_TRUE(event.has_value());
+    EXPECT_EQ(event->address, "81:71:C8:30:6A:F3");
+    EXPECT_EQ(event->source, AudioSource::Call);
+
+    EXPECT_FALSE(parse_audio_source(packet.data(), packet.size() - 1).has_value());
+}
+
+TEST(AirPods, OwnershipFollowsThePeerTakingTheBuds) {
+    EXPECT_EQ(ownership_action(true, false, true), HandoffAction::Release);
+    // Given up already: nothing to give up twice.
+    EXPECT_EQ(ownership_action(true, true, true), HandoffAction::None);
+    EXPECT_EQ(ownership_action(false, true, true), HandoffAction::Reclaim);
+    EXPECT_EQ(ownership_action(false, false, true), HandoffAction::None);
+}
+
+TEST(AirPods, OwnershipIsOffUnlessEnabledButStillGivesTheBudsBack) {
+    EXPECT_EQ(ownership_action(true, false, false), HandoffAction::None);
+    EXPECT_EQ(ownership_action(false, true, false), HandoffAction::Reclaim);
+}
+
+TEST(AirPods, HandoffIsOffUnlessEnabled) { EXPECT_EQ(handoff_action(true, true, false, false), HandoffAction::None); }
+
+// Turning the setting off while the phone has the buds must not strand them there.
+TEST(AirPods, ReclaimsReleasedBudsEvenWhenTurnedOff) {
+    EXPECT_EQ(handoff_action(false, false, true, false), HandoffAction::Reclaim);
 }
 
 TEST(AirPods, HandsBudsOverForACallAndTakesThemBack) {

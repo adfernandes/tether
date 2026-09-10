@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: tether 0.2.28\n"
 "Report-Msgid-Bugs-To: zack@bartel.com\n"
-"POT-Creation-Date: 2026-09-08 22:55-0700\n"
+"POT-Creation-Date: 2026-09-09 20:19-0700\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -88,6 +88,10 @@ msgstr ""
 
 #: src/cli/main.cpp
 msgid "Show AirPods and case battery."
+msgstr ""
+
+#: src/cli/main.cpp
+msgid "Manage AirPods from Tether at all: on or off."
 msgstr ""
 
 #: src/cli/main.cpp
@@ -416,8 +420,11 @@ msgid "Could not read the AirPods battery from the daemon.\n"
 msgstr ""
 
 #: src/cli/main.cpp
-#, c-format
 msgid "No AirPods connected.\n"
+msgstr ""
+
+#: src/cli/main.cpp
+msgid "AirPods management is off.\n"
 msgstr ""
 
 #: src/cli/main.cpp
@@ -435,6 +442,12 @@ msgstr ""
 
 #: src/cli/main.cpp
 msgid "Worn"
+msgstr ""
+
+#: src/cli/main.cpp
+msgid ""
+"This computer does not present itself as Apple hardware, so a call hands the "
+"buds over by disconnecting them. See DeviceID in /etc/bluetooth/main.conf."
 msgstr ""
 
 #: src/cli/main.cpp
@@ -461,6 +474,14 @@ msgstr ""
 
 #: src/cli/main.cpp
 msgid "Use on or off.\n"
+msgstr ""
+
+#: src/cli/main.cpp
+msgid "Tether is managing the AirPods."
+msgstr ""
+
+#: src/cli/main.cpp
+msgid "Tether has released the AirPods channel for another program."
 msgstr ""
 
 #: src/cli/main.cpp
@@ -706,6 +727,14 @@ msgstr ""
 
 #: src/cli/main.cpp
 msgid "Answering."
+msgstr ""
+
+#: src/cli/main.cpp
+msgid "Call audio comes to this computer."
+msgstr ""
+
+#: src/cli/main.cpp
+msgid "Call audio stays on the iPhone."
 msgstr ""
 
 #: src/cli/main.cpp
@@ -1148,6 +1177,10 @@ msgid "Calls are controlled here; the audio plays on the iPhone."
 msgstr ""
 
 #: src/core/src/bluetooth/telephony.cpp
+msgid "This computer is not carrying the call audio; it plays on the iPhone."
+msgstr ""
+
+#: src/core/src/bluetooth/telephony.cpp
 msgid "Not a dialable number."
 msgstr ""
 
@@ -1157,10 +1190,6 @@ msgstr ""
 
 #: src/core/src/bluetooth/telephony.cpp
 msgid "That call is no longer active."
-msgstr ""
-
-#: src/core/src/bluetooth/telephony.cpp
-msgid "This computer is not carrying the call audio; it plays on the iPhone."
 msgstr ""
 
 #: src/core/src/bluetooth/telephony.cpp
@@ -1401,6 +1430,10 @@ msgid "Noise Cancellation"
 msgstr ""
 
 #: src/gtk/devices_view.cpp
+msgid "Tether is not managing the AirPods, so another program can use them."
+msgstr ""
+
+#: src/gtk/devices_view.cpp
 msgid "These AirPods do not report a listening mode."
 msgstr ""
 
@@ -1418,6 +1451,17 @@ msgstr ""
 
 #: src/gtk/devices_view.cpp
 msgid "Neither bud is in."
+msgstr ""
+
+#: src/gtk/devices_view.cpp
+msgid "The buds are handed over with Apple's own handoff."
+msgstr ""
+
+#: src/gtk/devices_view.cpp
+msgid ""
+"The buds are handed over by disconnecting them. For Apple's own handoff, put "
+"DeviceID = bluetooth:004C:0000:0000 under [General] in /etc/bluetooth/"
+"main.conf and restart bluetooth."
 msgstr ""
 
 #: src/gtk/devices_view.cpp
@@ -1680,6 +1724,16 @@ msgstr ""
 
 #: src/gtk/devices_view.cpp
 msgid "Scan for devices"
+msgstr ""
+
+#: src/gtk/devices_view.cpp
+msgid "Manage AirPods from Tether"
+msgstr ""
+
+#: src/gtk/devices_view.cpp
+msgid ""
+"The AirPods channel takes one program per computer. Turning this off "
+"releases it, so another AirPods program can use it."
 msgstr ""
 
 #: src/gtk/devices_view.cpp

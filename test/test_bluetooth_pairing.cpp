@@ -81,6 +81,7 @@ TEST(BluetoothConfig, RoundTrips) {
     config.lock_on_away = true;
     config.lock_away_seconds = 45;
     config.lock_command = "hyprlock";
+    config.airpods_enabled = true;
 
     EXPECT_EQ(deserialize_config(serialize_config(config)), config);
 }
@@ -98,6 +99,8 @@ TEST(BluetoothConfig, DefaultsToConnectFirstAndAncsEnabled) {
     EXPECT_FALSE(config.calls_enabled);
     // A config written before the switch existed keeps showing popups.
     EXPECT_TRUE(config.desktop_popups_enabled);
+    // AirPods are not managed until asked: the channel takes one client per machine.
+    EXPECT_FALSE(config.airpods_enabled);
     // Locking the screen is never assumed; logind performs it once switched on.
     EXPECT_FALSE(config.lock_on_away);
     EXPECT_EQ(config.lock_away_seconds, AWAY_LOCK_GRACE_SECONDS);

@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: tether\n"
 "Report-Msgid-Bugs-To: zack@bartel.com\n"
-"POT-Creation-Date: 2026-09-08 22:55-0700\n"
+"POT-Creation-Date: 2026-09-09 20:19-0700\n"
 "PO-Revision-Date: 2026-08-23\n"
 "Last-Translator: Tether project\n"
 "Language-Team: Japanese\n"
@@ -90,6 +90,10 @@ msgstr "Bluetooth リンクとプロファイルの接続状態を表示しま�
 #: src/cli/main.cpp
 msgid "Show AirPods and case battery."
 msgstr "AirPods とケースのバッテリーを表示します。"
+
+#: src/cli/main.cpp
+msgid "Manage AirPods from Tether at all: on or off."
+msgstr "AirPods を Tether で管理するかどうか: on または off。"
 
 #: src/cli/main.cpp
 msgid "Set the AirPods listening mode: off, anc, transparency, adaptive."
@@ -452,9 +456,12 @@ msgid "Could not read the AirPods battery from the daemon.\n"
 msgstr "デーモンから AirPods のバッテリーを読み取れませんでした。\n"
 
 #: src/cli/main.cpp
-#, c-format
 msgid "No AirPods connected.\n"
 msgstr "AirPods は接続されていません。\n"
+
+#: src/cli/main.cpp
+msgid "AirPods management is off.\n"
+msgstr "AirPods の管理はオフです。\n"
 
 #: src/cli/main.cpp
 msgid "Left"
@@ -472,6 +479,15 @@ msgstr "ケース"
 #: src/cli/main.cpp
 msgid "Worn"
 msgstr "装着"
+
+#: src/cli/main.cpp
+msgid ""
+"This computer does not present itself as Apple hardware, so a call hands the "
+"buds over by disconnecting them. See DeviceID in /etc/bluetooth/main.conf."
+msgstr ""
+"このコンピューターは Apple のハードウェアとして名乗っていないため、通話時は "
+"AirPods を切断して渡します。/etc/bluetooth/main.conf の DeviceID を参照してく"
+"ださい。"
 
 #: src/cli/main.cpp
 msgid "Could not reach the daemon.\n"
@@ -498,6 +514,14 @@ msgstr "取り外し時の一時停止を %s に設定しました。\n"
 #: src/cli/main.cpp
 msgid "Use on or off.\n"
 msgstr "on または off を指定してください。\n"
+
+#: src/cli/main.cpp
+msgid "Tether is managing the AirPods."
+msgstr "Tether が AirPods を管理しています。"
+
+#: src/cli/main.cpp
+msgid "Tether has released the AirPods channel for another program."
+msgstr "Tether は AirPods のチャンネルを他のプログラムのために解放しました。"
 
 #: src/cli/main.cpp
 msgid ""
@@ -753,6 +777,14 @@ msgstr "発信しています。"
 #: src/cli/main.cpp
 msgid "Answering."
 msgstr "応答しています。"
+
+#: src/cli/main.cpp
+msgid "Call audio comes to this computer."
+msgstr "通話音声はこのコンピューターで再生されます。"
+
+#: src/cli/main.cpp
+msgid "Call audio stays on the iPhone."
+msgstr "通話音声は iPhone のままです。"
 
 #: src/cli/main.cpp
 msgid "Hanging up."
@@ -1265,6 +1297,12 @@ msgid "Calls are controlled here; the audio plays on the iPhone."
 msgstr "通話はここで操作し、音声は iPhone で再生されます。"
 
 #: src/core/src/bluetooth/telephony.cpp
+msgid "This computer is not carrying the call audio; it plays on the iPhone."
+msgstr ""
+"このコンピューターは通話音声を伝送していません。音声は iPhone で再生されま"
+"す。"
+
+#: src/core/src/bluetooth/telephony.cpp
 msgid "Not a dialable number."
 msgstr "発信できる番号ではありません。"
 
@@ -1275,12 +1313,6 @@ msgstr "通話が指定されていません。"
 #: src/core/src/bluetooth/telephony.cpp
 msgid "That call is no longer active."
 msgstr "その通話はもう有効ではありません。"
-
-#: src/core/src/bluetooth/telephony.cpp
-msgid "This computer is not carrying the call audio; it plays on the iPhone."
-msgstr ""
-"このコンピューターは通話音声を伝送していません。音声は iPhone で再生されま"
-"す。"
 
 #: src/core/src/bluetooth/telephony.cpp
 msgid "Unknown call action."
@@ -1529,6 +1561,10 @@ msgid "Noise Cancellation"
 msgstr "ノイズキャンセリング"
 
 #: src/gtk/devices_view.cpp
+msgid "Tether is not managing the AirPods, so another program can use them."
+msgstr "Tether は AirPods を管理していないため、別のプログラムが使用できます。"
+
+#: src/gtk/devices_view.cpp
 msgid "These AirPods do not report a listening mode."
 msgstr "この AirPods はリスニングモードを報告しません。"
 
@@ -1547,6 +1583,20 @@ msgstr "片方のイヤホンを装着しています。"
 #: src/gtk/devices_view.cpp
 msgid "Neither bud is in."
 msgstr "イヤホンを装着していません。"
+
+#: src/gtk/devices_view.cpp
+msgid "The buds are handed over with Apple's own handoff."
+msgstr "AirPods は Apple 本来のハンドオフで渡されます。"
+
+#: src/gtk/devices_view.cpp
+msgid ""
+"The buds are handed over by disconnecting them. For Apple's own handoff, put "
+"DeviceID = bluetooth:004C:0000:0000 under [General] in /etc/bluetooth/"
+"main.conf and restart bluetooth."
+msgstr ""
+"AirPods は切断して渡されます。Apple 本来のハンドオフを使うには、/etc/"
+"bluetooth/main.conf の [General] に DeviceID = bluetooth:004C:0000:0000 を追"
+"加し、bluetooth を再起動してください。"
 
 #: src/gtk/devices_view.cpp
 msgid "Full mode — messages, contacts, and notifications."
@@ -1837,6 +1887,18 @@ msgstr ""
 #: src/gtk/devices_view.cpp
 msgid "Scan for devices"
 msgstr "デバイスを検索"
+
+#: src/gtk/devices_view.cpp
+msgid "Manage AirPods from Tether"
+msgstr "AirPods を Tether で管理する"
+
+#: src/gtk/devices_view.cpp
+msgid ""
+"The AirPods channel takes one program per computer. Turning this off "
+"releases it, so another AirPods program can use it."
+msgstr ""
+"AirPods のチャンネルは 1 台につき 1 つのプログラムしか使えません。オフにする"
+"と解放され、別の AirPods プログラムが使用できます。"
 
 #: src/gtk/devices_view.cpp
 msgid "Listening mode"
@@ -2172,7 +2234,9 @@ msgstr "iPhone が範囲外になったらセッションをロックする"
 msgid ""
 "Locks about half a minute after the link times out. Switching Bluetooth off "
 "on the iPhone does not lock, and neither does suspending this machine."
-msgstr "リンクがタイムアウトしてから約 30 秒後にロックします。iPhone 側で Bluetooth を切ってもロックせず、このマシンをサスペンドしてもロックしません。"
+msgstr ""
+"リンクがタイムアウトしてから約 30 秒後にロックします。iPhone 側で Bluetooth "
+"を切ってもロックせず、このマシンをサスペンドしてもロックしません。"
 
 #: src/gtk/settings_view.cpp
 msgid "SMS and iMessage conversations synced over Bluetooth."
@@ -2302,9 +2366,6 @@ msgstr "デバイスをペアリングし、ネットワーク越しにクリッ
 #~ msgstr ""
 #~ "通話操作をオンまたはオフにします。WirePlumber の hfp_hf ロールとテレフォ"
 #~ "ニーサービスが必要です。docs/BLUETOOTH.md を参照してください。"
-
-#~ msgid "Call audio moved to this computer."
-#~ msgstr "通話音声をこのコンピューターに移しました。"
 
 #~ msgid ""
 #~ "Play the call through this computer's speakers and microphone. Handing it "

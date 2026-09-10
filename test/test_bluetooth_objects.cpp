@@ -112,6 +112,19 @@ TEST(BluetoothObjects, ParsesAdapterProperties) {
     EXPECT_TRUE(a.class_is_handsfree());
 }
 
+// DeviceID in main.conf is what makes AirPods treat the machine as a Mac.
+TEST(BluetoothObjects, ReadsTheApplePresentationFromTheAdapterModalias) {
+    Adapter apple;
+    apple.modalias = "bluetooth:v004Cp0000d0000";
+    EXPECT_TRUE(apple.presents_as_apple());
+
+    Adapter stock;
+    stock.modalias = "usb:v1D6Bp0246d0548";
+    EXPECT_FALSE(stock.presents_as_apple());
+
+    EXPECT_FALSE(Adapter{}.presents_as_apple());
+}
+
 TEST(BluetoothObjects, ParsesDeviceAndBearer) {
     Payload p(IPHONE_BONDED);
     auto objects = parse_managed_objects(p.v);

@@ -9,6 +9,7 @@
 #include <nlohmann/json.hpp>
 #include <optional>
 #include <string>
+#include <vector>
 
 namespace tether::bluetooth {
 
@@ -33,6 +34,40 @@ namespace tether::bluetooth {
 
     const char* to_string(AncMode mode);
     std::optional<AncMode> anc_mode_from_string(const std::string& name);
+
+    // Ownership state of one host attached to the buds, the `B` field of a
+    // connected-devices notification.
+    inline constexpr uint8_t AAP_PEER_ENGAGED = 0x10;
+    // Connected and idle. An iPhone sits here for as long as it is paired and doing
+    // nothing, so this one value is not a peer taking the buds.
+    inline constexpr uint8_t AAP_PEER_PASSIVE = 0x15;
+    inline constexpr uint8_t AAP_PEER_ACTIVE = 0x17;
+
+    // One host in a connected-devices notification.
+    struct AapPeer {
+        std::string address;
+        // Role and generation counter. Zero for our own address means the firmware
+        // evicted us, but it also occurs when the buds swap primary and secondary.
+        uint8_t role = 0;
+        uint8_t state = 0;
+
+        bool active() const { return state >= AAP_PEER_ACTIVE; }
+        // Escalating towards taking the buds, or already holding them. Claiming
+        // against this leaves the host contested and the firmware closes the link.
+        bool taking_over() const { return state >= AAP_PEER_ENGAGED && state != AAP_PEER_PASSIVE; }
+
+        bool operator==(const AapPeer&) const = default;
+    };
+
+    // What the buds are carrying for a host.
+    enum class AudioSource { None, Call, Media };
+
+    struct AudioSourceEvent {
+        std::string address;
+        AudioSource source = AudioSource::None;
+
+        bool operator==(const AudioSourceEvent&) const = default;
+    };
 
     // Where a bud is.
     enum class EarStatus { Unknown, InEar, OutOfEar, InCase };
@@ -86,6 +121,8 @@ namespace tether::bluetooth {
     struct AirPodsState {
         std::string address;
         std::string name;
+        bool peer_taking_over = false;
+        bool peer_active = false;
         AirPodsBattery battery;
         // Unset until the buds report one. Not every model has the feature.
         std::optional<AncMode> anc;
@@ -110,6 +147,26 @@ namespace tether::bluetooth {
     // offset 6 and the secondary at 7.
     std::optional<EarState> parse_ear(const uint8_t* data, size_t len);
 
+    // Decodes a connected-devices notification:
+    //   04 00 04 00 2E 00 [count] ([mac] * 6 [role] [state]) * count
+    // The MAC is stored least-significant byte first here, unlike the audio-source
+    // notification; both come back in BlueZ's own text order.
+    std::optional<std::vector<AapPeer>> parse_connected_devices(const uint8_t* data, size_t len);
+
+    // Decodes an audio-source notification, 13 bytes: prefix, MAC, then the type.
+    std::optional<AudioSourceEvent> parse_audio_source(const uint8_t* data, size_t len);
+
+    // Whether any host other than `local` is engaged with the buds, or actively
+    // holding them. A machine's own entry is never a peer.
+    struct PeerSummary {
+        bool taking_over = false;
+        bool active = false;
+
+        bool operator==(const PeerSummary&) const = default;
+    };
+
+    PeerSummary summarize_peers(const std::vector<AapPeer>& peers, const std::string& local);
+
     // Decodes a listening-mode notification, 11 bytes carrying the mode at offset 7.
     // Returns no value for anything else, including an out-of-range mode.
     std::optional<AncMode> parse_anc(const uint8_t* data, size_t len);
@@ -123,8 +180,13 @@ namespace tether::bluetooth {
     // What an iPhone call should do to AirPods that are connected to this machine.
     enum class HandoffAction { None, Release, Reclaim };
 
+    // What the buds' own view of their hosts should do to local audio, for the
+    // native handoff: the phone taking them is a peer going active, not a call.
+    HandoffAction ownership_action(bool peer_active, bool released, bool enabled);
+
     // `released` is whether this code is what disconnected them: buds the user
-    // took away by hand are never reclaimed.
+    // took away by hand are never reclaimed. A reclaim outlives `enabled` going
+    // false, so turning the feature off mid-call does not strand them.
     HandoffAction handoff_action(bool call_active, bool buds_on_linux, bool released, bool enabled);
 
     // Whether a bt_calls payload describes a call worth handing the buds over for.
@@ -145,12 +207,21 @@ namespace tether::bluetooth {
 
         // Points the watcher at a connected device, or stops it when `address` is
         // empty. Cheap to call on every BlueZ snapshot: an unchanged target is a no-op.
-        void set_device(const std::string& address, const std::string& name);
+        void set_device(const std::string& address, const std::string& name, const std::string& local = {});
+
+        // Stands the watcher down. The channel takes one client per machine, so
+        // this is what lets another AirPods program have it.
+        void set_enabled(bool enabled);
 
         // Asks the buds to switch listening mode. Sent on the open channel, and
         // dropped if the channel closes before it goes out; the buds answer with a
         // notification, which is what actually updates the published state.
         void set_anc(AncMode mode);
+
+        // Takes the buds or gives them up over AAP, which is what Apple's own
+        // handoff does. A claim is dropped while a peer is engaged: sending one then
+        // leaves this host contested and the firmware closes the link.
+        void set_ownership(bool own);
 
         AirPodsState state() const;
 

@@ -33,7 +33,7 @@
 | **Messages (SMS/iMessage)** | ✅ Stable |
 | **Notification Mirroring** | 🧪 Beta |
 | **Phone Calls** (PipeWire only) | 🧪 Alpha |
-| **AirPods** | 🧪 Alpha |
+| **AirPods** (opt-in) | 🧪 Alpha |
 
 ### Clipboard Sync
 Text copied on your Linux desktop appears instantly on your iPhone, and vice versa.

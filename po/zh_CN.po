@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: tether\n"
 "Report-Msgid-Bugs-To: zack@bartel.com\n"
-"POT-Creation-Date: 2026-09-08 22:55-0700\n"
+"POT-Creation-Date: 2026-09-09 20:19-0700\n"
 "PO-Revision-Date: 2026-08-23\n"
 "Last-Translator: Tether project\n"
 "Language-Team: Simplified Chinese\n"
@@ -89,6 +89,10 @@ msgstr "显示蓝牙链路和配置文件的连接状态。"
 #: src/cli/main.cpp
 msgid "Show AirPods and case battery."
 msgstr "显示 AirPods 和充电盒电量。"
+
+#: src/cli/main.cpp
+msgid "Manage AirPods from Tether at all: on or off."
+msgstr "是否由 Tether 管理 AirPods：on 或 off。"
 
 #: src/cli/main.cpp
 msgid "Set the AirPods listening mode: off, anc, transparency, adaptive."
@@ -439,9 +443,12 @@ msgid "Could not read the AirPods battery from the daemon.\n"
 msgstr "无法从守护进程读取 AirPods 电量。\n"
 
 #: src/cli/main.cpp
-#, c-format
 msgid "No AirPods connected.\n"
 msgstr "未连接 AirPods。\n"
+
+#: src/cli/main.cpp
+msgid "AirPods management is off.\n"
+msgstr "AirPods 管理已关闭。\n"
 
 #: src/cli/main.cpp
 msgid "Left"
@@ -459,6 +466,14 @@ msgstr "充电盒"
 #: src/cli/main.cpp
 msgid "Worn"
 msgstr "佩戴"
+
+#: src/cli/main.cpp
+msgid ""
+"This computer does not present itself as Apple hardware, so a call hands the "
+"buds over by disconnecting them. See DeviceID in /etc/bluetooth/main.conf."
+msgstr ""
+"本机没有以 Apple 硬件的身份出现，因此通话时通过断开连接来移交 AirPods。参见 /"
+"etc/bluetooth/main.conf 中的 DeviceID。"
 
 #: src/cli/main.cpp
 msgid "Could not reach the daemon.\n"
@@ -485,6 +500,14 @@ msgstr "取下时暂停已设为 %s。\n"
 #: src/cli/main.cpp
 msgid "Use on or off.\n"
 msgstr "请使用 on 或 off。\n"
+
+#: src/cli/main.cpp
+msgid "Tether is managing the AirPods."
+msgstr "Tether 正在管理 AirPods。"
+
+#: src/cli/main.cpp
+msgid "Tether has released the AirPods channel for another program."
+msgstr "Tether 已释放 AirPods 通道，供其他程序使用。"
 
 #: src/cli/main.cpp
 msgid ""
@@ -736,6 +759,14 @@ msgstr "正在拨号。"
 #: src/cli/main.cpp
 msgid "Answering."
 msgstr "正在接听。"
+
+#: src/cli/main.cpp
+msgid "Call audio comes to this computer."
+msgstr "通话声音转到这台电脑。"
+
+#: src/cli/main.cpp
+msgid "Call audio stays on the iPhone."
+msgstr "通话声音留在 iPhone 上。"
 
 #: src/cli/main.cpp
 msgid "Hanging up."
@@ -1218,6 +1249,10 @@ msgid "Calls are controlled here; the audio plays on the iPhone."
 msgstr "通话在此控制，音频在 iPhone 上播放。"
 
 #: src/core/src/bluetooth/telephony.cpp
+msgid "This computer is not carrying the call audio; it plays on the iPhone."
+msgstr "本机未承载通话音频；音频在 iPhone 上播放。"
+
+#: src/core/src/bluetooth/telephony.cpp
 msgid "Not a dialable number."
 msgstr "不是可拨打的号码。"
 
@@ -1228,10 +1263,6 @@ msgstr "未指定通话。"
 #: src/core/src/bluetooth/telephony.cpp
 msgid "That call is no longer active."
 msgstr "该通话已不再有效。"
-
-#: src/core/src/bluetooth/telephony.cpp
-msgid "This computer is not carrying the call audio; it plays on the iPhone."
-msgstr "本机未承载通话音频；音频在 iPhone 上播放。"
 
 #: src/core/src/bluetooth/telephony.cpp
 msgid "Unknown call action."
@@ -1476,6 +1507,10 @@ msgid "Noise Cancellation"
 msgstr "降噪"
 
 #: src/gtk/devices_view.cpp
+msgid "Tether is not managing the AirPods, so another program can use them."
+msgstr "Tether 未管理 AirPods，其他程序可以使用它们。"
+
+#: src/gtk/devices_view.cpp
 msgid "These AirPods do not report a listening mode."
 msgstr "此 AirPods 不报告聆听模式。"
 
@@ -1494,6 +1529,20 @@ msgstr "已佩戴一只耳机。"
 #: src/gtk/devices_view.cpp
 msgid "Neither bud is in."
 msgstr "未佩戴耳机。"
+
+#: src/gtk/devices_view.cpp
+msgid "The buds are handed over with Apple's own handoff."
+msgstr "使用 Apple 原生的移交方式交出 AirPods。"
+
+#: src/gtk/devices_view.cpp
+msgid ""
+"The buds are handed over by disconnecting them. For Apple's own handoff, put "
+"DeviceID = bluetooth:004C:0000:0000 under [General] in /etc/bluetooth/"
+"main.conf and restart bluetooth."
+msgstr ""
+"通过断开连接交出 AirPods。若要使用 Apple 原生的移交方式，请在 /etc/bluetooth/"
+"main.conf 的 [General] 下加入 DeviceID = bluetooth:004C:0000:0000 并重启 "
+"bluetooth。"
 
 #: src/gtk/devices_view.cpp
 msgid "Full mode — messages, contacts, and notifications."
@@ -1775,6 +1824,18 @@ msgstr ""
 #: src/gtk/devices_view.cpp
 msgid "Scan for devices"
 msgstr "搜索设备"
+
+#: src/gtk/devices_view.cpp
+msgid "Manage AirPods from Tether"
+msgstr "由 Tether 管理 AirPods"
+
+#: src/gtk/devices_view.cpp
+msgid ""
+"The AirPods channel takes one program per computer. Turning this off "
+"releases it, so another AirPods program can use it."
+msgstr ""
+"每台电脑只有一个程序能占用 AirPods 通道。关闭后即可释放，供其他 AirPods 程序"
+"使用。"
 
 #: src/gtk/devices_view.cpp
 msgid "Listening mode"
@@ -2100,7 +2161,8 @@ msgstr "当 iPhone 超出范围时锁定会话"
 msgid ""
 "Locks about half a minute after the link times out. Switching Bluetooth off "
 "on the iPhone does not lock, and neither does suspending this machine."
-msgstr "在链路超时约半分钟后锁定。在 iPhone 上关闭蓝牙不会锁定，将本机挂起也不会。"
+msgstr ""
+"在链路超时约半分钟后锁定。在 iPhone 上关闭蓝牙不会锁定，将本机挂起也不会。"
 
 #: src/gtk/settings_view.cpp
 msgid "SMS and iMessage conversations synced over Bluetooth."
@@ -2222,9 +2284,6 @@ msgstr "配对设备并通过网络同步剪贴板"
 #~ msgstr ""
 #~ "开启或关闭通话控制。需要 WirePlumber 中的 hfp_hf 角色和电话服务；参见 "
 #~ "docs/BLUETOOTH.md。"
-
-#~ msgid "Call audio moved to this computer."
-#~ msgstr "通话音频已转到本机。"
 
 #~ msgid ""
 #~ "Play the call through this computer's speakers and microphone. Handing it "

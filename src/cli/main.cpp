@@ -192,6 +192,7 @@ static const Opt kOptions[] = {
     {"--bt-devices", N_("List Bluetooth devices known to BlueZ.")},
     {"--bt-connection", N_("Show Bluetooth link and profile connection state.")},
     {"--bt-airpods", N_("Show AirPods and case battery.")},
+    {"--bt-airpods-enable", N_("Manage AirPods from Tether at all: on or off.")},
     {"--bt-airpods-mode", N_("Set the AirPods listening mode: off, anc, transparency, adaptive.")},
     {"--bt-airpods-pause", N_("Pause local playback when an AirPod is removed: never, one-removed, both-removed.")},
     {"--bt-airpods-handoff", N_("Hand the AirPods to the iPhone during a call: on or off.")},
@@ -507,15 +508,20 @@ static int print_bt_devices(tether::Client& client) {
 
 static int print_bt_airpods(tether::Client& client) {
     nlohmann::json resp;
+    nlohmann::json status;
     try {
         resp = nlohmann::json::parse(client.send_and_wait("{\"command\":\"bt_airpods\"}\n"));
+        status = nlohmann::json::parse(client.send_and_wait("{\"command\":\"bt_status\"}\n"));
     } catch (const std::exception&) {
         debug::log(ERR, _("Could not read the AirPods battery from the daemon.\n"));
         return 1;
     }
 
     if (resp.value("address", "").empty()) {
-        fprintf(stdout, _("No AirPods connected.\n"));
+        fprintf(stdout,
+                "%s",
+                status.value("airpods_enabled", false) ? _("AirPods management is off.\n")
+                                                       : _("No AirPods connected.\n"));
         return 0;
     }
 
@@ -545,6 +551,12 @@ static int print_bt_airpods(tether::Client& client) {
     const std::string reason = resp.value("reason", "");
     if (!reason.empty())
         fprintf(stdout, "  %s\n", reason.c_str());
+
+    if (!status.value("apple_device_id", false))
+        fprintf(stdout,
+                "  %s\n",
+                _("This computer does not present itself as Apple hardware, so a call hands the buds over by "
+                  "disconnecting them. See DeviceID in /etc/bluetooth/main.conf."));
     return 0;
 }
 
@@ -577,6 +589,22 @@ static int set_bt_airpods_pause(tether::Client& client, const std::string& mode)
         return 1;
     }
     fprintf(stdout, _("Pause on removal set to %s.\n"), mode.c_str());
+    return 0;
+}
+
+static int set_bt_airpods_enable(tether::Client& client, const std::string& value) {
+    if (value != "on" && value != "off") {
+        debug::log(ERR, _("Use on or off.\n"));
+        return 1;
+    }
+    if (!client.send(nlohmann::json{{"command", "bt_airpods_enable"}, {"enabled", value == "on"}}.dump() + "\n")) {
+        debug::log(ERR, _("Could not reach the daemon.\n"));
+        return 1;
+    }
+    fprintf(stdout,
+            "%s\n",
+            value == "on" ? _("Tether is managing the AirPods.")
+                          : _("Tether has released the AirPods channel for another program."));
     return 0;
 }
 
@@ -1061,6 +1089,10 @@ int main(int argc, char* argv[]) {
             action = "bt_connection";
         } else if (arg == "--bt-airpods") {
             action = "bt_airpods";
+        } else if (arg == "--bt-airpods-enable") {
+            action = "bt_airpods_enable";
+            if (i + 1 < argc && argv[i + 1][0] != '-')
+                arg_val = argv[++i];
         } else if (arg == "--bt-airpods-mode") {
             action = "bt_airpods_mode";
             if (i + 1 < argc && argv[i + 1][0] != '-')
@@ -1314,6 +1346,8 @@ int main(int argc, char* argv[]) {
         return print_bt_connection(client);
     } else if (action == "bt_airpods") {
         return print_bt_airpods(client);
+    } else if (action == "bt_airpods_enable") {
+        return set_bt_airpods_enable(client, arg_val);
     } else if (action == "bt_airpods_mode") {
         return set_bt_airpods_mode(client, arg_val);
     } else if (action == "bt_airpods_pause") {
@@ -1345,7 +1379,11 @@ int main(int argc, char* argv[]) {
         nlohmann::json request;
         request["command"] = "bt_call_action";
         request["action"] = arg_val;
-        return run_call_command(client, request, arg_val == "answer" ? _("Answering.") : _("Hanging up."));
+        const char* done = arg_val == "answer"        ? _("Answering.")
+                           : arg_val == "audio_here"  ? _("Call audio comes to this computer.")
+                           : arg_val == "audio_phone" ? _("Call audio stays on the iPhone.")
+                                                      : _("Hanging up.");
+        return run_call_command(client, request, done);
     } else if (action == "bt_calls_enable") {
         if (arg_val != "on" && arg_val != "off") {
             debug::log(ERR, _("Expected on or off, e.g. --bt-calls-enable on\n"));

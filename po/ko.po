@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: tether\n"
 "Report-Msgid-Bugs-To: zack@bartel.com\n"
-"POT-Creation-Date: 2026-09-08 22:55-0700\n"
+"POT-Creation-Date: 2026-09-09 20:19-0700\n"
 "PO-Revision-Date: 2026-08-23\n"
 "Last-Translator: Tether project\n"
 "Language-Team: Korean\n"
@@ -89,6 +89,10 @@ msgstr "Bluetooth 링크와 프로파일의 연결 상태를 표시합니다."
 #: src/cli/main.cpp
 msgid "Show AirPods and case battery."
 msgstr "AirPods 및 케이스 배터리를 표시합니다."
+
+#: src/cli/main.cpp
+msgid "Manage AirPods from Tether at all: on or off."
+msgstr "Tether에서 AirPods를 관리할지 여부: on 또는 off."
 
 #: src/cli/main.cpp
 msgid "Set the AirPods listening mode: off, anc, transparency, adaptive."
@@ -449,9 +453,12 @@ msgid "Could not read the AirPods battery from the daemon.\n"
 msgstr "데몬에서 AirPods 배터리를 읽을 수 없습니다.\n"
 
 #: src/cli/main.cpp
-#, c-format
 msgid "No AirPods connected.\n"
 msgstr "연결된 AirPods가 없습니다.\n"
+
+#: src/cli/main.cpp
+msgid "AirPods management is off.\n"
+msgstr "AirPods 관리가 꺼져 있습니다.\n"
 
 #: src/cli/main.cpp
 msgid "Left"
@@ -469,6 +476,14 @@ msgstr "케이스"
 #: src/cli/main.cpp
 msgid "Worn"
 msgstr "착용"
+
+#: src/cli/main.cpp
+msgid ""
+"This computer does not present itself as Apple hardware, so a call hands the "
+"buds over by disconnecting them. See DeviceID in /etc/bluetooth/main.conf."
+msgstr ""
+"이 컴퓨터는 Apple 하드웨어로 표시되지 않으므로 통화 시 AirPods 연결을 끊어 넘"
+"깁니다. /etc/bluetooth/main.conf의 DeviceID를 참고하세요."
 
 #: src/cli/main.cpp
 msgid "Could not reach the daemon.\n"
@@ -495,6 +510,14 @@ msgstr "제거 시 일시정지를 %s(으)로 설정했습니다.\n"
 #: src/cli/main.cpp
 msgid "Use on or off.\n"
 msgstr "on 또는 off를 사용하세요.\n"
+
+#: src/cli/main.cpp
+msgid "Tether is managing the AirPods."
+msgstr "Tether가 AirPods를 관리하고 있습니다."
+
+#: src/cli/main.cpp
+msgid "Tether has released the AirPods channel for another program."
+msgstr "Tether가 다른 프로그램을 위해 AirPods 채널을 해제했습니다."
 
 #: src/cli/main.cpp
 msgid ""
@@ -749,6 +772,14 @@ msgstr "전화를 거는 중입니다."
 #: src/cli/main.cpp
 msgid "Answering."
 msgstr "전화를 받는 중입니다."
+
+#: src/cli/main.cpp
+msgid "Call audio comes to this computer."
+msgstr "통화 음성이 이 컴퓨터로 옵니다."
+
+#: src/cli/main.cpp
+msgid "Call audio stays on the iPhone."
+msgstr "통화 음성이 iPhone에 남습니다."
 
 #: src/cli/main.cpp
 msgid "Hanging up."
@@ -1252,6 +1283,11 @@ msgid "Calls are controlled here; the audio plays on the iPhone."
 msgstr "통화는 여기서 제어하고 오디오는 iPhone에서 재생됩니다."
 
 #: src/core/src/bluetooth/telephony.cpp
+msgid "This computer is not carrying the call audio; it plays on the iPhone."
+msgstr ""
+"이 컴퓨터는 통화 오디오를 전달하지 않습니다. 오디오는 iPhone에서 재생됩니다."
+
+#: src/core/src/bluetooth/telephony.cpp
 msgid "Not a dialable number."
 msgstr "전화를 걸 수 있는 번호가 아닙니다."
 
@@ -1262,11 +1298,6 @@ msgstr "통화를 지정하지 않았습니다."
 #: src/core/src/bluetooth/telephony.cpp
 msgid "That call is no longer active."
 msgstr "그 통화는 더 이상 활성 상태가 아닙니다."
-
-#: src/core/src/bluetooth/telephony.cpp
-msgid "This computer is not carrying the call audio; it plays on the iPhone."
-msgstr ""
-"이 컴퓨터는 통화 오디오를 전달하지 않습니다. 오디오는 iPhone에서 재생됩니다."
 
 #: src/core/src/bluetooth/telephony.cpp
 msgid "Unknown call action."
@@ -1512,6 +1543,11 @@ msgid "Noise Cancellation"
 msgstr "노이즈 캔슬링"
 
 #: src/gtk/devices_view.cpp
+msgid "Tether is not managing the AirPods, so another program can use them."
+msgstr ""
+"Tether가 AirPods를 관리하지 않으므로 다른 프로그램이 사용할 수 있습니다."
+
+#: src/gtk/devices_view.cpp
 msgid "These AirPods do not report a listening mode."
 msgstr "이 AirPods는 청취 모드를 보고하지 않습니다."
 
@@ -1530,6 +1566,20 @@ msgstr "한쪽 이어버드를 착용 중입니다."
 #: src/gtk/devices_view.cpp
 msgid "Neither bud is in."
 msgstr "이어버드를 착용하지 않았습니다."
+
+#: src/gtk/devices_view.cpp
+msgid "The buds are handed over with Apple's own handoff."
+msgstr "AirPods는 Apple 자체 핸드오프로 넘겨집니다."
+
+#: src/gtk/devices_view.cpp
+msgid ""
+"The buds are handed over by disconnecting them. For Apple's own handoff, put "
+"DeviceID = bluetooth:004C:0000:0000 under [General] in /etc/bluetooth/"
+"main.conf and restart bluetooth."
+msgstr ""
+"AirPods는 연결을 끊어 넘깁니다. Apple 자체 핸드오프를 사용하려면 /etc/"
+"bluetooth/main.conf의 [General]에 DeviceID = bluetooth:004C:0000:0000 을 추가"
+"하고 bluetooth를 다시 시작하세요."
 
 #: src/gtk/devices_view.cpp
 msgid "Full mode — messages, contacts, and notifications."
@@ -1816,6 +1866,18 @@ msgstr ""
 #: src/gtk/devices_view.cpp
 msgid "Scan for devices"
 msgstr "기기 검색"
+
+#: src/gtk/devices_view.cpp
+msgid "Manage AirPods from Tether"
+msgstr "Tether에서 AirPods 관리"
+
+#: src/gtk/devices_view.cpp
+msgid ""
+"The AirPods channel takes one program per computer. Turning this off "
+"releases it, so another AirPods program can use it."
+msgstr ""
+"AirPods 채널은 컴퓨터당 하나의 프로그램만 사용할 수 있습니다. 이 설정을 끄면 "
+"채널이 해제되어 다른 AirPods 프로그램이 사용할 수 있습니다."
 
 #: src/gtk/devices_view.cpp
 msgid "Listening mode"
@@ -2145,7 +2207,9 @@ msgstr "iPhone이 범위를 벗어나면 세션 잠그기"
 msgid ""
 "Locks about half a minute after the link times out. Switching Bluetooth off "
 "on the iPhone does not lock, and neither does suspending this machine."
-msgstr "링크가 시간 초과된 뒤 약 30초 후에 잠급니다. iPhone에서 Bluetooth를 꺼도 잠기지 않으며, 이 기기를 절전 모드로 두어도 잠기지 않습니다."
+msgstr ""
+"링크가 시간 초과된 뒤 약 30초 후에 잠급니다. iPhone에서 Bluetooth를 꺼도 잠기"
+"지 않으며, 이 기기를 절전 모드로 두어도 잠기지 않습니다."
 
 #: src/gtk/settings_view.cpp
 msgid "SMS and iMessage conversations synced over Bluetooth."
@@ -2274,9 +2338,6 @@ msgstr "기기를 페어링하고 네트워크를 통해 클립보드를 동기�
 #~ msgstr ""
 #~ "통화 제어를 켜거나 끕니다. WirePlumber의 hfp_hf 역할과 전화 서비스가 필요"
 #~ "합니다. docs/BLUETOOTH.md를 참고하십시오."
-
-#~ msgid "Call audio moved to this computer."
-#~ msgstr "통화 오디오를 이 컴퓨터로 옮겼습니다."
 
 #~ msgid ""
 #~ "Play the call through this computer's speakers and microphone. Handing it "
