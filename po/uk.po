@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: tether\n"
 "Report-Msgid-Bugs-To: zack@bartel.com\n"
-"POT-Creation-Date: 2026-09-08 22:55-0700\n"
+"POT-Creation-Date: 2026-09-09 20:19-0700\n"
 "PO-Revision-Date: 2026-08-23\n"
 "Last-Translator: Tether project\n"
 "Language-Team: Ukrainian\n"
@@ -92,6 +92,10 @@ msgstr "Показати стан з'єднання Bluetooth і профілі�
 #: src/cli/main.cpp
 msgid "Show AirPods and case battery."
 msgstr "Показати заряд AirPods і футляра."
+
+#: src/cli/main.cpp
+msgid "Manage AirPods from Tether at all: on or off."
+msgstr "Керувати AirPods із Tether: on або off."
 
 #: src/cli/main.cpp
 msgid "Set the AirPods listening mode: off, anc, transparency, adaptive."
@@ -465,9 +469,12 @@ msgid "Could not read the AirPods battery from the daemon.\n"
 msgstr "Не вдалося отримати заряд AirPods від служби.\n"
 
 #: src/cli/main.cpp
-#, c-format
 msgid "No AirPods connected.\n"
 msgstr "AirPods не під'єднано.\n"
+
+#: src/cli/main.cpp
+msgid "AirPods management is off.\n"
+msgstr "Керування AirPods вимкнено.\n"
 
 #: src/cli/main.cpp
 msgid "Left"
@@ -485,6 +492,15 @@ msgstr "Футляр"
 #: src/cli/main.cpp
 msgid "Worn"
 msgstr "У вухах"
+
+#: src/cli/main.cpp
+msgid ""
+"This computer does not present itself as Apple hardware, so a call hands the "
+"buds over by disconnecting them. See DeviceID in /etc/bluetooth/main.conf."
+msgstr ""
+"Цей комп'ютер не представляється обладнанням Apple, тому під час дзвінка "
+"AirPods передаються через відключення. Див. DeviceID у /etc/bluetooth/"
+"main.conf."
 
 #: src/cli/main.cpp
 msgid "Could not reach the daemon.\n"
@@ -511,6 +527,14 @@ msgstr "Паузу при вийманні встановлено на %s.\n"
 #: src/cli/main.cpp
 msgid "Use on or off.\n"
 msgstr "Використовуйте on або off.\n"
+
+#: src/cli/main.cpp
+msgid "Tether is managing the AirPods."
+msgstr "Tether керує AirPods."
+
+#: src/cli/main.cpp
+msgid "Tether has released the AirPods channel for another program."
+msgstr "Tether звільнив канал AirPods для іншої програми."
 
 #: src/cli/main.cpp
 msgid ""
@@ -769,6 +793,14 @@ msgstr "Триває набір."
 #: src/cli/main.cpp
 msgid "Answering."
 msgstr "Відповідь на виклик."
+
+#: src/cli/main.cpp
+msgid "Call audio comes to this computer."
+msgstr "Звук дзвінка йде на цей комп'ютер."
+
+#: src/cli/main.cpp
+msgid "Call audio stays on the iPhone."
+msgstr "Звук дзвінка залишається на iPhone."
 
 #: src/cli/main.cpp
 msgid "Hanging up."
@@ -1285,6 +1317,10 @@ msgid "Calls are controlled here; the audio plays on the iPhone."
 msgstr "Викликами керують звідси; звук відтворюється на iPhone."
 
 #: src/core/src/bluetooth/telephony.cpp
+msgid "This computer is not carrying the call audio; it plays on the iPhone."
+msgstr "Цей комп’ютер не передає звук виклику; він відтворюється на iPhone."
+
+#: src/core/src/bluetooth/telephony.cpp
 msgid "Not a dialable number."
 msgstr "Такий номер набрати не можна."
 
@@ -1295,10 +1331,6 @@ msgstr "Виклик не вказано."
 #: src/core/src/bluetooth/telephony.cpp
 msgid "That call is no longer active."
 msgstr "Цей виклик уже не активний."
-
-#: src/core/src/bluetooth/telephony.cpp
-msgid "This computer is not carrying the call audio; it plays on the iPhone."
-msgstr "Цей комп’ютер не передає звук виклику; він відтворюється на iPhone."
 
 #: src/core/src/bluetooth/telephony.cpp
 msgid "Unknown call action."
@@ -1548,6 +1580,10 @@ msgid "Noise Cancellation"
 msgstr "Шумозаглушення"
 
 #: src/gtk/devices_view.cpp
+msgid "Tether is not managing the AirPods, so another program can use them."
+msgstr "Tether не керує AirPods, їх може використовувати інша програма."
+
+#: src/gtk/devices_view.cpp
 msgid "These AirPods do not report a listening mode."
 msgstr "Ці AirPods не повідомляють режим прослуховування."
 
@@ -1566,6 +1602,20 @@ msgstr "Один навушник у вусі."
 #: src/gtk/devices_view.cpp
 msgid "Neither bud is in."
 msgstr "Жоден навушник не у вусі."
+
+#: src/gtk/devices_view.cpp
+msgid "The buds are handed over with Apple's own handoff."
+msgstr "AirPods передаються власним механізмом Apple."
+
+#: src/gtk/devices_view.cpp
+msgid ""
+"The buds are handed over by disconnecting them. For Apple's own handoff, put "
+"DeviceID = bluetooth:004C:0000:0000 under [General] in /etc/bluetooth/"
+"main.conf and restart bluetooth."
+msgstr ""
+"AirPods передаються через відключення. Для власного механізму Apple додайте "
+"DeviceID = bluetooth:004C:0000:0000 у розділ [General] у /etc/bluetooth/"
+"main.conf і перезапустіть bluetooth."
 
 #: src/gtk/devices_view.cpp
 msgid "Full mode — messages, contacts, and notifications."
@@ -1859,6 +1909,18 @@ msgstr ""
 #: src/gtk/devices_view.cpp
 msgid "Scan for devices"
 msgstr "Шукати пристрої"
+
+#: src/gtk/devices_view.cpp
+msgid "Manage AirPods from Tether"
+msgstr "Керувати AirPods із Tether"
+
+#: src/gtk/devices_view.cpp
+msgid ""
+"The AirPods channel takes one program per computer. Turning this off "
+"releases it, so another AirPods program can use it."
+msgstr ""
+"Канал AirPods приймає одну програму на комп'ютер. Вимкнення звільняє його "
+"для іншої програми для AirPods."
 
 #: src/gtk/devices_view.cpp
 msgid "Listening mode"
@@ -2195,7 +2257,9 @@ msgstr "Блокувати сеанс, коли iPhone виходить із з�
 msgid ""
 "Locks about half a minute after the link times out. Switching Bluetooth off "
 "on the iPhone does not lock, and neither does suspending this machine."
-msgstr "Блокує приблизно за півхвилини після того, як з'єднання завершиться за часом. Вимкнення Bluetooth на iPhone не блокує, як і присипляння цієї машини."
+msgstr ""
+"Блокує приблизно за півхвилини після того, як з'єднання завершиться за "
+"часом. Вимкнення Bluetooth на iPhone не блокує, як і присипляння цієї машини."
 
 #: src/gtk/settings_view.cpp
 msgid "SMS and iMessage conversations synced over Bluetooth."
@@ -2328,9 +2392,6 @@ msgstr "Створюйте пари пристроїв і синхронізуй
 #~ msgstr ""
 #~ "Увімкнути або вимкнути керування викликами. Потрібна роль hfp_hf і служба "
 #~ "телефонії у WirePlumber; див. docs/BLUETOOTH.md."
-
-#~ msgid "Call audio moved to this computer."
-#~ msgstr "Звук виклику переведено на цей комп’ютер."
 
 #~ msgid ""
 #~ "Play the call through this computer's speakers and microphone. Handing it "

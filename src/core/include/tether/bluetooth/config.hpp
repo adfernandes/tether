@@ -49,6 +49,8 @@ namespace tether::bluetooth {
         Retention retention = Retention::Encrypted;
         // Whether the daemon shows desktop popups at all.
         bool desktop_popups_enabled = true;
+        // Whether Tether manages AirPods at all. Off until asked.
+        bool airpods_enabled = false;
         // Whether removing an AirPod pauses local playback.
         PauseMode airpods_pause = PauseMode::Never;
         // Whether an iPhone call hands the AirPods to the phone and takes them back after.

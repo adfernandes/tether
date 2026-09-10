@@ -13,6 +13,7 @@ add_library(tether STATIC
     src/extension_host.cpp
     src/discovery.cpp
     src/mpris.cpp
+    src/audio.cpp
     src/bluetooth/objects.cpp
     src/bluetooth/monitor.cpp
     src/bluetooth/config.cpp

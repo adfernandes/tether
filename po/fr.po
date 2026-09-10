@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: tether\n"
 "Report-Msgid-Bugs-To: zack@bartel.com\n"
-"POT-Creation-Date: 2026-09-08 22:55-0700\n"
+"POT-Creation-Date: 2026-09-09 20:19-0700\n"
 "PO-Revision-Date: 2026-08-22\n"
 "Last-Translator: Tether project\n"
 "Language-Team: French\n"
@@ -92,6 +92,10 @@ msgstr "Afficher l'état du lien et des profils Bluetooth."
 #: src/cli/main.cpp
 msgid "Show AirPods and case battery."
 msgstr "Afficher la batterie des AirPods et du boîtier."
+
+#: src/cli/main.cpp
+msgid "Manage AirPods from Tether at all: on or off."
+msgstr "Gérer les AirPods depuis Tether : on ou off."
 
 #: src/cli/main.cpp
 msgid "Set the AirPods listening mode: off, anc, transparency, adaptive."
@@ -466,9 +470,12 @@ msgid "Could not read the AirPods battery from the daemon.\n"
 msgstr "Impossible de lire la batterie des AirPods depuis le démon.\n"
 
 #: src/cli/main.cpp
-#, c-format
 msgid "No AirPods connected.\n"
 msgstr "Aucun AirPods connecté.\n"
+
+#: src/cli/main.cpp
+msgid "AirPods management is off.\n"
+msgstr "La gestion des AirPods est désactivée.\n"
 
 #: src/cli/main.cpp
 msgid "Left"
@@ -486,6 +493,15 @@ msgstr "Boîtier"
 #: src/cli/main.cpp
 msgid "Worn"
 msgstr "Portés"
+
+#: src/cli/main.cpp
+msgid ""
+"This computer does not present itself as Apple hardware, so a call hands the "
+"buds over by disconnecting them. See DeviceID in /etc/bluetooth/main.conf."
+msgstr ""
+"Cet ordinateur ne se présente pas comme du matériel Apple ; un appel confie "
+"donc les AirPods en les déconnectant. Voir DeviceID dans /etc/bluetooth/"
+"main.conf."
 
 #: src/cli/main.cpp
 msgid "Could not reach the daemon.\n"
@@ -512,6 +528,14 @@ msgstr "Pause au retrait réglée sur %s.\n"
 #: src/cli/main.cpp
 msgid "Use on or off.\n"
 msgstr "Utilisez on ou off.\n"
+
+#: src/cli/main.cpp
+msgid "Tether is managing the AirPods."
+msgstr "Tether gère les AirPods."
+
+#: src/cli/main.cpp
+msgid "Tether has released the AirPods channel for another program."
+msgstr "Tether a libéré le canal des AirPods pour un autre programme."
 
 #: src/cli/main.cpp
 msgid ""
@@ -772,6 +796,14 @@ msgstr "Numérotation en cours."
 #: src/cli/main.cpp
 msgid "Answering."
 msgstr "Réponse en cours."
+
+#: src/cli/main.cpp
+msgid "Call audio comes to this computer."
+msgstr "L'audio de l'appel arrive sur cet ordinateur."
+
+#: src/cli/main.cpp
+msgid "Call audio stays on the iPhone."
+msgstr "L'audio de l'appel reste sur l'iPhone."
 
 #: src/cli/main.cpp
 msgid "Hanging up."
@@ -1300,6 +1332,12 @@ msgid "Calls are controlled here; the audio plays on the iPhone."
 msgstr "Les appels se pilotent ici ; l'audio est diffusé sur l'iPhone."
 
 #: src/core/src/bluetooth/telephony.cpp
+msgid "This computer is not carrying the call audio; it plays on the iPhone."
+msgstr ""
+"Cet ordinateur ne transporte pas l'audio de l'appel ; il est diffusé sur "
+"l'iPhone."
+
+#: src/core/src/bluetooth/telephony.cpp
 msgid "Not a dialable number."
 msgstr "Numéro non composable."
 
@@ -1310,12 +1348,6 @@ msgstr "Aucun appel indiqué."
 #: src/core/src/bluetooth/telephony.cpp
 msgid "That call is no longer active."
 msgstr "Cet appel n'est plus actif."
-
-#: src/core/src/bluetooth/telephony.cpp
-msgid "This computer is not carrying the call audio; it plays on the iPhone."
-msgstr ""
-"Cet ordinateur ne transporte pas l'audio de l'appel ; il est diffusé sur "
-"l'iPhone."
 
 #: src/core/src/bluetooth/telephony.cpp
 msgid "Unknown call action."
@@ -1567,6 +1599,10 @@ msgid "Noise Cancellation"
 msgstr "Réduction de bruit"
 
 #: src/gtk/devices_view.cpp
+msgid "Tether is not managing the AirPods, so another program can use them."
+msgstr "Tether ne gère pas les AirPods, un autre programme peut les utiliser."
+
+#: src/gtk/devices_view.cpp
 msgid "These AirPods do not report a listening mode."
 msgstr "Ces AirPods ne signalent pas de mode d'écoute."
 
@@ -1585,6 +1621,20 @@ msgstr "Un écouteur est en place."
 #: src/gtk/devices_view.cpp
 msgid "Neither bud is in."
 msgstr "Aucun écouteur n'est en place."
+
+#: src/gtk/devices_view.cpp
+msgid "The buds are handed over with Apple's own handoff."
+msgstr "Les AirPods sont confiés avec le transfert natif d'Apple."
+
+#: src/gtk/devices_view.cpp
+msgid ""
+"The buds are handed over by disconnecting them. For Apple's own handoff, put "
+"DeviceID = bluetooth:004C:0000:0000 under [General] in /etc/bluetooth/"
+"main.conf and restart bluetooth."
+msgstr ""
+"Les AirPods sont confiés en les déconnectant. Pour le transfert natif "
+"d'Apple, ajoutez DeviceID = bluetooth:004C:0000:0000 sous [General] dans /"
+"etc/bluetooth/main.conf et redémarrez bluetooth."
 
 #: src/gtk/devices_view.cpp
 msgid "Full mode — messages, contacts, and notifications."
@@ -1879,6 +1929,18 @@ msgstr ""
 #: src/gtk/devices_view.cpp
 msgid "Scan for devices"
 msgstr "Rechercher des appareils"
+
+#: src/gtk/devices_view.cpp
+msgid "Manage AirPods from Tether"
+msgstr "Gérer les AirPods depuis Tether"
+
+#: src/gtk/devices_view.cpp
+msgid ""
+"The AirPods channel takes one program per computer. Turning this off "
+"releases it, so another AirPods program can use it."
+msgstr ""
+"Le canal des AirPods n'accepte qu'un programme par ordinateur. Le désactiver "
+"le libère pour un autre programme AirPods."
 
 #: src/gtk/devices_view.cpp
 msgid "Listening mode"
@@ -2218,7 +2280,10 @@ msgstr "Verrouiller la session quand l'iPhone sort de portée"
 msgid ""
 "Locks about half a minute after the link times out. Switching Bluetooth off "
 "on the iPhone does not lock, and neither does suspending this machine."
-msgstr "Verrouille environ une demi-minute après l'expiration du lien. Couper le Bluetooth sur l'iPhone ne verrouille pas, et mettre cette machine en veille non plus."
+msgstr ""
+"Verrouille environ une demi-minute après l'expiration du lien. Couper le "
+"Bluetooth sur l'iPhone ne verrouille pas, et mettre cette machine en veille "
+"non plus."
 
 #: src/gtk/settings_view.cpp
 msgid "SMS and iMessage conversations synced over Bluetooth."
@@ -2354,9 +2419,6 @@ msgstr "Appairez des appareils et synchronisez le presse-papiers sur le réseau"
 #~ msgstr ""
 #~ "Activer ou désactiver la gestion des appels. Nécessite le rôle hfp_hf et "
 #~ "le service de téléphonie dans WirePlumber ; voir docs/BLUETOOTH.md."
-
-#~ msgid "Call audio moved to this computer."
-#~ msgstr "Audio de l'appel transféré vers cet ordinateur."
 
 #~ msgid ""
 #~ "Play the call through this computer's speakers and microphone. Handing it "

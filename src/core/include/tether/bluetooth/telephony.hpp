@@ -99,6 +99,10 @@ namespace tether::bluetooth {
                     GVariant* args,
                     std::string& err);
 
+        // Moves the call audio between this computer and the iPhone. Fails when the
+        // stack holding Hands-Free cannot carry audio at all.
+        bool route_audio(TelephonySource& source, const TelephonySnapshot& snap, bool to_phone, std::string& err);
+
         std::vector<std::unique_ptr<TelephonySource>> sources_;
         std::string address_;
     };

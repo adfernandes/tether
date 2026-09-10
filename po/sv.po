@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: tether\n"
 "Report-Msgid-Bugs-To: zack@bartel.com\n"
-"POT-Creation-Date: 2026-09-08 22:55-0700\n"
+"POT-Creation-Date: 2026-09-09 20:19-0700\n"
 "PO-Revision-Date: 2026-08-23\n"
 "Last-Translator: Tether project\n"
 "Language-Team: Swedish\n"
@@ -91,6 +91,10 @@ msgstr "Visa status för Bluetooth-länken och profilerna."
 #: src/cli/main.cpp
 msgid "Show AirPods and case battery."
 msgstr "Visa batterinivå för AirPods och etui."
+
+#: src/cli/main.cpp
+msgid "Manage AirPods from Tether at all: on or off."
+msgstr "Låt Tether hantera AirPods: on eller off."
 
 #: src/cli/main.cpp
 msgid "Set the AirPods listening mode: off, anc, transparency, adaptive."
@@ -457,9 +461,12 @@ msgid "Could not read the AirPods battery from the daemon.\n"
 msgstr "Kunde inte läsa AirPods batterinivå från demonen.\n"
 
 #: src/cli/main.cpp
-#, c-format
 msgid "No AirPods connected.\n"
 msgstr "Inga AirPods anslutna.\n"
+
+#: src/cli/main.cpp
+msgid "AirPods management is off.\n"
+msgstr "Hanteringen av AirPods är avstängd.\n"
 
 #: src/cli/main.cpp
 msgid "Left"
@@ -477,6 +484,15 @@ msgstr "Etui"
 #: src/cli/main.cpp
 msgid "Worn"
 msgstr "Bärs"
+
+#: src/cli/main.cpp
+msgid ""
+"This computer does not present itself as Apple hardware, so a call hands the "
+"buds over by disconnecting them. See DeviceID in /etc/bluetooth/main.conf."
+msgstr ""
+"Den här datorn presenterar sig inte som Apple-hårdvara, så ett samtal lämnar "
+"över AirPods genom att koppla från dem. Se DeviceID i /etc/bluetooth/"
+"main.conf."
 
 #: src/cli/main.cpp
 msgid "Could not reach the daemon.\n"
@@ -503,6 +519,14 @@ msgstr "Paus vid urtagning inställd på %s.\n"
 #: src/cli/main.cpp
 msgid "Use on or off.\n"
 msgstr "Använd on eller off.\n"
+
+#: src/cli/main.cpp
+msgid "Tether is managing the AirPods."
+msgstr "Tether hanterar AirPods."
+
+#: src/cli/main.cpp
+msgid "Tether has released the AirPods channel for another program."
+msgstr "Tether har släppt AirPods-kanalen till ett annat program."
 
 #: src/cli/main.cpp
 msgid ""
@@ -760,6 +784,14 @@ msgstr "Ringer upp."
 #: src/cli/main.cpp
 msgid "Answering."
 msgstr "Besvarar."
+
+#: src/cli/main.cpp
+msgid "Call audio comes to this computer."
+msgstr "Samtalsljudet kommer till den här datorn."
+
+#: src/cli/main.cpp
+msgid "Call audio stays on the iPhone."
+msgstr "Samtalsljudet stannar på iPhone."
 
 #: src/cli/main.cpp
 msgid "Hanging up."
@@ -1274,6 +1306,10 @@ msgid "Calls are controlled here; the audio plays on the iPhone."
 msgstr "Samtal styrs härifrån; ljudet spelas upp på iPhone."
 
 #: src/core/src/bluetooth/telephony.cpp
+msgid "This computer is not carrying the call audio; it plays on the iPhone."
+msgstr "Den här datorn bär inte samtalsljudet; det spelas upp på iPhone."
+
+#: src/core/src/bluetooth/telephony.cpp
 msgid "Not a dialable number."
 msgstr "Inte ett uppringbart nummer."
 
@@ -1284,10 +1320,6 @@ msgstr "Inget samtal angivet."
 #: src/core/src/bluetooth/telephony.cpp
 msgid "That call is no longer active."
 msgstr "Det samtalet är inte längre aktivt."
-
-#: src/core/src/bluetooth/telephony.cpp
-msgid "This computer is not carrying the call audio; it plays on the iPhone."
-msgstr "Den här datorn bär inte samtalsljudet; det spelas upp på iPhone."
 
 #: src/core/src/bluetooth/telephony.cpp
 msgid "Unknown call action."
@@ -1534,6 +1566,10 @@ msgid "Noise Cancellation"
 msgstr "Brusreducering"
 
 #: src/gtk/devices_view.cpp
+msgid "Tether is not managing the AirPods, so another program can use them."
+msgstr "Tether hanterar inte AirPods, ett annat program kan använda dem."
+
+#: src/gtk/devices_view.cpp
 msgid "These AirPods do not report a listening mode."
 msgstr "De här AirPods rapporterar inget lyssningsläge."
 
@@ -1552,6 +1588,20 @@ msgstr "En propp sitter i."
 #: src/gtk/devices_view.cpp
 msgid "Neither bud is in."
 msgstr "Ingen propp sitter i."
+
+#: src/gtk/devices_view.cpp
+msgid "The buds are handed over with Apple's own handoff."
+msgstr "AirPods lämnas över med Apples egen överlämning."
+
+#: src/gtk/devices_view.cpp
+msgid ""
+"The buds are handed over by disconnecting them. For Apple's own handoff, put "
+"DeviceID = bluetooth:004C:0000:0000 under [General] in /etc/bluetooth/"
+"main.conf and restart bluetooth."
+msgstr ""
+"AirPods lämnas över genom att koppla från dem. För Apples egen överlämning, "
+"lägg till DeviceID = bluetooth:004C:0000:0000 under [General] i /etc/"
+"bluetooth/main.conf och starta om bluetooth."
 
 #: src/gtk/devices_view.cpp
 msgid "Full mode — messages, contacts, and notifications."
@@ -1843,6 +1893,18 @@ msgstr ""
 #: src/gtk/devices_view.cpp
 msgid "Scan for devices"
 msgstr "Sök efter enheter"
+
+#: src/gtk/devices_view.cpp
+msgid "Manage AirPods from Tether"
+msgstr "Låt Tether hantera AirPods"
+
+#: src/gtk/devices_view.cpp
+msgid ""
+"The AirPods channel takes one program per computer. Turning this off "
+"releases it, so another AirPods program can use it."
+msgstr ""
+"AirPods-kanalen tar ett program per dator. Att stänga av släpper den, så att "
+"ett annat AirPods-program kan använda den."
 
 #: src/gtk/devices_view.cpp
 msgid "Listening mode"
@@ -2177,7 +2239,10 @@ msgstr "Lås sessionen när iPhonen hamnar utom räckhåll"
 msgid ""
 "Locks about half a minute after the link times out. Switching Bluetooth off "
 "on the iPhone does not lock, and neither does suspending this machine."
-msgstr "Låser ungefär en halv minut efter att länken gått ut. Att stänga av Bluetooth på iPhonen låser inte, och inte heller att försätta den här maskinen i vila."
+msgstr ""
+"Låser ungefär en halv minut efter att länken gått ut. Att stänga av "
+"Bluetooth på iPhonen låser inte, och inte heller att försätta den här "
+"maskinen i vila."
 
 #: src/gtk/settings_view.cpp
 msgid "SMS and iMessage conversations synced over Bluetooth."
@@ -2308,9 +2373,6 @@ msgstr "Parkoppla enheter och synkronisera urklipp över nätverket"
 #~ msgstr ""
 #~ "Slå på eller av samtalsstyrning. Kräver rollen hfp_hf och "
 #~ "telefonitjänsten i WirePlumber; se docs/BLUETOOTH.md."
-
-#~ msgid "Call audio moved to this computer."
-#~ msgstr "Samtalsljudet flyttat till den här datorn."
 
 #~ msgid ""
 #~ "Play the call through this computer's speakers and microphone. Handing it "

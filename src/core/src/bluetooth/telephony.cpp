@@ -213,6 +213,31 @@ namespace tether::bluetooth {
         return true;
     }
 
+    bool TelephonyClient::route_audio(TelephonySource& source,
+                                      const TelephonySnapshot& snap,
+                                      bool to_phone,
+                                      std::string& err) {
+        const char* transport = source.ids().transport_iface;
+        if (!transport) {
+            err = _("This computer is not carrying the call audio; it plays on the iPhone.");
+            return false;
+        }
+        if (!invoke(source,
+                    snap.gateway.path,
+                    IFACE_PROPS,
+                    "Set",
+                    g_variant_new("(ssv)", transport, "RejectSCO", g_variant_new_boolean(to_phone)),
+                    err))
+            return false;
+        if (to_phone)
+            return true;
+
+        std::string activate_err;
+        if (!invoke(source, snap.gateway.path, transport, "Activate", nullptr, activate_err))
+            debug::log(INFO, "telephony: no call audio to take yet: {}", activate_err);
+        return true;
+    }
+
     bool TelephonyClient::dial(const std::string& number, std::string& err) {
         const std::string dialable = normalize_dial_string(number);
         if (dialable.empty()) {
@@ -257,22 +282,8 @@ namespace tether::bluetooth {
                 *source, target, source->ids().call_iface, action == "answer" ? "Answer" : "Hangup", nullptr, err);
         }
 
-        if (action == "audio_here" || action == "audio_phone") {
-            const char* transport = source->ids().transport_iface;
-            if (!transport) {
-                err = _("This computer is not carrying the call audio; it plays on the iPhone.");
-                return false;
-            }
-            const bool to_phone = action == "audio_phone";
-            if (!invoke(*source,
-                        snap.gateway.path,
-                        IFACE_PROPS,
-                        "Set",
-                        g_variant_new("(ssv)", transport, "RejectSCO", g_variant_new_boolean(to_phone)),
-                        err))
-                return false;
-            return to_phone || invoke(*source, snap.gateway.path, transport, "Activate", nullptr, err);
-        }
+        if (action == "audio_here" || action == "audio_phone")
+            return route_audio(*source, snap, action == "audio_phone", err);
 
         static const std::pair<const char*, const char*> gateway_actions[] = {
             {"hangup_all", "HangupAll"},

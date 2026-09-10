@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: tether\n"
 "Report-Msgid-Bugs-To: zack@bartel.com\n"
-"POT-Creation-Date: 2026-09-08 22:55-0700\n"
+"POT-Creation-Date: 2026-09-09 20:19-0700\n"
 "PO-Revision-Date: 2026-08-23\n"
 "Last-Translator: Tether project\n"
 "Language-Team: Czech\n"
@@ -90,6 +90,10 @@ msgstr "Zobrazit stav Bluetooth spojení a profilů."
 #: src/cli/main.cpp
 msgid "Show AirPods and case battery."
 msgstr "Zobrazit baterii AirPods a pouzdra."
+
+#: src/cli/main.cpp
+msgid "Manage AirPods from Tether at all: on or off."
+msgstr "Spravovat AirPods z Tetheru: on nebo off."
 
 #: src/cli/main.cpp
 msgid "Set the AirPods listening mode: off, anc, transparency, adaptive."
@@ -461,9 +465,12 @@ msgid "Could not read the AirPods battery from the daemon.\n"
 msgstr "Nepodařilo se načíst baterii AirPods z démona.\n"
 
 #: src/cli/main.cpp
-#, c-format
 msgid "No AirPods connected.\n"
 msgstr "Nejsou připojena žádná AirPods.\n"
+
+#: src/cli/main.cpp
+msgid "AirPods management is off.\n"
+msgstr "Správa AirPods je vypnutá.\n"
 
 #: src/cli/main.cpp
 msgid "Left"
@@ -481,6 +488,14 @@ msgstr "Pouzdro"
 #: src/cli/main.cpp
 msgid "Worn"
 msgstr "Nošení"
+
+#: src/cli/main.cpp
+msgid ""
+"This computer does not present itself as Apple hardware, so a call hands the "
+"buds over by disconnecting them. See DeviceID in /etc/bluetooth/main.conf."
+msgstr ""
+"Tento počítač se nehlásí jako hardware Apple, takže hovor předá AirPods "
+"jejich odpojením. Viz DeviceID v /etc/bluetooth/main.conf."
 
 #: src/cli/main.cpp
 msgid "Could not reach the daemon.\n"
@@ -507,6 +522,14 @@ msgstr "Pozastavení při vyjmutí nastaveno na %s.\n"
 #: src/cli/main.cpp
 msgid "Use on or off.\n"
 msgstr "Použijte on nebo off.\n"
+
+#: src/cli/main.cpp
+msgid "Tether is managing the AirPods."
+msgstr "Tether spravuje AirPods."
+
+#: src/cli/main.cpp
+msgid "Tether has released the AirPods channel for another program."
+msgstr "Tether uvolnil kanál AirPods pro jiný program."
 
 #: src/cli/main.cpp
 msgid ""
@@ -764,6 +787,14 @@ msgstr "Vytáčení."
 #: src/cli/main.cpp
 msgid "Answering."
 msgstr "Přijímání."
+
+#: src/cli/main.cpp
+msgid "Call audio comes to this computer."
+msgstr "Zvuk hovoru půjde do tohoto počítače."
+
+#: src/cli/main.cpp
+msgid "Call audio stays on the iPhone."
+msgstr "Zvuk hovoru zůstane v iPhonu."
 
 #: src/cli/main.cpp
 msgid "Hanging up."
@@ -1274,6 +1305,10 @@ msgid "Calls are controlled here; the audio plays on the iPhone."
 msgstr "Hovory se ovládají zde; zvuk se přehrává v iPhonu."
 
 #: src/core/src/bluetooth/telephony.cpp
+msgid "This computer is not carrying the call audio; it plays on the iPhone."
+msgstr "Tento počítač zvuk hovoru nepřenáší; přehrává se v iPhonu."
+
+#: src/core/src/bluetooth/telephony.cpp
 msgid "Not a dialable number."
 msgstr "Není to vytáčitelné číslo."
 
@@ -1284,10 +1319,6 @@ msgstr "Nebyl uveden žádný hovor."
 #: src/core/src/bluetooth/telephony.cpp
 msgid "That call is no longer active."
 msgstr "Tento hovor už není aktivní."
-
-#: src/core/src/bluetooth/telephony.cpp
-msgid "This computer is not carrying the call audio; it plays on the iPhone."
-msgstr "Tento počítač zvuk hovoru nepřenáší; přehrává se v iPhonu."
 
 #: src/core/src/bluetooth/telephony.cpp
 msgid "Unknown call action."
@@ -1536,6 +1567,10 @@ msgid "Noise Cancellation"
 msgstr "Potlačení hluku"
 
 #: src/gtk/devices_view.cpp
+msgid "Tether is not managing the AirPods, so another program can use them."
+msgstr "Tether AirPods nespravuje, může je používat jiný program."
+
+#: src/gtk/devices_view.cpp
 msgid "These AirPods do not report a listening mode."
 msgstr "Tato AirPods nehlásí režim poslechu."
 
@@ -1554,6 +1589,20 @@ msgstr "Jedno sluchátko je v uchu."
 #: src/gtk/devices_view.cpp
 msgid "Neither bud is in."
 msgstr "Žádné sluchátko není v uchu."
+
+#: src/gtk/devices_view.cpp
+msgid "The buds are handed over with Apple's own handoff."
+msgstr "AirPods se předávají vlastním předáním od Applu."
+
+#: src/gtk/devices_view.cpp
+msgid ""
+"The buds are handed over by disconnecting them. For Apple's own handoff, put "
+"DeviceID = bluetooth:004C:0000:0000 under [General] in /etc/bluetooth/"
+"main.conf and restart bluetooth."
+msgstr ""
+"AirPods se předávají odpojením. Pro vlastní předání od Applu přidejte "
+"DeviceID = bluetooth:004C:0000:0000 do sekce [General] v /etc/bluetooth/"
+"main.conf a restartujte bluetooth."
 
 #: src/gtk/devices_view.cpp
 msgid "Full mode — messages, contacts, and notifications."
@@ -1844,6 +1893,18 @@ msgstr ""
 #: src/gtk/devices_view.cpp
 msgid "Scan for devices"
 msgstr "Hledat zařízení"
+
+#: src/gtk/devices_view.cpp
+msgid "Manage AirPods from Tether"
+msgstr "Spravovat AirPods z Tetheru"
+
+#: src/gtk/devices_view.cpp
+msgid ""
+"The AirPods channel takes one program per computer. Turning this off "
+"releases it, so another AirPods program can use it."
+msgstr ""
+"Kanál AirPods přijme jeden program na počítač. Vypnutím se uvolní, aby ho "
+"mohl použít jiný program pro AirPods."
 
 #: src/gtk/devices_view.cpp
 msgid "Listening mode"
@@ -2176,7 +2237,9 @@ msgstr "Zamknout relaci, když iPhone opustí dosah"
 msgid ""
 "Locks about half a minute after the link times out. Switching Bluetooth off "
 "on the iPhone does not lock, and neither does suspending this machine."
-msgstr "Zamkne asi půl minuty po vypršení spojení. Vypnutí Bluetooth na iPhonu nezamkne, stejně jako uspání tohoto počítače."
+msgstr ""
+"Zamkne asi půl minuty po vypršení spojení. Vypnutí Bluetooth na iPhonu "
+"nezamkne, stejně jako uspání tohoto počítače."
 
 #: src/gtk/settings_view.cpp
 msgid "SMS and iMessage conversations synced over Bluetooth."
@@ -2305,9 +2368,6 @@ msgstr "Spárujte zařízení a synchronizujte schránku po síti"
 #~ msgstr ""
 #~ "Zapnout nebo vypnout ovládání hovorů. Vyžaduje roli hfp_hf a službu "
 #~ "telefonie ve WirePlumberu; viz docs/BLUETOOTH.md."
-
-#~ msgid "Call audio moved to this computer."
-#~ msgstr "Zvuk hovoru přesunut do tohoto počítače."
 
 #~ msgid ""
 #~ "Play the call through this computer's speakers and microphone. Handing it "

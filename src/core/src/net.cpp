@@ -310,6 +310,7 @@ namespace tether {
         status["retention"] = to_string(config.retention);
         status["retention_ready"] = secret::have_key();
         status["desktop_popups_enabled"] = config.desktop_popups_enabled;
+        status["airpods_enabled"] = config.airpods_enabled;
         status["airpods_pause"] = to_string(config.airpods_pause);
         status["airpods_handoff"] = config.airpods_handoff;
         status["lock_on_away"] = config.lock_on_away;
@@ -322,10 +323,14 @@ namespace tether {
         }
 
         status["capability"] = bluetooth::to_json(bluetooth::g_bluez->capability());
+        const auto objects = bluetooth::g_bluez->snapshot();
         nlohmann::json adapters = nlohmann::json::array();
-        for (const auto& adapter : bluetooth::g_bluez->snapshot().adapters)
+        for (const auto& adapter : objects.adapters)
             adapters.push_back(bluetooth::to_json(adapter));
         status["adapters"] = adapters;
+        // AirPods handoff needs the controller to present itself as Apple hardware.
+        const auto* adapter = bluetooth::preferred_adapter(objects, bluetooth::g_bluez->preferred_adapter_id());
+        status["apple_device_id"] = adapter != nullptr && adapter->presents_as_apple();
         return status;
     }
 
@@ -961,6 +966,14 @@ namespace tether {
                     } else if (j.contains("command") && j["command"] == "bt_airpods") {
                         std::string payload = build_bt_airpods().dump() + "\n";
                         write_plain_packet(client_fd, payload);
+                        continue;
+                    } else if (j.contains("command") && j["command"] == "bt_airpods_enable" && j.contains("enabled")) {
+                        auto config = bluetooth::load_config();
+                        config.airpods_enabled = j.value("enabled", false);
+                        bluetooth::save_config(config);
+                        if (bluetooth::g_airpods)
+                            bluetooth::g_airpods->set_enabled(config.airpods_enabled);
+                        broadcast_local_event(build_bt_status().dump());
                         continue;
                     } else if (j.contains("command") && j["command"] == "bt_airpods_handoff" && j.contains("enabled")) {
                         auto config = bluetooth::load_config();

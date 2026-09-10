@@ -63,8 +63,10 @@ namespace tether::ui {
             GtkWidget* lbl_airpods_battery = nullptr;
             GtkWidget* lbl_airpods_reason = nullptr;
             GtkWidget* lbl_airpods_worn = nullptr;
+            GtkWidget* chk_airpods_enabled = nullptr;
             GtkWidget* cmb_airpods_pause = nullptr;
             GtkWidget* chk_airpods_handoff = nullptr;
+            GtkWidget* lbl_airpods_apple_id = nullptr;
             GtkWidget* airpods_mode_buttons[4] = {nullptr, nullptr, nullptr, nullptr};
             bool airpods_syncing = false;
 
@@ -250,6 +252,13 @@ namespace tether::ui {
             daemon_send({{"command", "bt_airpods_pause"}, {"mode", AIRPODS_PAUSE_MODES[index]}});
         }
 
+        void on_airpods_enabled_toggled(GtkWidget* button, gpointer) {
+            if (g_devices.airpods_syncing)
+                return;
+            daemon_send({{"command", "bt_airpods_enable"},
+                         {"enabled", gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(button)) == TRUE}});
+        }
+
         void on_airpods_handoff_toggled(GtkWidget* button, gpointer) {
             if (g_devices.airpods_syncing)
                 return;
@@ -265,23 +274,28 @@ namespace tether::ui {
 
         void update_airpods_pane() {
             const nlohmann::json& airpods = g_devices.bt_airpods;
+            const bool managed = g_devices.bt_status.value("airpods_enabled", false);
             set_markup(g_devices.lbl_airpods_name,
                        "<b>" + escape_markup(json_string(airpods, "name", g_devices.selected_bt_name)) + "</b>");
 
             const std::string levels = airpods_status_text(airpods);
-            set_text(g_devices.lbl_airpods_battery, levels.empty() ? _("Reading battery\u2026") : levels);
+            set_text(g_devices.lbl_airpods_battery,
+                     !managed         ? ""
+                     : levels.empty() ? _("Reading battery\u2026")
+                                      : levels);
 
             const std::string current = json_string(airpods, "anc");
             g_devices.airpods_syncing = true;
             for (int i = 0; i < 4; ++i) {
                 GtkWidget* button = g_devices.airpods_mode_buttons[i];
                 gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(button), current == AIRPODS_MODES[i].wire);
-                gtk_widget_set_sensitive(button, !current.empty());
+                gtk_widget_set_sensitive(button, managed && !current.empty());
             }
             g_devices.airpods_syncing = false;
 
             // Reuses the daemon's own sentence rather than inventing a second one.
-            const char* reason = !current.empty() ? ""
+            const char* reason = !managed ? _("Tether is not managing the AirPods, so another program can use them.")
+                                 : !current.empty() ? ""
                                  : json_string(airpods, "address").empty()
                                      ? _("No AirPods are connected.")
                                      : _("These AirPods do not report a listening mode.");
@@ -305,12 +319,24 @@ namespace tether::ui {
                 if (pause == AIRPODS_PAUSE_MODES[i])
                     gtk_combo_box_set_active(GTK_COMBO_BOX(g_devices.cmb_airpods_pause), i);
             }
-            gtk_widget_set_sensitive(g_devices.cmb_airpods_pause, ear_known);
+            gtk_widget_set_sensitive(g_devices.cmb_airpods_pause, managed && ear_known);
 
+            gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(g_devices.chk_airpods_enabled), managed);
             gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(g_devices.chk_airpods_handoff),
                                          g_devices.bt_status.value("airpods_handoff", false));
+            // Ownership handoff runs off the buds' own state; only the disconnect
+            // fallback needs the iPhone's call state.
+            const bool apple_id = g_devices.bt_status.value("apple_device_id", false);
             const bool calls_on = g_devices.bt_status.value("calls_enabled", false);
-            gtk_widget_set_sensitive(g_devices.chk_airpods_handoff, calls_on);
+            gtk_widget_set_sensitive(g_devices.chk_airpods_handoff, managed && (apple_id || calls_on));
+
+            // Apple's own handoff needs the controller to look like a Mac; without it
+            // the buds are handed over by disconnecting them.
+            set_text(g_devices.lbl_airpods_apple_id,
+                     apple_id ? _("The buds are handed over with Apple's own handoff.")
+                              : _("The buds are handed over by disconnecting them. For Apple's own handoff, put "
+                                  "DeviceID = bluetooth:004C:0000:0000 under [General] in /etc/bluetooth/main.conf "
+                                  "and restart bluetooth."));
             g_devices.airpods_syncing = false;
         }
 
@@ -1453,6 +1479,13 @@ namespace tether::ui {
         gtk_container_set_border_width(GTK_CONTAINER(airpods_box), 32);
         gtk_widget_set_valign(airpods_box, GTK_ALIGN_CENTER);
 
+        g_devices.chk_airpods_enabled = gtk_check_button_new_with_label(_("Manage AirPods from Tether"));
+        gtk_widget_set_tooltip_text(g_devices.chk_airpods_enabled,
+                                    _("The AirPods channel takes one program per computer. Turning this off "
+                                      "releases it, so another AirPods program can use it."));
+        g_signal_connect(g_devices.chk_airpods_enabled, "toggled", G_CALLBACK(on_airpods_enabled_toggled), nullptr);
+        gtk_box_pack_start(GTK_BOX(airpods_box), g_devices.chk_airpods_enabled, FALSE, FALSE, 0);
+
         g_devices.lbl_airpods_name = gtk_label_new(nullptr);
         gtk_label_set_xalign(GTK_LABEL(g_devices.lbl_airpods_name), 0.0);
         gtk_box_pack_start(GTK_BOX(airpods_box), g_devices.lbl_airpods_name, FALSE, FALSE, 0);
@@ -1525,6 +1558,13 @@ namespace tether::ui {
                                       "applies while the buds are connected to this computer."));
         g_signal_connect(g_devices.chk_airpods_handoff, "toggled", G_CALLBACK(on_airpods_handoff_toggled), nullptr);
         gtk_box_pack_start(GTK_BOX(airpods_box), g_devices.chk_airpods_handoff, FALSE, FALSE, 0);
+
+        g_devices.lbl_airpods_apple_id = gtk_label_new(nullptr);
+        gtk_label_set_xalign(GTK_LABEL(g_devices.lbl_airpods_apple_id), 0.0);
+        gtk_label_set_line_wrap(GTK_LABEL(g_devices.lbl_airpods_apple_id), TRUE);
+        gtk_label_set_selectable(GTK_LABEL(g_devices.lbl_airpods_apple_id), TRUE);
+        gtk_style_context_add_class(gtk_widget_get_style_context(g_devices.lbl_airpods_apple_id), "muted");
+        gtk_box_pack_start(GTK_BOX(airpods_box), g_devices.lbl_airpods_apple_id, FALSE, FALSE, 0);
 
         gtk_stack_add_named(GTK_STACK(g_devices.right_pane_stack), airpods_box, "airpods");
 
