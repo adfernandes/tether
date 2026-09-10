@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: tether\n"
 "Report-Msgid-Bugs-To: zack@bartel.com\n"
-"POT-Creation-Date: 2026-09-10 09:25-0700\n"
+"POT-Creation-Date: 2026-09-10 09:49-0700\n"
 "PO-Revision-Date: 2026-08-23\n"
 "Last-Translator: Tether project\n"
 "Language-Team: Turkish\n"
@@ -851,9 +851,9 @@ msgid ""
 "tetherd from whatever this system uses for services, or let a client start "
 "it on demand.\n"
 msgstr ""
-"Bu makinede systemd yok, dolayısıyla yönetilecek bir kullanıcı servisi de yok. "
-"tetherd'i bu sistemin servisler için kullandığı şeyle başlatın ya da bir "
-"istemcinin gerektiğinde başlatmasına izin verin.\n"
+"Bu makinede systemd yok, dolayısıyla yönetilecek bir kullanıcı servisi de "
+"yok. tetherd'i bu sistemin servisler için kullandığı şeyle başlatın ya da "
+"bir istemcinin gerektiğinde başlatmasına izin verin.\n"
 
 #: src/cli/main.cpp
 #, c-format
@@ -929,6 +929,21 @@ msgid "Found %zu device in %.1fs\n"
 msgid_plural "Found %zu devices in %.1fs\n"
 msgstr[0] "%2$.1fs içinde %1$zu aygıt bulundu\n"
 msgstr[1] "%2$.1fs içinde %1$zu aygıt bulundu\n"
+
+#: src/cli/main.cpp
+msgid ""
+"The daemon is not running, and could not be started. Check the log in "
+"$XDG_STATE_HOME/tether, or start it with 'systemctl --user start "
+"tetherd.service'.\n"
+msgstr ""
+"Arka plan süreci çalışmıyor ve başlatılamadı. $XDG_STATE_HOME/tether "
+"içindeki günlüğe bakın ya da 'systemctl --user start tetherd.service' ile "
+"başlatın.\n"
+
+#: src/cli/main.cpp
+#, c++-format
+msgid "No daemon answered at {}:{}.\n"
+msgstr "{}:{} adresinde yanıt veren bir süreç yok.\n"
 
 #: src/cli/main.cpp
 msgid ""

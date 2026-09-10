@@ -33,7 +33,7 @@ A portable build (an AppImage, or a tree you built yourself) has no package to
 install that unit, so the CLI writes one pointed at wherever that build lives:
 
 ```bash
-tether --install-service     # writes ~/.config/systemd/user/tetherd.service
+tether service  # writes ~/.config/systemd/user/tetherd.service
 ```
 
 It never enables or starts anything: it prints the commands above and leaves the
@@ -52,10 +52,10 @@ to accept, and on the desktop that prompt is a GTK window you do not have here,
 so accept it from the shell instead:
 
 ```bash
-tether --status         # is the daemon up, is mDNS advertising
-tether --pending        # the requests waiting, with their fingerprints
-tether --accept 9a4f21c8…
-tether --list-devices   # what is paired now
+tether status            # is the daemon up, is mDNS advertising
+tether pending           # the requests waiting, with their fingerprints
+tether accept 9a4f21c8…
+tether devices           # what is paired now
 ```
 
 If the phone cannot find the machine, mDNS or the firewall is usually why:
@@ -72,10 +72,10 @@ it is still a port.
 ## Use it
 
 ```bash
-tether -f ./report.pdf                # to the phone
-tether --status                       # what arrived, and from whom
-tether --bt-threads                   # conversations, over Bluetooth
-tether --bt-send <thread> "on my way"
+tether send ./report.pdf             # to the phone
+tether status                        # what arrived, and from whom
+tether bt threads                    # conversations, over Bluetooth
+tether bt send <thread> "on my way"
 ```
 
 Files the phone sends land in `$XDG_DOWNLOAD_DIR`, or `~/Downloads`. On a server
@@ -89,7 +89,7 @@ systemctl --user edit tetherd.service
 
 ## Clipboard sync
 
-`tether --status` says `Clipboard: off, no Wayland session on this machine` and
+`tether status` says `Clipboard: off, no Wayland session on this machine` and
 that is the whole story: without a compositor there is no clipboard to sync. The
 rest of the daemon does not care. If the machine does run a compositor and this
 still says off, the compositor is missing `wlr-data-control` or
@@ -101,5 +101,5 @@ The CLI talks to a remote daemon over the same TLS the phone uses:
 
 ```bash
 tether -g --host 10.0.0.5
-tether --pair --host 10.0.0.5
+tether pair --host 10.0.0.5
 ```

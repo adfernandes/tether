@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: tether\n"
 "Report-Msgid-Bugs-To: zack@bartel.com\n"
-"POT-Creation-Date: 2026-09-10 09:25-0700\n"
+"POT-Creation-Date: 2026-09-10 09:49-0700\n"
 "PO-Revision-Date: 2026-08-23\n"
 "Last-Translator: Tether project\n"
 "Language-Team: Japanese\n"
@@ -922,6 +922,21 @@ msgstr "[既知]"
 msgid "Found %zu device in %.1fs\n"
 msgid_plural "Found %zu devices in %.1fs\n"
 msgstr[0] "%2$.1fs で %1$zu 台のデバイスが見つかりました\n"
+
+#: src/cli/main.cpp
+msgid ""
+"The daemon is not running, and could not be started. Check the log in "
+"$XDG_STATE_HOME/tether, or start it with 'systemctl --user start "
+"tetherd.service'.\n"
+msgstr ""
+"デーモンが実行されておらず、起動もできませんでした。$XDG_STATE_HOME/tether の"
+"ログを確認するか、'systemctl --user start tetherd.service' で起動してくださ"
+"い。\n"
+
+#: src/cli/main.cpp
+#, c++-format
+msgid "No daemon answered at {}:{}.\n"
+msgstr "{}:{} で応答するデーモンがありません。\n"
 
 #: src/cli/main.cpp
 msgid ""

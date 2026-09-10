@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: tether\n"
 "Report-Msgid-Bugs-To: zack@bartel.com\n"
-"POT-Creation-Date: 2026-09-10 09:25-0700\n"
+"POT-Creation-Date: 2026-09-10 09:49-0700\n"
 "PO-Revision-Date: 2026-08-22\n"
 "Last-Translator: Tether project\n"
 "Language-Team: German\n"
@@ -860,8 +860,8 @@ msgid ""
 "it on demand.\n"
 msgstr ""
 "Auf diesem Rechner läuft kein systemd, es gibt also keinen Benutzerdienst zu "
-"verwalten. Starten Sie tetherd über das, was dieses System für Dienste nutzt, "
-"oder lassen Sie ihn von einem Client bei Bedarf starten.\n"
+"verwalten. Starten Sie tetherd über das, was dieses System für Dienste "
+"nutzt, oder lassen Sie ihn von einem Client bei Bedarf starten.\n"
 
 #: src/cli/main.cpp
 #, c-format
@@ -940,6 +940,21 @@ msgid "Found %zu device in %.1fs\n"
 msgid_plural "Found %zu devices in %.1fs\n"
 msgstr[0] "%zu Gerät in %.1fs gefunden\n"
 msgstr[1] "%zu Geräte in %.1fs gefunden\n"
+
+#: src/cli/main.cpp
+msgid ""
+"The daemon is not running, and could not be started. Check the log in "
+"$XDG_STATE_HOME/tether, or start it with 'systemctl --user start "
+"tetherd.service'.\n"
+msgstr ""
+"Der Daemon läuft nicht und ließ sich nicht starten. Sehen Sie ins Log in "
+"$XDG_STATE_HOME/tether, oder starten Sie ihn mit 'systemctl --user start "
+"tetherd.service'.\n"
+
+#: src/cli/main.cpp
+#, c++-format
+msgid "No daemon answered at {}:{}.\n"
+msgstr "Kein Daemon hat auf {}:{} geantwortet.\n"
 
 #: src/cli/main.cpp
 msgid ""

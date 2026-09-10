@@ -237,8 +237,8 @@ make install
    or
 
    ```bash
-   tether --pending                # the requests waiting, with their fingerprints
-   tether --accept <fingerprint>
+   tether pending               # the requests waiting, with their fingerprints
+   tether accept <fingerprint>
    ```
 
 3. Bluetooth (for Messages and Notifications):
@@ -247,7 +247,7 @@ make install
    needs, with the exact commands:
 
    ```bash
-   tether --bt-setup
+   tether bt setup
    ```
 
    Tether never applies these itself: they change how the machine behaves over
@@ -257,7 +257,7 @@ make install
    *If* you have more than one Bluetooth controller, pick the one to use. Default is the first powered one.
 
    ```bash
-   tether --bt-adapter hci1     # or the controller's address, or "auto"
+   tether bt adapter hci1  # or the controller's address, or "auto"
    ```
 
    Then pair. In the GTK app, pick your iPhone under BLUETOOTH on the Devices
@@ -267,9 +267,9 @@ make install
    or
 
    ```bash
-   tether --bt-devices          # find the iPhone's address
-   tether --bt-pair <address>
-   tether --bt-connection       # what is up, and what is not
+   tether bt devices         # find the iPhone's address
+   tether bt pair <address>
+   tether bt connection      # what is up, and what is not
    ```
 
 4. On the iPhone, under Settings > Bluetooth > (i) for this computer, enable
@@ -284,10 +284,10 @@ The daemon does not need a Wayland session. Everything but clipboard sync works
 over SSH, pairing included:
 
 ```bash
-systemctl --user enable --now tetherd.service   # portable build? tether --install-service first
-tether --pending        # the pairing requests waiting, with fingerprints
-tether --accept 9a4f21...
-tether --status         # devices, links, and recent transfers
+systemctl --user enable --now tetherd.service  # portable build? tether service first
+tether pending                                 # the pairing requests waiting, with fingerprints
+tether accept 9a4f21...
+tether status                                  # devices, links, and recent transfers
 ```
 
 See [docs/HEADLESS.md](docs/HEADLESS.md).
@@ -324,7 +324,7 @@ See [docs/HEADLESS.md](docs/HEADLESS.md).
 - `bluez`, `bluez-utils`, and `bluez-obex` (for messages and notifications)
 
 #### Bluetooth (for Messages and Notifications)
-- BlueZ 5.86+ must be running with experimental bearer API. `tether --bt-setup`
+- BlueZ 5.86+ must be running with experimental bearer API. `tether bt setup`
   prints the systemd drop-in command that enables it. Do this **before** pairing.
 - A controller with BR/EDR, LE, and advertising support.
 - Notification mirroring does not work on iOS 18 and earlier.
@@ -373,7 +373,7 @@ sudo systemctl enable --now avahi-daemon
 Messages and notifications need one-time system setup. See [docs/BLUETOOTH.md](docs/BLUETOOTH.md), or run:
 
 ```bash
-tether --bt-setup
+tether bt setup
 ```
 
 ## Security
