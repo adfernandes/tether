@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: tether\n"
 "Report-Msgid-Bugs-To: zack@bartel.com\n"
-"POT-Creation-Date: 2026-09-09 20:19-0700\n"
+"POT-Creation-Date: 2026-09-10 07:05+0000\n"
 "PO-Revision-Date: 2026-08-23\n"
 "Last-Translator: Tether project\n"
 "Language-Team: Czech\n"
@@ -260,6 +260,14 @@ msgid "Options:"
 msgstr "Volby:"
 
 #: src/cli/main.cpp
+msgid "Commands:"
+msgstr "Příkazy:"
+
+#: src/cli/main.cpp
+msgid "Any --bt-<name> flag, as a subcommand."
+msgstr "Libovolný přepínač --bt-<name> jako podpříkaz."
+
+#: src/cli/main.cpp
 msgid "Examples:"
 msgstr "Příklady:"
 
@@ -465,12 +473,12 @@ msgid "Could not read the AirPods battery from the daemon.\n"
 msgstr "Nepodařilo se načíst baterii AirPods z démona.\n"
 
 #: src/cli/main.cpp
-msgid "No AirPods connected.\n"
-msgstr "Nejsou připojena žádná AirPods.\n"
-
-#: src/cli/main.cpp
 msgid "AirPods management is off.\n"
 msgstr "Správa AirPods je vypnutá.\n"
+
+#: src/cli/main.cpp
+msgid "No AirPods connected.\n"
+msgstr "Nejsou připojena žádná AirPods.\n"
 
 #: src/cli/main.cpp
 msgid "Left"

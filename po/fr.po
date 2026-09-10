@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: tether\n"
 "Report-Msgid-Bugs-To: zack@bartel.com\n"
-"POT-Creation-Date: 2026-09-09 20:19-0700\n"
+"POT-Creation-Date: 2026-09-10 07:05+0000\n"
 "PO-Revision-Date: 2026-08-22\n"
 "Last-Translator: Tether project\n"
 "Language-Team: French\n"
@@ -269,6 +269,14 @@ msgid "Options:"
 msgstr "Options :"
 
 #: src/cli/main.cpp
+msgid "Commands:"
+msgstr "Commandes :"
+
+#: src/cli/main.cpp
+msgid "Any --bt-<name> flag, as a subcommand."
+msgstr "N'importe quelle option --bt-<name>, en sous-commande."
+
+#: src/cli/main.cpp
 msgid "Examples:"
 msgstr "Exemples :"
 
@@ -470,12 +478,12 @@ msgid "Could not read the AirPods battery from the daemon.\n"
 msgstr "Impossible de lire la batterie des AirPods depuis le démon.\n"
 
 #: src/cli/main.cpp
-msgid "No AirPods connected.\n"
-msgstr "Aucun AirPods connecté.\n"
-
-#: src/cli/main.cpp
 msgid "AirPods management is off.\n"
 msgstr "La gestion des AirPods est désactivée.\n"
+
+#: src/cli/main.cpp
+msgid "No AirPods connected.\n"
+msgstr "Aucun AirPods connecté.\n"
 
 #: src/cli/main.cpp
 msgid "Left"
