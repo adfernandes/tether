@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: tether\n"
 "Report-Msgid-Bugs-To: zack@bartel.com\n"
-"POT-Creation-Date: 2026-09-10 09:25-0700\n"
+"POT-Creation-Date: 2026-09-10 09:49-0700\n"
 "PO-Revision-Date: 2026-08-23\n"
 "Last-Translator: Tether project\n"
 "Language-Team: Czech\n"
@@ -852,9 +852,9 @@ msgid ""
 "tetherd from whatever this system uses for services, or let a client start "
 "it on demand.\n"
 msgstr ""
-"V tomto počítači není systemd, takže není žádná uživatelská služba ke správě. "
-"Spusťte tetherd tím, co tento systém používá pro služby, nebo jej nechte "
-"spustit klientem na vyžádání.\n"
+"V tomto počítači není systemd, takže není žádná uživatelská služba ke "
+"správě. Spusťte tetherd tím, co tento systém používá pro služby, nebo jej "
+"nechte spustit klientem na vyžádání.\n"
 
 #: src/cli/main.cpp
 #, c-format
@@ -933,6 +933,21 @@ msgid_plural "Found %zu devices in %.1fs\n"
 msgstr[0] "Nalezeno %zu zařízení za %.1fs\n"
 msgstr[1] "Nalezena %zu zařízení za %.1fs\n"
 msgstr[2] "Nalezeno %zu zařízení za %.1fs\n"
+
+#: src/cli/main.cpp
+msgid ""
+"The daemon is not running, and could not be started. Check the log in "
+"$XDG_STATE_HOME/tether, or start it with 'systemctl --user start "
+"tetherd.service'.\n"
+msgstr ""
+"Démon neběží a nepodařilo se jej spustit. Zkontrolujte log v "
+"$XDG_STATE_HOME/tether, nebo jej spusťte příkazem 'systemctl --user start "
+"tetherd.service'.\n"
+
+#: src/cli/main.cpp
+#, c++-format
+msgid "No daemon answered at {}:{}.\n"
+msgstr "Na {}:{} neodpověděl žádný démon.\n"
 
 #: src/cli/main.cpp
 msgid ""

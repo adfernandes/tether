@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: tether\n"
 "Report-Msgid-Bugs-To: zack@bartel.com\n"
-"POT-Creation-Date: 2026-09-10 09:25-0700\n"
+"POT-Creation-Date: 2026-09-10 09:49-0700\n"
 "PO-Revision-Date: 2026-08-23\n"
 "Last-Translator: Tether project\n"
 "Language-Team: Korean\n"
@@ -836,9 +836,9 @@ msgid ""
 "tetherd from whatever this system uses for services, or let a client start "
 "it on demand.\n"
 msgstr ""
-"이 컴퓨터에는 systemd가 없으므로 관리할 사용자 서비스가 없습니다. 이 시스템이 "
-"서비스에 사용하는 방법으로 tetherd를 시작하거나, 클라이언트가 필요할 때 "
-"시작하도록 두십시오.\n"
+"이 컴퓨터에는 systemd가 없으므로 관리할 사용자 서비스가 없습니다. 이 시스템"
+"이 서비스에 사용하는 방법으로 tetherd를 시작하거나, 클라이언트가 필요할 때 시"
+"작하도록 두십시오.\n"
 
 #: src/cli/main.cpp
 #, c-format
@@ -913,6 +913,21 @@ msgstr "[알려짐]"
 msgid "Found %zu device in %.1fs\n"
 msgid_plural "Found %zu devices in %.1fs\n"
 msgstr[0] "%2$.1f초 만에 기기 %1$zu대를 찾았습니다\n"
+
+#: src/cli/main.cpp
+msgid ""
+"The daemon is not running, and could not be started. Check the log in "
+"$XDG_STATE_HOME/tether, or start it with 'systemctl --user start "
+"tetherd.service'.\n"
+msgstr ""
+"데몬이 실행 중이 아니며 시작할 수도 없었습니다. $XDG_STATE_HOME/tether의 로그를 "
+"확인하거나 'systemctl --user start tetherd.service'로 시작하십시오."
+"\n"
+
+#: src/cli/main.cpp
+#, c++-format
+msgid "No daemon answered at {}:{}.\n"
+msgstr "{}:{}에서 응답한 데몬이 없습니다.\n"
 
 #: src/cli/main.cpp
 msgid ""

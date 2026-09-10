@@ -1490,6 +1490,17 @@ int main(int argc, char* argv[]) {
 
     // Bind network abstraction natively
     if (!client.connect(host, port)) {
+        // status and pending are what someone runs to find out whether the daemon is up
+        if (action == "status" || action == "pending") {
+            if (host.empty())
+                debug::log(ERR,
+                           _("The daemon is not running, and could not be started. Check the log in "
+                             "$XDG_STATE_HOME/tether, or start it with 'systemctl --user start "
+                             "tetherd.service'.\n"));
+            else
+                debug::log(ERR, _("No daemon answered at {}:{}.\n"), host, port);
+            return 1;
+        }
         debug::log(
             ERR,
             _("Explicit framework connection locally rejected! Did you target explicitly invalid TLS or is daemon "
