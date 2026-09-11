@@ -233,17 +233,38 @@ TEST(AirPods, ParsesTheConnectedDeviceList) {
 TEST(AirPods, SeparatesAnIdlePeerFromOneTakingTheBuds) {
     const auto peer = [](uint8_t state) { return AapPeer{"81:71:C8:30:6A:F3", 0x02, state}; };
     EXPECT_FALSE(peer(0x15).taking_over());
+    EXPECT_TRUE(peer(0x10).taking_over());
+    EXPECT_FALSE(peer(0x10).active());
     EXPECT_TRUE(peer(0x12).taking_over());
     EXPECT_TRUE(peer(0x17).taking_over());
     EXPECT_TRUE(peer(0x17).active());
     EXPECT_FALSE(peer(0x15).active());
     // AirPods Pro 1 leaves a healthy iPhone at 0x01 forever.
     EXPECT_FALSE(peer(0x01).taking_over());
+
+    // AirPods Pro 3 never report 0x10 and up: the iPhone read 0x05 and 0x07 on 2026-09-10, and
+    // 0x02 on 2026-09-11, where it kept 0x02 after the call ended. Owning must not block a claim.
+    EXPECT_FALSE(peer(0x05).active());
+    EXPECT_TRUE(peer(0x07).active());
+    EXPECT_TRUE(peer(0x02).active());
+    EXPECT_FALSE(peer(0x02).taking_over());
+    EXPECT_FALSE(peer(0x07).taking_over());
+}
+
+// Handoff yields to a phone that owns the buds and plays through them, never to ownership alone.
+TEST(AirPods, AnOwnerThatStoppedPlayingIsNotBusy) {
+    AirPodsState state;
+    state.peer_active = true;
+    EXPECT_FALSE(state.peer_busy());
+    state.peer_audio = true;
+    EXPECT_TRUE(state.peer_busy());
+    state.peer_active = false;
+    EXPECT_FALSE(state.peer_busy());
 }
 
 // This machine's own entry rises with its own ownership and is never a peer.
 TEST(AirPods, SummarisesPeersWithoutCountingItself) {
-    const std::vector<AapPeer> peers = {{"AC:F2:3C:AF:52:9C", 0x01, 0x17}, {"81:71:C8:30:6A:F3", 0x02, 0x12}};
+    const std::vector<AapPeer> peers = {{"AC:F2:3C:AF:52:9C", 0x01, 0x17}, {"81:71:C8:30:6A:F3", 0x02, 0x10}};
     const auto summary = summarize_peers(peers, "AC:F2:3C:AF:52:9C");
     EXPECT_TRUE(summary.taking_over);
     EXPECT_FALSE(summary.active);
@@ -265,17 +286,6 @@ TEST(AirPods, ParsesTheAudioSource) {
     EXPECT_EQ(event->source, AudioSource::Call);
 
     EXPECT_FALSE(parse_audio_source(packet.data(), packet.size() - 1).has_value());
-}
-
-TEST(AirPods, PausesForAPhoneCallAndResumesAfter) {
-    EXPECT_EQ(call_media_action(false, true, true, false), MediaAction::Pause);
-    EXPECT_EQ(call_media_action(true, true, true, true), MediaAction::None);
-    EXPECT_EQ(call_media_action(true, false, true, true), MediaAction::Resume);
-    // Playback that was already stopped when the call came in stays stopped.
-    EXPECT_EQ(call_media_action(true, false, true, false), MediaAction::None);
-    EXPECT_EQ(call_media_action(false, true, false, false), MediaAction::None);
-    // Switching handoff off during the call still gives the music back.
-    EXPECT_EQ(call_media_action(true, false, false, true), MediaAction::Resume);
 }
 
 // Measured on AirPods Pro 3: the buds route this machine's stream while the phone still owns

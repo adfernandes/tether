@@ -36,12 +36,13 @@ namespace tether::bluetooth {
     std::optional<AncMode> anc_mode_from_string(const std::string& name);
 
     // Ownership state of one host attached to the buds, the `B` field of a
-    // connected-devices notification.
+    // connected-devices notification. The owner carries bit 0x02 on every model measured:
+    // an iPhone idles at 0x15 and owns at 0x17 on some buds, 0x05 and 0x07 on others.
+    inline constexpr uint8_t AAP_PEER_OWNER = 0x02;
     inline constexpr uint8_t AAP_PEER_ENGAGED = 0x10;
     // Connected and idle. An iPhone sits here for as long as it is paired and doing
     // nothing, so this one value is not a peer taking the buds.
     inline constexpr uint8_t AAP_PEER_PASSIVE = 0x15;
-    inline constexpr uint8_t AAP_PEER_ACTIVE = 0x17;
 
     // One host in a connected-devices notification.
     struct AapPeer {
@@ -51,9 +52,10 @@ namespace tether::bluetooth {
         uint8_t role = 0;
         uint8_t state = 0;
 
-        bool active() const { return state >= AAP_PEER_ACTIVE; }
-        // Escalating towards taking the buds, or already holding them. Claiming
-        // against this leaves the host contested and the firmware closes the link.
+        // Owns the buds, which is not the same as using them: an iPhone keeps the bit after a call.
+        bool active() const { return (state & AAP_PEER_OWNER) != 0; }
+        // Escalating towards taking the buds, or holding them, on buds that report 0x10 and up.
+        // Claiming against this leaves the host contested and the firmware closes the link.
         bool taking_over() const { return state >= AAP_PEER_ENGAGED && state != AAP_PEER_PASSIVE; }
 
         bool operator==(const AapPeer&) const = default;
@@ -123,8 +125,8 @@ namespace tether::bluetooth {
         std::string name;
         bool peer_taking_over = false;
         bool peer_active = false;
-        // A peer is on a call, held until the buds have stopped reporting it for a few seconds.
-        bool peer_call = false;
+        // A peer has a call or media on the buds, held until they have stopped reporting it for a few seconds.
+        bool peer_audio = false;
         AirPodsBattery battery;
         // Unset until the buds report one. Not every model has the feature.
         std::optional<AncMode> anc;
@@ -132,6 +134,9 @@ namespace tether::bluetooth {
         AirPodsStatus status = AirPodsStatus::Idle;
         // Written for display, shown verbatim.
         std::string reason;
+
+        // A peer owns the buds and is playing through them: what handoff yields to.
+        bool peer_busy() const { return peer_active && peer_audio; }
 
         bool operator==(const AirPodsState&) const = default;
     };
@@ -161,11 +166,11 @@ namespace tether::bluetooth {
     // Whether the buds carrying this machine's audio should be answered with a claim. They
     // route a non-owner's stream for a few seconds and then hand it back to the owner; a claim
     // keeps it. `owns` is the last ownership verdict, unset until one arrives. Never while a
-    // peer is on a call.
+    // peer is playing through them.
     bool claims_for_playback(const AudioSourceEvent& event,
                              const std::string& local,
                              std::optional<bool> owns,
-                             bool peer_call);
+                             bool peer_audio);
 
     // Whether any host other than `local` is engaged with the buds, or actively
     // holding them. A machine's own entry is never a peer.
@@ -187,11 +192,6 @@ namespace tether::bluetooth {
 
     // `holding` is whether the caller has a pause outstanding.
     MediaAction ear_media_action(const EarState& before, const EarState& after, PauseMode mode, bool holding);
-
-    // What a call on the phone should do to local playback. `paused_for_call` is whether
-    // this pause is outstanding: only it is undone, and it is undone even if the setting
-    // was switched off during the call.
-    MediaAction call_media_action(bool call_before, bool call_after, bool enabled, bool paused_for_call);
 
     // What an iPhone call should do to AirPods that are connected to this machine.
     enum class HandoffAction { None, Release, Reclaim };
@@ -236,7 +236,8 @@ namespace tether::bluetooth {
 
         // Takes the buds or gives them up over AAP, which is what Apple's own
         // handoff does. A claim is dropped while a peer is engaged: sending one then
-        // leaves this host contested and the firmware closes the link.
+        // leaves this host contested and the firmware closes the link. Giving them up
+        // also stops the watcher's own claims until they are taken back.
         void set_ownership(bool own);
 
         AirPodsState state() const;

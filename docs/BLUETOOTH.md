@@ -526,26 +526,26 @@ unacknowledged step must not stall the session.
 Two more notifications are read, and they are what the ownership handoff runs on:
 
 ```
-connected-devices  04 00 04 00 2E 00 [count] ([mac] * 6 [role] [state]) * count
+connected-devices  04 00 04 00 2E 00 [?] [?] [count] ([mac] * 6 [role] [state]) * count
 audio-source       04 00 04 00 0E 00 [mac] * 6 [type]
 ```
 
-`state` is the ownership field. **Read it as a threshold, never as an exact value**: at or
-above `0x10` a host is engaged or about to be, `0x17` is an active owner, below `0x10` it
-is not engaged. The exact numbers differ between models -- an idle iPhone sits at `0x15` on
-AirPods Pro 2 and 3 and at `0x01` forever on Pro 1 -- so a rule written against exact
-values breaks on somebody else's buds.
+`state` is the ownership field. **The owner carries bit `0x02`**; never compare exact values.
+The numbers differ between buds: an iPhone idles at `0x15` and owns at `0x17` on the buds the
+first implementation was written against, and at `0x05` and `0x07` on AirPods Pro 3 measured
+2026-09-10, where this machine reads `0x00` and `0x02`. Pro 1 leaves an idle iPhone at `0x01`.
+An earlier threshold rule (`0x17` and above owns) never fired on the Pro 3 values.
 
-`0x15` is the one value that has to be carved out of that rule, and getting it wrong costs
-the whole feature. It is what a **connected, idle iPhone** reports, permanently, and it is
-the state this machine claims the buds *out of*. Treating it as "a peer has them" means the
-claim is never sent, this machine never owns anything, and the phone keeps the buds --
-which is exactly what a first cut of this did. So: a peer at `0x10`-`0x14` is escalating
-and blocks a claim, `0x17` is holding them and blocks a claim, `0x15` blocks nothing.
+A peer blocks a claim when it sits at `0x10` or above and is not `0x15`. Owning alone does
+not: on Pro 3 the iPhone keeps `0x02` after its call ends, until another host claims.
+`0x15` is carved out because it is what a **connected, idle iPhone** reports, permanently, and
+it is the state this machine claims the buds *out of*. Treating it as "a peer has them" means
+the claim is never sent and the phone keeps the buds -- which is exactly what a first cut of
+this did.
 
-The address is stored **least significant byte first in connected-devices and in normal
-order in audio-source**. That is the protocol, not a bug, and getting it wrong makes a
-machine read its own entry as a peer. Both parsers return BlueZ's own text order.
+The address is in **display order in connected-devices and least significant byte first in
+audio-source**. Getting it wrong makes a machine read its own entry as a peer. Both parsers
+return BlueZ's own text order.
 
 `type` in audio-source is a hint and nothing more: iOS reports `MEDIA` for real calls, and
 sends `NONE` every twenty seconds or so *during* one. Deciding anything from it alone
@@ -633,10 +633,22 @@ Apple's own. The buds keep both hosts connected and hand *ownership* between the
 link to this machine is never dropped, the AAP channel is never given up, and the volume
 the stem sets is the volume of whoever owns them.
 
-The trigger is the buds' own peer list, not the phone's call state, so **this path does
-not need call control**: a connected-devices notification says the iPhone went active and
-that is enough. Music started on the phone counts the same as a call, which is what the
-buds themselves do.
+**The trigger is the iPhone's call list when call control is on**, and the buds' own
+notifications otherwise. On AirPods Pro 3 the buds cannot say when a call ends: the phone
+keeps the owner bit for minutes after it, and the audio source reads none a few seconds into
+one. The call list is exact, so a ringing, dialling or connected call gives the buds up and
+its end takes them back. Without call control, a peer that owns the buds *and* has a call or
+media on them (`AirPodsState::peer_busy()`) stands in, and can take the buds back mid-call.
+Music on the phone reaches this path only through the buds.
+
+While the buds are given up the watcher sends no claim of its own -- not the one a session
+sends when it opens, and not one for local playback. Only the reclaim claims.
+
+**The call has to arrive before the phone moves the audio.** When the phone takes A2DP the
+Bluetooth sink fails and WirePlumber moves any stream still playing to the laptop speakers, so
+a pause that lands after that is heard as a burst of music from the speakers. The supervisor
+publishes the call list once a second; on this path every BlueZ object change republishes it
+straight away (`ConnectionManager::refresh_calls()`).
 
 `ownership_action()` is pure and tested, and is the same shape as `handoff_action()`: give
 them up when a peer goes active, take them back when it lets go, never twice, and buds
@@ -714,10 +726,21 @@ are connected, even while the user listens on speakers -- and so is looking for 
 the Bluetooth sink, because a virtual sink for an equaliser takes them instead. The
 default sink is the one thing that reflects what the user actually chose.
 
+On the ownership path the sink also has to be **rebuilt**. The phone tears this machine's
+A2DP transport down when it takes the buds, and PipeWire never reopens a sink left sitting on
+it: playback resumes into silence until the buds are reconnected. So giving the buds up pauses
+the players, reads the sink's raw volume, and switches the card profile `off` (A2DP profiles
+only) before releasing. Taking them back claims, switches the card back to the saved profile and
+reads it back (`pactl` can report success while the card stays off), waits for the **new** sink
+-- it has a new index -- and restores the volume before anything resumes. If the phone has
+taken the buds again by then, the card goes back off and nothing resumes. A call can also drop
+the link outright and the buds reconnect with the card already back on, so there was nothing to
+switch off on release; the reclaim then switches it off first. See 2026-09-11 below.
+
 ponytail: no silence stream. A host that is itself the audio source has to write inaudible
-silence to keep the sink from being torn down while idle; here the media player is the
-source and the sink wait covers the gap. Add one if a reclaim is ever seen racing a
-sink that PipeWire has already dropped.
+silence to keep the sink from being torn down while idle, and to prime the encoder after a
+rebuild; here the media player is the source and the sink wait covers the gap. Add one if
+crackling is heard after a reclaim.
 
 **What it does not cover.** On the disconnect path, music or video playing on the iPhone
 is not a call, so nothing reacts to it. Seeing that would mean the machine acting as an
@@ -3083,3 +3106,82 @@ the bearer step is a `sed` plus a restart through the machine's own service mana
 Not yet verified on hardware: that `class=ok` survives a `bluetoothd` restart on a machine
 without hostnamed. The `sed` leaves a `main.conf` with no `Class` or `Experimental` line,
 commented or not, unchanged, and `--bt-setup` keeps listing the step.
+
+### 2026-09-11 - The AirPods sink jammed after a call
+
+Reported in #85 and reproduced on AirPods Pro 3: music on Linux, a call on the iPhone,
+playback paused, and after the call playback resumed into silence. PipeWire stayed jammed
+until the buds were reconnected.
+
+The reporter captured the working sequence from their own implementation at three stages:
+
+| Stage | Card profile | `MediaTransport1` | Sink |
+|---|---|---|---|
+| Before the call | `a2dp-sink-sbc_xq` | `active` | index 468, RUNNING |
+| During | `off` | `idle` | gone |
+| After | `a2dp-sink-sbc_xq` | `active` | index 623, RUNNING |
+
+The transport object never goes away; the sink does, and comes back as a new object. A sink
+left in place while the phone holds the transport is what jams. A first fix detected a
+suspended sink with a stream on it after the call and cycled the profile off and on two
+seconds apart. It worked, but it guessed at the jam, ran on a separate thread from the
+ownership reclaim with both resuming players, and changed the profile twice in quick
+succession, which the Apple-mode firmware tolerates badly. The card now goes off when the buds
+are given up and back on when they are taken back.
+
+That fix could only run from call state, because the ownership path never fired on these
+buds: `active()` tested `state >= 0x17` and Pro 3 reports `0x07`. That also left
+`taking_over()` false while the iPhone held the buds, so nothing in the peer state blocked a
+claim. Reading bit `0x02` fits every value recorded so far and puts iPhone media on the same
+path as calls.
+
+Volume, measured: WirePlumber restores a Bluetooth route's saved volume when the new sink's
+route comes up (`scripts/device/state-routes.lua`, "a new route is now active, restore the
+volume"), and these buds had `channelVolumes 0.174729` saved in
+`~/.local/state/wireplumber/default-routes`. The reporter saw a rebuilt sink come up at a
+default volume on their stack, so the raw value is saved on release and restored before
+resuming anyway, then read back.
+
+The first hardware run of that, 09:51 the same day, jammed again. The log shows why:
+
+- 09:51:21 the iPhone joined the host list at `0x00` and 200ms later BlueZ reported the buds
+  disconnected from this machine, `org.bluez.Reason.Remote`. No handoff, a link drop.
+- 09:51:43 the buds were back, with the iPhone at `0x02`. The owner bit alone released them, and
+  nothing was switched off: the card had not come back to an A2DP profile yet.
+- 09:51:56 WirePlumber logged `Failure in Bluetooth audio transport` on the new node, and the
+  buds reported the iPhone's call.
+- After the call ended no connected-devices notification arrived at all. The iPhone stayed at
+  `0x02`, so a reclaim waiting on the owner bit never fired. Even had it fired, its claim
+  would have been dropped, because counting the owner bit as `taking_over()` blocked claims.
+
+So handoff now yields to a peer that owns the buds **and** has audio on them, from the
+audio-source notification with the same three-second settle the call tracking already had;
+`taking_over()` is back to `0x10` and up; and a reclaim with nothing switched off on release
+switches the card off before switching it on.
+
+The second run, 10:05 to 10:10, was worse:
+
+- 10:08:49 and 10:10:09 the reclaim claimed the buds back six seconds after a single audio
+  source none, while the iPhone still read `0x07` and its call was still going.
+- The night before, 20:33:39, the iPhone took `0x07` for a call and still held it at 20:37:48,
+  with Linux playing in between. The owner bit does not mark the end of a call either.
+- Calls at 09:51:10, 10:05:31 and 10:08:56 put SCO on this machine (`corrupted SCO packet` in
+  the kernel log): iOS routed the call to the laptop's hands-free link, not the buds. At 10:05
+  the iPhone read `0x01` while an iMac on the same iCloud account held the buds at `0x07`
+  playing media. 10:08:56 came seven seconds after the early reclaim.
+- 10:05:15 the claim a session sends when it opens took the buds from that iMac mid-media,
+  while this machine had given them up.
+
+So the call list decides when call control is on, and a watcher that has given the buds up
+sends no claim of its own. Several Apple devices on one account is the normal case.
+
+The third run, 11:11 to 11:14, handed over and back correctly on every call, but music played
+briefly from the laptop speakers at the start of each. At 11:13:12 WirePlumber logged the A2DP
+transport failure at 12.000 and the release, which pauses first, logged at 12.053; at 11:13:35,
+35.569 and 35.626. SCO had reached this machine 300 to 550ms before each failure, so the phone
+was already committed to the call while Tether waited for its one-second call-list tick.
+
+Not yet verified on hardware: the full sequence on Pro 3, iPhone media rather than a call,
+the owner bit on Pro 2, and whether an `off` profile persists if tetherd dies while the buds
+are away. WirePlumber restores a saved `off` profile unless `session.dont-restore-off-profile`
+is set.

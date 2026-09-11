@@ -685,8 +685,10 @@ namespace tether::bluetooth {
         ConnectionManager::CallsFn on_calls;
         std::atomic<bool> calls_wanted{false};
         bool calls_enabled = false;
-        // Last published call list
+        // Last published call list. The mutex also serialises on_calls: the supervisor tick and
+        // refresh_calls() both publish.
         nlohmann::json last_calls;
+        std::mutex calls_publish_mutex;
 
         // Brings the telephony client in line with the wanted preference.
         void apply_calls_preference();
@@ -1174,12 +1176,14 @@ namespace tether::bluetooth {
             std::lock_guard<std::mutex> lock(telephony_mutex);
             telephony = std::move(client);
         }
+        std::lock_guard<std::mutex> lock(calls_publish_mutex);
         last_calls = nullptr;
         debug::log(INFO, "bluetooth: call control {}", wanted ? "enabled" : "disabled");
     }
 
     void ConnectionState::sync_calls() {
         auto client = calls_client();
+        std::lock_guard<std::mutex> lock(calls_publish_mutex);
         if (!client) {
             last_calls = nullptr;
             return;
@@ -1434,6 +1438,8 @@ namespace tether::bluetooth {
     }
 
     void ConnectionManager::set_call_handler(CallsFn on_calls) { state_->on_calls = std::move(on_calls); }
+
+    void ConnectionManager::refresh_calls() { state_->sync_calls(); }
 
     void ConnectionManager::set_calls_enabled(bool enabled) { state_->calls_wanted = enabled; }
 

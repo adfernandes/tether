@@ -19,19 +19,24 @@ namespace tether::audio {
     // again. False when it did not appear before the deadline.
     bool restore_default_sink(const std::string& address, int timeout_ms);
 
-    // HACK: Whether a stream is attached to a Bluetooth device's sink while the sink stays
-    // suspended. PipeWire does not reopen a transport the device tore down under it.
-    bool bluez_sink_stuck(const std::string& address);
+    // Switches a Bluetooth device's card off when it is on an A2DP profile, so the audio server
+    // lets go of the transport before another host takes the buds. Returns the profile to restore,
+    // empty when nothing was switched.
+    std::string release_bluez_card(const std::string& address);
 
-    // HACK: Switches a Bluetooth device's card profile off and back, which rebuilds its sink.
-    bool restart_bluez_card(const std::string& address);
+    // Switches the card back to `profile`, which builds a new sink under a new index. False when
+    // the card is still not on it after one retry.
+    bool restore_bluez_card(const std::string& address, const std::string& profile);
 
-    // HACK: Parsers for `pactl list short sinks` with `pactl list short sink-inputs`, and for
-    // `pactl list cards`, exposed for tests.
-    bool bluez_sink_stuck_in(const std::string& short_sinks,
-                             const std::string& short_inputs,
-                             const std::string& address);
+    // A sink's raw per-channel volume ("45877 45877"), empty when unknown.
+    std::string sink_volume(const std::string& sink);
+
+    // Sets a raw volume from sink_volume() and reads it back. False when it did not take.
+    bool set_sink_volume(const std::string& sink, const std::string& volume);
+
+    // Parsers for `pactl list cards` and `pactl get-sink-volume`, exposed for tests.
     std::string active_profile_in(const std::string& cards, const std::string& card);
+    std::string volume_in(const std::string& text);
 
     // Sink name for a Bluetooth address, exposed for tests.
     std::string sink_prefix(const std::string& address);
