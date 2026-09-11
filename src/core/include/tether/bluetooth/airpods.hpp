@@ -123,6 +123,8 @@ namespace tether::bluetooth {
         std::string name;
         bool peer_taking_over = false;
         bool peer_active = false;
+        // A peer is on a call, held until the buds have stopped reporting it for a few seconds.
+        bool peer_call = false;
         AirPodsBattery battery;
         // Unset until the buds report one. Not every model has the feature.
         std::optional<AncMode> anc;
@@ -148,13 +150,22 @@ namespace tether::bluetooth {
     std::optional<EarState> parse_ear(const uint8_t* data, size_t len);
 
     // Decodes a connected-devices notification:
-    //   04 00 04 00 2E 00 [count] ([mac] * 6 [role] [state]) * count
-    // The MAC is stored least-significant byte first here, unlike the audio-source
-    // notification; both come back in BlueZ's own text order.
+    //   04 00 04 00 2E 00 [?] [?] [count] ([mac] * 6 [role] [state]) * count
+    // The MAC is in display order here and least-significant byte first in the
+    // audio-source notification; both come back in BlueZ's own text order.
     std::optional<std::vector<AapPeer>> parse_connected_devices(const uint8_t* data, size_t len);
 
     // Decodes an audio-source notification, 13 bytes: prefix, MAC, then the type.
     std::optional<AudioSourceEvent> parse_audio_source(const uint8_t* data, size_t len);
+
+    // Whether the buds carrying this machine's audio should be answered with a claim. They
+    // route a non-owner's stream for a few seconds and then hand it back to the owner; a claim
+    // keeps it. `owns` is the last ownership verdict, unset until one arrives. Never while a
+    // peer is on a call.
+    bool claims_for_playback(const AudioSourceEvent& event,
+                             const std::string& local,
+                             std::optional<bool> owns,
+                             bool peer_call);
 
     // Whether any host other than `local` is engaged with the buds, or actively
     // holding them. A machine's own entry is never a peer.
@@ -176,6 +187,11 @@ namespace tether::bluetooth {
 
     // `holding` is whether the caller has a pause outstanding.
     MediaAction ear_media_action(const EarState& before, const EarState& after, PauseMode mode, bool holding);
+
+    // What a call on the phone should do to local playback. `paused_for_call` is whether
+    // this pause is outstanding: only it is undone, and it is undone even if the setting
+    // was switched off during the call.
+    MediaAction call_media_action(bool call_before, bool call_after, bool enabled, bool paused_for_call);
 
     // What an iPhone call should do to AirPods that are connected to this machine.
     enum class HandoffAction { None, Release, Reclaim };

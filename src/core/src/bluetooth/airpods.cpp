@@ -90,6 +90,8 @@ namespace tether::bluetooth {
         constexpr size_t EAR_PACKET_BYTES = 8;
 
         constexpr uint8_t CONNECTED_DEVICES_PREFIX[] = {0x04, 0x00, 0x04, 0x00, 0x2e, 0x00};
+        // Two bytes of unknown meaning sit between the prefix and the count.
+        constexpr size_t CONNECTED_DEVICES_COUNT_OFFSET = 8;
         constexpr size_t CONNECTED_DEVICES_ENTRY_BYTES = 8;
 
         constexpr uint8_t AUDIO_SOURCE_PREFIX[] = {0x04, 0x00, 0x04, 0x00, 0x0e, 0x00};
@@ -105,10 +107,13 @@ namespace tether::bluetooth {
         // Sent anyway when the buds do not acknowledge; some models never do.
         constexpr int FEATURES_FALLBACK_MS = 500;
         constexpr int NOTIFICATIONS_AT_MS = 600;
-        // The buds broadcast their host list unprompted at roughly 800ms. The opening
-        // claim waits for it so it can be skipped when the phone already has them, and
-        // goes out anyway at this deadline when no list arrives.
-        constexpr int OPENING_CLAIM_BY_MS = 1500;
+        // How long a claim waits after the channel opens or this machine starts playing.
+        // A claim sent while the audio link is still being set up makes the buds drop
+        // the link; the AirPods Center reference puts audio setup safe from 5s.
+        constexpr int CLAIM_SETTLE_MS = 5000;
+        // How long the buds must stop reporting a peer's call before it counts as over:
+        // some models report no audio source every twenty seconds or so during a call.
+        constexpr int CALL_END_SETTLE_MS = 3000;
 
         constexpr int CONNECT_TIMEOUT_MS = 8000;
         constexpr int FIRST_PACKET_TIMEOUT_MS = 8000;
@@ -180,6 +185,19 @@ namespace tether::bluetooth {
             return ::send(fd, data, len, MSG_NOSIGNAL) == static_cast<ssize_t>(len);
         }
 
+        std::string hex(const uint8_t* data, size_t len) {
+            static constexpr char HEX[] = "0123456789abcdef";
+            std::string out;
+            out.reserve(len * 3);
+            for (size_t i = 0; i < len; ++i) {
+                if (i > 0)
+                    out.push_back(' ');
+                out.push_back(HEX[data[i] >> 4]);
+                out.push_back(HEX[data[i] & 0x0f]);
+            }
+            return out;
+        }
+
     } // namespace
 
     const char* to_string(AirPodsStatus status) {
@@ -210,6 +228,7 @@ namespace tether::bluetooth {
             {"in_ear", s.ear.in_ear()},
             {"peer_taking_over", s.peer_taking_over},
             {"peer_active", s.peer_active},
+            {"peer_call", s.peer_call},
             {"status", to_string(s.status)},
             {"reason", s.reason},
         };
@@ -286,20 +305,20 @@ namespace tether::bluetooth {
     }
 
     std::optional<std::vector<AapPeer>> parse_connected_devices(const uint8_t* data, size_t len) {
-        if (data == nullptr || len < sizeof(CONNECTED_DEVICES_PREFIX) + 1)
+        if (data == nullptr || len < CONNECTED_DEVICES_COUNT_OFFSET + 1)
             return std::nullopt;
         if (std::memcmp(data, CONNECTED_DEVICES_PREFIX, sizeof(CONNECTED_DEVICES_PREFIX)) != 0)
             return std::nullopt;
 
-        const size_t count = data[sizeof(CONNECTED_DEVICES_PREFIX)];
-        size_t offset = sizeof(CONNECTED_DEVICES_PREFIX) + 1;
+        const size_t count = data[CONNECTED_DEVICES_COUNT_OFFSET];
+        size_t offset = CONNECTED_DEVICES_COUNT_OFFSET + 1;
         if (offset + count * CONNECTED_DEVICES_ENTRY_BYTES > len)
             return std::nullopt;
 
         std::vector<AapPeer> peers;
         peers.reserve(count);
         for (size_t i = 0; i < count; ++i, offset += CONNECTED_DEVICES_ENTRY_BYTES)
-            peers.push_back({format_address(data + offset, true), data[offset + 6], data[offset + 7]});
+            peers.push_back({format_address(data + offset, false), data[offset + 6], data[offset + 7]});
         return peers;
     }
 
@@ -310,7 +329,7 @@ namespace tether::bluetooth {
             return std::nullopt;
 
         AudioSourceEvent event;
-        event.address = format_address(data + sizeof(AUDIO_SOURCE_PREFIX), false);
+        event.address = format_address(data + sizeof(AUDIO_SOURCE_PREFIX), true);
         switch (data[AUDIO_SOURCE_PACKET_BYTES - 1]) {
         case 0x01:
             event.source = AudioSource::Call;
@@ -392,6 +411,22 @@ namespace tether::bluetooth {
         if (peer_active && !released)
             return HandoffAction::Release;
         return HandoffAction::None;
+    }
+
+    MediaAction call_media_action(bool call_before, bool call_after, bool enabled, bool paused_for_call) {
+        if (call_before && !call_after && paused_for_call)
+            return MediaAction::Resume;
+        if (enabled && !call_before && call_after)
+            return MediaAction::Pause;
+        return MediaAction::None;
+    }
+
+    bool claims_for_playback(const AudioSourceEvent& event,
+                             const std::string& local,
+                             std::optional<bool> owns,
+                             bool peer_call) {
+        return !local.empty() && event.address == local && event.source != AudioSource::None && owns == false &&
+               !peer_call;
     }
 
     PeerSummary summarize_peers(const std::vector<AapPeer>& peers, const std::string& local) {
@@ -510,13 +545,18 @@ namespace tether::bluetooth {
 
         // Records a peer list, logging every ownership transition: almost every
         // diagnosis of a dropped link starts from one.
-        void note_peers(const std::vector<AapPeer>& peers, std::map<std::string, uint8_t>& seen, bool delivered) {
+        void note_peers(const std::vector<AapPeer>& peers,
+                        std::map<std::string, uint8_t>& seen,
+                        bool& warned_unlisted,
+                        bool delivered) {
             std::string local;
             {
                 std::lock_guard<std::mutex> lock(mutex);
                 local = local_address;
             }
+            bool listed = false;
             for (const auto& peer : peers) {
+                listed = listed || peer.address == local;
                 auto [it, inserted] = seen.insert({peer.address, peer.state});
                 if (inserted || it->second != peer.state) {
                     debug::log(DEBUG,
@@ -527,6 +567,12 @@ namespace tether::bluetooth {
                                peer.state);
                     it->second = peer.state;
                 }
+            }
+
+            // Without its own entry this machine reads as a peer: an eviction, or a misread list.
+            if (!local.empty() && !listed && !warned_unlisted) {
+                debug::log(DEBUG, "airpods: this machine ({}) is not in the buds' host list", local);
+                warned_unlisted = true;
             }
 
             const auto summary = summarize_peers(peers, local);
@@ -544,8 +590,10 @@ namespace tether::bluetooth {
         // iPhone is not that: claiming out from under one is the whole point.
         bool send_ownership(int fd, bool own) {
             if (!own) {
-                if (write_all(fd, RELEASE, sizeof(RELEASE)))
+                if (write_all(fd, RELEASE, sizeof(RELEASE))) {
+                    debug::log(DEBUG, "airpods: release sent");
                     return true;
+                }
                 debug::log(DEBUG, "airpods: release write failed: {}", std::strerror(errno));
                 return false;
             }
@@ -563,8 +611,10 @@ namespace tether::bluetooth {
                     return true;
                 last_claim = now;
             }
-            if (write_all(fd, CLAIM, sizeof(CLAIM)))
+            if (write_all(fd, CLAIM, sizeof(CLAIM))) {
+                debug::log(DEBUG, "airpods: claim sent");
                 return true;
+            }
             debug::log(DEBUG, "airpods: claim write failed: {}", std::strerror(errno));
             return false;
         }
@@ -592,8 +642,8 @@ namespace tether::bluetooth {
             return false;
         }
 
-        // Runs one channel from connect to close. Sets `delivered` when at least one
-        // battery packet arrived, which is what separates a contended channel from a
+        // Runs one channel from connect to close. Sets `delivered` when the buds sent
+        // any notification, which is what separates a contended channel from a
         // healthy but quiet one.
         void session(const std::string& address, bool& delivered) {
             uint8_t addr[6] = {};
@@ -669,7 +719,6 @@ namespace tether::bluetooth {
                     if (!write_all(fd, REQUEST_NOTIFICATIONS, sizeof(REQUEST_NOTIFICATIONS)))
                         return false;
                     stage = Stage::Ready;
-                    due = opened + std::chrono::milliseconds(OPENING_CLAIM_BY_MS);
                     return true;
                 case Stage::Ready:
                     return true;
@@ -679,10 +728,10 @@ namespace tether::bluetooth {
 
             // AirPods Pro 2 validates a host by itself once the session is up; Pro 3
             // never does, and an unvalidated host is dropped at the first pod movement.
-            // So a session claims once it knows the phone does not have them, and keeps
-            // waiting for that to be true rather than claiming into a peer's call.
+            // So a session claims once the buds' host list proves the channel is live,
+            // never into a peer taking them, and only after the audio link has settled.
             bool claim_sent = false;
-            bool claim_deadline_passed = false;
+            std::optional<clock::time_point> claim_at;
             const auto claim = [&] {
                 bool blocked = false;
                 {
@@ -696,16 +745,37 @@ namespace tether::bluetooth {
             };
 
             std::map<std::string, uint8_t> peer_states;
+            bool warned_unlisted = false;
+            std::optional<bool> owns;
+            bool peer_call = false;
+            std::optional<AudioSourceEvent> latest_source;
+            std::optional<clock::time_point> call_ends_at;
+            // Published so local playback can step aside while the phone has a call.
+            const auto set_peer_call = [&](bool on) {
+                peer_call = on;
+                {
+                    std::lock_guard<std::mutex> lock(mutex);
+                    state.peer_call = on;
+                }
+                publish(delivered ? AirPodsStatus::Live : AirPodsStatus::Connecting, "");
+            };
             std::array<uint8_t, 1024> buffer{};
             while (!retargeted(address)) {
                 const auto now = clock::now();
-                const auto quiet_for = std::chrono::duration_cast<std::chrono::milliseconds>(now - last_packet);
+                // Until the buds send a notification, stray bytes do not keep an attempt alive:
+                // a channel another client holds stays open and says nothing useful.
+                const auto quiet_since = delivered ? last_packet : opened;
                 const int quiet_timeout = (delivered ? IDLE_TIMEOUT_MS : FIRST_PACKET_TIMEOUT_MS);
-                int timeout = quiet_timeout - static_cast<int>(quiet_for.count());
-                if (stage != Stage::Ready || !claim_deadline_passed) {
-                    const auto until_due = std::chrono::duration_cast<std::chrono::milliseconds>(due - now);
-                    timeout = std::min(timeout, static_cast<int>(until_due.count()));
-                }
+                const auto until = [&](clock::time_point at) {
+                    return static_cast<int>(std::chrono::duration_cast<std::chrono::milliseconds>(at - now).count());
+                };
+                int timeout = until(quiet_since + std::chrono::milliseconds(quiet_timeout));
+                if (stage != Stage::Ready)
+                    timeout = std::min(timeout, until(due));
+                if (claim_at)
+                    timeout = std::min(timeout, until(*claim_at));
+                if (call_ends_at)
+                    timeout = std::min(timeout, until(*call_ends_at));
                 const int ready = wait_for(fd, wake_fd, POLLIN, std::max(timeout, 0));
                 if (ready == 0) {
                     drain_wake();
@@ -716,21 +786,41 @@ namespace tether::bluetooth {
                 if (ready == -2)
                     break;
                 if (ready < 0) {
-                    if (clock::now() >= due) {
-                        if (stage != Stage::Ready) {
-                            if (!advance(clock::now()))
-                                break;
-                            continue;
-                        }
-                        // No host list arrived in time, so claim on the reference's own
-                        // schedule and let the peer check catch the rest.
-                        claim_deadline_passed = true;
-                        if (!claim_sent && !claim())
+                    const auto fired = clock::now();
+                    if (stage != Stage::Ready && fired >= due) {
+                        if (!advance(fired))
                             break;
                         continue;
                     }
-                    if (clock::now() - last_packet >= std::chrono::milliseconds(quiet_timeout))
+                    if (call_ends_at && fired >= *call_ends_at) {
+                        call_ends_at.reset();
+                        set_peer_call(false);
+                        continue;
+                    }
+                    if (claim_at && fired >= *claim_at) {
+                        claim_at.reset();
+                        std::string local;
+                        {
+                            std::lock_guard<std::mutex> lock(mutex);
+                            local = local_address;
+                        }
+                        // Decided on the state at firing time: a call or a new owner since
+                        // the claim was armed cancels it.
+                        if (!claim_sent) {
+                            if (!claim())
+                                break;
+                        } else if (latest_source && claims_for_playback(*latest_source, local, owns, peer_call)) {
+                            debug::log(DEBUG, "airpods: claiming for playback here");
+                            if (!send_ownership(fd, true))
+                                break;
+                        }
+                        continue;
+                    }
+                    if (fired - quiet_since >= std::chrono::milliseconds(quiet_timeout)) {
+                        if (!delivered)
+                            debug::log(DEBUG, "airpods: no notification within {}ms", FIRST_PACKET_TIMEOUT_MS);
                         break;
+                    }
                     continue;
                 }
 
@@ -756,29 +846,58 @@ namespace tether::bluetooth {
 
                 if (starts_with(buffer.data(), size, OWNS_CONNECTION_PREFIX, sizeof(OWNS_CONNECTION_PREFIX)) &&
                     size > sizeof(OWNS_CONNECTION_PREFIX)) {
+                    delivered = true;
+                    owns = buffer[sizeof(OWNS_CONNECTION_PREFIX)] == 0x01;
                     debug::log(DEBUG, "airpods: ownership verdict {:#04x}", buffer[sizeof(OWNS_CONNECTION_PREFIX)]);
                     continue;
                 }
 
+                // Ownership runs on these two; the raw bytes settle any doubt about the layout.
+                if (starts_with(buffer.data(), size, CONNECTED_DEVICES_PREFIX, sizeof(CONNECTED_DEVICES_PREFIX)) ||
+                    starts_with(buffer.data(), size, AUDIO_SOURCE_PREFIX, sizeof(AUDIO_SOURCE_PREFIX)))
+                    debug::log(DEBUG, "airpods: rx {}", hex(buffer.data(), size));
+
                 if (auto peers = parse_connected_devices(buffer.data(), size)) {
-                    note_peers(*peers, peer_states, delivered);
-                    // The host list is what says whether claiming is safe.
-                    if (stage == Stage::Ready && !claim_sent && !claim())
-                        break;
+                    delivered = true;
+                    note_peers(*peers, peer_states, warned_unlisted, delivered);
+                    // The host list proves the channel is ours; the claim waits for the audio link.
+                    if (!claim_sent && !claim_at)
+                        claim_at = std::max(last_packet, opened + std::chrono::milliseconds(CLAIM_SETTLE_MS));
                     continue;
                 }
 
                 if (auto source = parse_audio_source(buffer.data(), size)) {
+                    delivered = true;
                     debug::log(DEBUG,
                                "airpods: audio source {} on {}",
                                source->source == AudioSource::Call    ? "call"
                                : source->source == AudioSource::Media ? "media"
                                                                       : "none",
                                source->address);
+                    std::string local;
+                    {
+                        std::lock_guard<std::mutex> lock(mutex);
+                        local = local_address;
+                    }
+                    latest_source = *source;
+                    // Re-armed on every stream start, so the claim waits for the newest one to settle.
+                    if (claims_for_playback(*source, local, owns, peer_call)) {
+                        claim_at = last_packet + std::chrono::milliseconds(CLAIM_SETTLE_MS);
+                        debug::log(
+                            DEBUG, "airpods: playing here without owning the buds; claiming in {}ms", CLAIM_SETTLE_MS);
+                    }
+                    if (source->source == AudioSource::Call && source->address != local) {
+                        call_ends_at.reset();
+                        if (!peer_call)
+                            set_peer_call(true);
+                    } else if (peer_call && !call_ends_at) {
+                        call_ends_at = last_packet + std::chrono::milliseconds(CALL_END_SETTLE_MS);
+                    }
                     continue;
                 }
 
                 if (auto mode = parse_anc(buffer.data(), size)) {
+                    delivered = true;
                     {
                         std::lock_guard<std::mutex> lock(mutex);
                         state.anc = *mode;
@@ -788,6 +907,7 @@ namespace tether::bluetooth {
                 }
 
                 if (auto ear = parse_ear(buffer.data(), size)) {
+                    delivered = true;
                     {
                         std::lock_guard<std::mutex> lock(mutex);
                         state.ear = *ear;
@@ -813,6 +933,7 @@ namespace tether::bluetooth {
                 std::lock_guard<std::mutex> lock(mutex);
                 pending_anc.reset();
                 pending_ownership.reset();
+                state.peer_call = false;
             }
             ::close(fd);
         }
@@ -842,6 +963,7 @@ namespace tether::bluetooth {
                         state.ear = {};
                         state.peer_taking_over = false;
                         state.peer_active = false;
+                        state.peer_call = false;
                     }
                     publish(AirPodsStatus::Idle, "");
                     backoff_ms = BACKOFF_START_MS;
@@ -860,6 +982,7 @@ namespace tether::bluetooth {
                         state.ear = {};
                         state.peer_taking_over = false;
                         state.peer_active = false;
+                        state.peer_call = false;
                     }
                     state.name = name;
                 }

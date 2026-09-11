@@ -58,6 +58,8 @@ constexpr int HANDOFF_RECLAIM_ATTEMPTS = 3;
 constexpr int HANDOFF_GUARD_SECONDS = 3;
 // How long to wait for the buds' sink to come back before resuming anything.
 constexpr int SINK_RETURN_TIMEOUT_MS = 8000;
+// HACK: After a rebuilt Bluetooth sink reappears, time for the audio server to move streams back onto it.
+constexpr int SINK_SETTLE_SECONDS = 1;
 
 int main(int argc, char** argv) {
     redirect_output_to_log();
@@ -354,8 +356,11 @@ int main(int argc, char** argv) {
     // AirPods battery arrives on its own L2CAP channel, not through BlueZ.
     tether::MediaControl media;
     tether::bluetooth::EarState last_ear;
+    bool last_peer_call = false;
+    bool paused_for_call = false;
     tether::bluetooth::AirPodsWatcher airpods(
-        [&media, &last_ear, handoff, &native_handoff, &run_ownership](const tether::bluetooth::AirPodsState& state) {
+        [&media, &last_ear, &last_peer_call, &paused_for_call, handoff, &native_handoff, &run_ownership](
+            const tether::bluetooth::AirPodsState& state) {
             const auto config = tether::bluetooth::load_config();
             const auto mode = config.airpods_enabled ? config.airpods_pause : tether::bluetooth::PauseMode::Never;
             switch (tether::bluetooth::ear_media_action(last_ear, state.ear, mode, media.holding())) {
@@ -371,13 +376,61 @@ int main(int argc, char** argv) {
                 break;
             }
 
-            if (state.address.empty() && !handoff->holding_buds())
+            bool resume_after_call = false;
+            switch (tether::bluetooth::call_media_action(
+                last_peer_call, state.peer_call, config.airpods_enabled && config.airpods_handoff, paused_for_call)) {
+            case tether::bluetooth::MediaAction::Pause:
+                if (const size_t paused = media.pause()) {
+                    paused_for_call = true;
+                    debug::log(INFO, "airpods: paused {} player(s), the iPhone has a call", paused);
+                }
+                break;
+            case tether::bluetooth::MediaAction::Resume:
+                paused_for_call = false;
+                // Resuming without the buds would move the audio to the speakers.
+                resume_after_call = !state.address.empty();
+                break;
+            case tether::bluetooth::MediaAction::None:
+                break;
+            }
+
+            // HACK: The phone tore down this machine's transport when it took the buds, and PipeWire does
+            // not reopen it, so a sink left suspended with a stream on it is rebuilt. Players stay
+            // paused meanwhile: with the card off their streams fall back to the speakers.
+            if (last_peer_call && !state.peer_call && !state.address.empty()) {
+                std::thread([address = state.address, resume = resume_after_call] {
+                    const bool stuck = tether::audio::default_sink() == tether::audio::bluez_sink(address) &&
+                                       tether::audio::bluez_sink_stuck(address);
+                    if (stuck) {
+                        debug::log(INFO, "airpods: the Bluetooth sink stayed suspended after the call; rebuilding it");
+                        if (tether::g_media)
+                            tether::g_media->pause();
+                        if (!tether::audio::restart_bluez_card(address) ||
+                            !tether::audio::restore_default_sink(address, SINK_RETURN_TIMEOUT_MS)) {
+                            debug::log(WARN, "airpods: could not rebuild the Bluetooth sink for {}", address);
+                            if (tether::g_media)
+                                tether::g_media->forget();
+                            return;
+                        }
+                        std::this_thread::sleep_for(std::chrono::seconds(SINK_SETTLE_SECONDS));
+                    }
+                    if ((resume || stuck) && tether::g_media) {
+                        if (const size_t resumed = tether::g_media->resume())
+                            debug::log(INFO, "airpods: resumed {} player(s), the call ended", resumed);
+                    }
+                }).detach();
+            }
+
+            if (state.address.empty() && !handoff->holding_buds()) {
                 media.forget();
+                paused_for_call = false;
+            }
 
             if (native_handoff.load())
                 run_ownership(state);
 
             last_ear = state.ear;
+            last_peer_call = state.peer_call;
 
             tether::broadcast_local_event(tether::bluetooth::to_json(state).dump());
         });
