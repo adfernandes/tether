@@ -102,8 +102,8 @@ chmod +x tether-*-x86_64.AppImage
 ./tether-*-x86_64.AppImage --install-extension-host     # if you use the browser or mail extension
 ```
 
-The iPhone Bluetooth features need a systemd unit the AppImage cannot install for you.
-`--bt-setup` prints the command that writes it.
+The iPhone Bluetooth features need one-time system setup the AppImage cannot do for you.
+`--bt-setup` prints the commands for this machine.
 
 Requires glibc 2.38 and libstdc++ from GCC 13 (Fedora 39+, Ubuntu 23.10+, Debian 13+, Arch).
 
@@ -325,7 +325,7 @@ See [docs/HEADLESS.md](docs/HEADLESS.md).
 
 #### Bluetooth (for Messages and Notifications)
 - BlueZ 5.86+ must be running with experimental bearer API. `tether bt setup`
-  prints the systemd drop-in command that enables it. Do this **before** pairing.
+  prints the command that enables it on this machine. Do this **before** pairing.
 - A controller with BR/EDR, LE, and advertising support.
 - Notification mirroring does not work on iOS 18 and earlier.
 

@@ -1,6 +1,7 @@
 #include <gtest/gtest.h>
 #include <tether/bluetooth/objects.hpp>
 #include <tether/packaging.hpp>
+#include <tether/service.hpp>
 
 #include <sstream>
 #include <string_view>
@@ -603,20 +604,38 @@ TEST(Capability, WrongClassIsReportedButDoesNotDowngradeMode) {
     // The unit is templated on the adapter, so the wrong id makes the command a no-op.
     EXPECT_EQ(cap.adapter_id, "hci0");
     ASSERT_EQ(cap.setup.size(), 1u);
-    EXPECT_TRUE(cap.setup[0].command.ends_with("sudo systemctl enable --now tether-btclass@hci0"))
-        << cap.setup[0].command;
+    EXPECT_EQ(cap.setup[0].command, set_class_command("hci0", tether::systemd_booted()));
+}
+
+TEST(Capability, ClassCommandWithSystemdEnablesTheUnit) {
+    const std::string command = set_class_command("hci0", true);
+    EXPECT_TRUE(command.ends_with("sudo systemctl enable --now tether-btclass@hci0")) << command;
 
     // The portable-build branch pastes the unit through a here-document, and a here-document
     // delimiter only ends it at column 0. That is why the unit text has to end in a newline:
     // without it EOF lands on the last line of the unit and closes nothing.
     EXPECT_TRUE(std::string_view(tether::packaging::BTCLASS_UNIT).ends_with("\n"));
-    if (cap.setup[0].command.find("<<'EOF'") != std::string::npos) {
+    if (command.find("<<'EOF'") != std::string::npos) {
         bool terminated = false;
-        std::istringstream lines(cap.setup[0].command);
+        std::istringstream lines(command);
         for (std::string line; std::getline(lines, line);)
             terminated = terminated || line == "EOF";
-        EXPECT_TRUE(terminated) << cap.setup[0].command;
+        EXPECT_TRUE(terminated) << command;
     }
+}
+
+// No unit runs without systemd, even where a package left the file on disk.
+TEST(Capability, ClassCommandWithoutSystemdEditsMainConf) {
+    const std::string command = set_class_command("hci0", false);
+    EXPECT_NE(command.find("Class = 0x000408"), std::string::npos) << command;
+    EXPECT_NE(command.find("echo | sudo btmgmt --index hci0 class 4 8"), std::string::npos) << command;
+    EXPECT_EQ(command.find("systemctl"), std::string::npos) << command;
+}
+
+TEST(Capability, ExperimentalCommandWithoutSystemdEditsMainConf) {
+    const std::string command = enable_experimental_command(false);
+    EXPECT_NE(command.find("Experimental = true"), std::string::npos) << command;
+    EXPECT_EQ(command.find("systemd"), std::string::npos) << command;
 }
 
 TEST(Capability, PrefersAPoweredAdapter) {

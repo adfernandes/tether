@@ -777,11 +777,18 @@ namespace tether {
     }
 
     std::string get_runtime_dir() {
-        const char* xdg_runtime = std::getenv("XDG_RUNTIME_DIR");
-        if (!xdg_runtime) {
-            throw std::runtime_error("XDG_RUNTIME_DIR is not set");
+        std::filesystem::path base;
+        if (const char* xdg_runtime = std::getenv("XDG_RUNTIME_DIR")) {
+            base = xdg_runtime;
+        } else {
+            // login managers create this, but only a login session exports the variable.
+            const std::string fallback = "/run/user/" + std::to_string(getuid());
+            struct stat st{};
+            if (lstat(fallback.c_str(), &st) != 0 || !S_ISDIR(st.st_mode) || st.st_uid != getuid())
+                throw std::runtime_error("XDG_RUNTIME_DIR is not set");
+            base = fallback;
         }
-        std::filesystem::path tether_dir = std::filesystem::path(xdg_runtime) / "tether";
+        std::filesystem::path tether_dir = base / "tether";
         if (!std::filesystem::exists(tether_dir)) {
             std::filesystem::create_directories(tether_dir);
             std::filesystem::permissions(

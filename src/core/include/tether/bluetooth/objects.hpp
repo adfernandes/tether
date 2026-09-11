@@ -218,6 +218,10 @@ namespace tether::bluetooth {
                                   std::optional<bool> secure_connections = std::nullopt,
                                   const std::string& preferred_id = {});
 
+    // Shell commands for the two setup steps, for a machine booted with or without systemd.
+    std::string enable_experimental_command(bool systemd);
+    std::string set_class_command(const std::string& adapter_id, bool systemd);
+
     nlohmann::json to_json(const Adapter& adapter);
     nlohmann::json to_json(const Device& device);
     nlohmann::json to_json(const SetupStep& step);

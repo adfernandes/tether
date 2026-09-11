@@ -19,6 +19,7 @@
 #include <sstream>
 #include <sys/file.h>
 #include <sys/socket.h>
+#include <sys/stat.h>
 #include <sys/wait.h>
 #include <thread>
 #include <unistd.h>
@@ -90,6 +91,17 @@ namespace {
     private:
         pid_t pid_;
     };
+
+    // A daemon an init system starts has no XDG_RUNTIME_DIR, yet has to share a socket with login shells.
+    TEST(RuntimeDirTest, FallsBackToRunUserWhenXdgRuntimeDirIsUnset) {
+        ScopedEnvVar unset("XDG_RUNTIME_DIR", "");
+        const std::string run_user = "/run/user/" + std::to_string(getuid());
+        struct stat st{};
+        if (lstat(run_user.c_str(), &st) == 0 && S_ISDIR(st.st_mode) && st.st_uid == getuid())
+            EXPECT_EQ(tether::get_runtime_dir(), run_user + "/tether");
+        else
+            EXPECT_THROW(tether::get_runtime_dir(), std::runtime_error);
+    }
 
     // The single-instance lock fd is deliberately leaked so the OS holds it for the
     // process lifetime. Without O_CLOEXEC any helper the daemon exec's (btmgmt, the

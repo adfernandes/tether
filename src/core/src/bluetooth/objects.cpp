@@ -1,6 +1,7 @@
 #include "tether/bluetooth/objects.hpp"
 #include <tether/i18n.hpp>
 #include <tether/packaging.hpp>
+#include <tether/service.hpp>
 
 #include <algorithm>
 #include <cstdlib>
@@ -394,49 +395,67 @@ namespace tether::bluetooth {
             return {};
         }
 
-        // bluetoothd's path is distro-specific, this command resolves it in the user's shell instead of hardcoding.
-        std::string enable_experimental_command() {
-            const std::string found = bluetoothd_path();
-            const std::string binary = found.empty()
-                                           ? "$(ls /usr/lib/bluetooth/bluetoothd /usr/libexec/bluetooth/bluetoothd "
-                                             "2>/dev/null | head -1)"
-                                           : found;
+    } // namespace
 
-            return "sudo mkdir -p /etc/systemd/system/bluetooth.service.d\n"
-                   "printf '[Service]\\nExecStart=\\nExecStart=%s --experimental\\n' \\\n"
-                   "  \"" +
-                   binary +
-                   "\" \\\n"
-                   "  | sudo tee /etc/systemd/system/bluetooth.service.d/experimental.conf\n"
-                   "sudo systemctl daemon-reload && sudo systemctl restart bluetooth";
+    // bluetoothd's path is distro-specific, this command resolves it in the user's shell instead of hardcoding.
+    std::string enable_experimental_command(bool systemd) {
+        // main.conf's Experimental is the same switch as --experimental, and no init system is involved.
+        if (!systemd)
+            return "sudo sed -i -E 's/^#?[[:space:]]*Experimental[[:space:]]*=.*/Experimental = true/' "
+                   "/etc/bluetooth/main.conf\n"
+                   "# then restart bluetoothd with this system's service manager";
+
+        const std::string found = bluetoothd_path();
+        const std::string binary = found.empty()
+                                       ? "$(ls /usr/lib/bluetooth/bluetoothd /usr/libexec/bluetooth/bluetoothd "
+                                         "2>/dev/null | head -1)"
+                                       : found;
+
+        return "sudo mkdir -p /etc/systemd/system/bluetooth.service.d\n"
+               "printf '[Service]\\nExecStart=\\nExecStart=%s --experimental\\n' \\\n"
+               "  \"" +
+               binary +
+               "\" \\\n"
+               "  | sudo tee /etc/systemd/system/bluetooth.service.d/experimental.conf\n"
+               "sudo systemctl daemon-reload && sudo systemctl restart bluetooth";
+    }
+
+    // Distro packages install the unit. A portable build writes it out.
+    std::string set_class_command(const std::string& adapter_id, bool systemd) {
+        // Without hostnamed, BlueZ's hostname plugin leaves main.conf's Class alone across restarts.
+        // Checked before the unit probe: an Arch package on Artix still ships the unit file.
+        if (!systemd)
+            return "sudo sed -i -E 's/^#?[[:space:]]*Class[[:space:]]*=.*/Class = 0x000408/' "
+                   "/etc/bluetooth/main.conf\n"
+                   "echo | sudo btmgmt --index " +
+                   adapter_id + " class 4 8";
+
+        const std::string enable = "sudo systemctl enable --now tether-btclass@" + adapter_id;
+        std::error_code ec;
+        for (const char* dir : {"/etc/systemd/system",
+                                "/usr/lib/systemd/system",
+                                "/lib/systemd/system",
+                                "/usr/local/lib/systemd/system"}) {
+            if (std::filesystem::exists(std::string(dir) + "/tether-btclass@.service", ec))
+                return enable;
         }
 
-        // Distro packages install the unit. A portable build writes it out.
-        std::string set_class_command(const std::string& adapter_id) {
-            const std::string enable = "sudo systemctl enable --now tether-btclass@" + adapter_id;
-            std::error_code ec;
-            for (const char* dir : {"/etc/systemd/system",
-                                    "/usr/lib/systemd/system",
-                                    "/lib/systemd/system",
-                                    "/usr/local/lib/systemd/system"}) {
-                if (std::filesystem::exists(std::string(dir) + "/tether-btclass@.service", ec))
-                    return enable;
-            }
-
-            // The AppImage can write the unit itself, which beats pasting it. Flatpak cannot:
-            // "flatpak run" under sudo is the wrong user, so it falls through to the here-document.
-            if (const char* appimage = std::getenv("APPIMAGE"); appimage && *appimage)
-                return "sudo \"" + std::string(appimage) +
-                       "\" --install-btclass-unit\n"
-                       "sudo systemctl daemon-reload\n" +
-                       enable;
-
-            return "sudo tee /etc/systemd/system/tether-btclass@.service >/dev/null <<'EOF'\n" +
-                   std::string(packaging::BTCLASS_UNIT) +
-                   "EOF\n"
+        // The AppImage can write the unit itself, which beats pasting it. Flatpak cannot:
+        // "flatpak run" under sudo is the wrong user, so it falls through to the here-document.
+        if (const char* appimage = std::getenv("APPIMAGE"); appimage && *appimage)
+            return "sudo \"" + std::string(appimage) +
+                   "\" --install-btclass-unit\n"
                    "sudo systemctl daemon-reload\n" +
                    enable;
-        }
+
+        return "sudo tee /etc/systemd/system/tether-btclass@.service >/dev/null <<'EOF'\n" +
+               std::string(packaging::BTCLASS_UNIT) +
+               "EOF\n"
+               "sudo systemctl daemon-reload\n" +
+               enable;
+    }
+
+    namespace {
 
         // /org/bluez/hci0 -> hci0
         std::string adapter_id_of(const std::string& path) {
@@ -532,7 +551,7 @@ namespace tether::bluetooth {
             cap.setup.push_back({_("Notification mirroring needs BlueZ's experimental bearer API "
                                    "(org.bluez.Bearer.LE1), which bluetoothd is not exposing. Set this up before "
                                    "pairing: a bond made without it has no LE half."),
-                                 enable_experimental_command()});
+                                 enable_experimental_command(systemd_booted())});
             cap.mode = DeliveryMode::Compatibility;
         } else if (cap.bearer_api == BearerApi::Unknown && !cap.bonded_device_present) {
             // only an iphone bond can confirm the api
@@ -559,7 +578,7 @@ namespace tether::bluetooth {
         if (!cap.class_ok) {
             cap.setup.push_back({_("The iPhone will not offer its Messages and Contacts permissions until this "
                                    "adapter presents itself as A/V Hands-Free (major 4, minor 8)."),
-                                 set_class_command(cap.adapter_id)});
+                                 set_class_command(cap.adapter_id, systemd_booted())});
         }
 
         return cap;

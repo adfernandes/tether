@@ -123,7 +123,14 @@ namespace tether {
 
         sockaddr_un addr{};
         addr.sun_family = AF_UNIX;
-        std::string path = tether::get_runtime_dir() + "/tetherd.sock";
+        std::string path;
+        try {
+            path = tether::get_runtime_dir() + "/tetherd.sock";
+        } catch (const std::exception& e) {
+            debug::log(ERR, "{}", e.what());
+            close(sock);
+            return -1;
+        }
         if (path.size() >= sizeof(addr.sun_path)) {
             debug::log(ERR, "Socket path too long: {}", path);
             close(sock);
