@@ -11,6 +11,7 @@ import SwiftUI
 import UniformTypeIdentifiers
 import UIKit
 import TetherFramework
+internal import Network
 
 // High-level app state.
 enum AppConnectionState: Equatable {
@@ -133,6 +134,10 @@ final class TetherViewModel {
     private var pendingReconnectTask: Task<Void, Never>?
     private var connectTimeoutTask: Task<Void, Never>?
     private var autoConnectingFingerprint: String?
+
+    // Direction of the current transport, set only from the connection state.
+    // The trust gate keys off this; `pairingIsInbound` is UI state that messages move.
+    private var connectionIsInbound = false
     private var manualDisconnect = false
     private var currentScenePhase: ScenePhase = .active
 
@@ -470,7 +475,13 @@ final class TetherViewModel {
     private func setupServerHandlers() {
         server.onNewConnection = { [weak self] incomingConn, incomingFingerprint in
             guard let self = self else { return }
-            
+
+            // A live or in-flight session is not displaced by a stranger dialling in.
+            guard self.appState == .disconnected || self.appState == .discovering else {
+                incomingConn.cancel()
+                return
+            }
+
             // We just received an incoming connection from a peer!
             // We give it to our connection manager and start decoding.
             self.connection.accept(incomingConnection: incomingConn, fingerprint: incomingFingerprint)
@@ -490,6 +501,7 @@ final class TetherViewModel {
     }
 
     private func handleConnected(isInbound: Bool = false) {
+        connectionIsInbound = isInbound
         let serverFP = connection.serverFingerprint
 
         if certificateManager.isHostKnown(serverFP) {
@@ -612,6 +624,13 @@ final class TetherViewModel {
     }
 
     private func handleMessage(_ message: TetherMessage) {
+        // An unpinned peer may only speak the pairing half of the protocol, and only
+        // the half its direction allows. Same boundary tetherd enforces.
+        if !certificateManager.isHostKnown(connection.serverFingerprint),
+           !TetherCommand.allowedWhileUnpaired(message.parsedCommand, inbound: connectionIsInbound) {
+            return
+        }
+
         switch message.parsedCommand {
         case .clipboardUpdated:
             if let content = message.content {
@@ -730,6 +749,7 @@ final class TetherViewModel {
     // Approve a request from a peer that dialled us. This device is the approver
     // here, so the tap is the real decision and the peer is told about it.
     func acceptIncomingPairing() {
+        guard connectionIsInbound else { return }
         connection.send(.pairAccepted)
         finishPairing()
     }

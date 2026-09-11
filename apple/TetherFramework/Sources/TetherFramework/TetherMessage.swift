@@ -27,6 +27,17 @@ public enum TetherCommand: String, Codable, Sendable {
     case pairPending = "pair_pending"
     case pairAccepted = "pair_accepted"
     case error = "error"
+
+    // Commands a peer may send before it is pinned as a known host. Inbound means
+    // the peer dialled us and the local user is the approver, so only its request
+    // is allowed. Outbound means we asked and the peer's user decides, so only its
+    // verdict is. Mirrors the boundary tetherd enforces.
+    public static func allowedWhileUnpaired(_ command: TetherCommand?, inbound: Bool) -> Bool {
+        guard let command else { return false }
+        return inbound
+            ? command == .pairRequest
+            : command == .pairAccepted || command == .pairPending || command == .error
+    }
 }
 
 // MARK: - Message
