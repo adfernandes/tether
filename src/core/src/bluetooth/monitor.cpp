@@ -71,8 +71,44 @@ namespace tether::bluetooth {
             return G_SOURCE_REMOVE;
         }
 
-        void on_bluez_signal(
-            GDBusConnection*, const gchar*, const gchar*, const gchar*, const gchar*, GVariant*, gpointer user_data) {
+        constexpr const char* IFACE_ADAPTER = "org.bluez.Adapter1";
+
+        void log_adapter_change(const gchar* signal_name, GVariant* parameters) {
+            const bool added = g_strcmp0(signal_name, "InterfacesAdded") == 0;
+            if (!g_variant_is_of_type(parameters, G_VARIANT_TYPE(added ? "(oa{sa{sv}})" : "(oas)")))
+                return;
+
+            const gchar* path = nullptr;
+            GVariant* interfaces = nullptr;
+            g_variant_get(parameters, added ? "(&o@a{sa{sv}})" : "(&o@as)", &path, &interfaces);
+
+            bool adapter = false;
+            if (added) {
+                if (GVariant* props = g_variant_lookup_value(interfaces, IFACE_ADAPTER, nullptr)) {
+                    adapter = true;
+                    g_variant_unref(props);
+                }
+            } else {
+                const gchar** names = g_variant_get_strv(interfaces, nullptr);
+                for (const gchar** name = names; name && *name && !adapter; ++name)
+                    adapter = g_strcmp0(*name, IFACE_ADAPTER) == 0;
+                g_free(names);
+            }
+            g_variant_unref(interfaces);
+
+            if (adapter)
+                debug::log(INFO, "bluetooth: adapter {} {}", path, added ? "added" : "removed");
+        }
+
+        void on_bluez_signal(GDBusConnection*,
+                             const gchar*,
+                             const gchar*,
+                             const gchar*,
+                             const gchar* signal_name,
+                             GVariant* parameters,
+                             gpointer user_data) {
+            if (g_strcmp0(signal_name, "PropertiesChanged") != 0)
+                log_adapter_change(signal_name, parameters);
             static_cast<MonitorState*>(user_data)->schedule_refresh();
         }
 
