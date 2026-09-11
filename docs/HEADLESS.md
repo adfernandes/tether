@@ -45,6 +45,26 @@ already, holding the port this unit wants. Enabling the unit takes it over.
 Once the unit is enabled, clients stop spawning their own and leave the daemon
 to systemd.
 
+## Without systemd
+
+On Artix, Void, Devuan, or Gentoo with OpenRC there is no user unit to enable,
+and `tether service` says so. `tetherd` itself does not need systemd, but
+whatever starts it has to provide three things:
+
+- **Your user.** Never root: the keys and pairings live in your home directory.
+- **A runtime directory.** Clients find the daemon's socket in
+  `$XDG_RUNTIME_DIR/tether`, or `/run/user/<uid>/tether` when the variable is
+  unset, as it is for anything an init system starts. elogind, turnstile, and
+  pam_rundir create that directory at login and remove it at your last logout,
+  so check it survives a logout before relying on a daemon that outlives you.
+- **A session bus.** Messages and contacts (`obexd`), the secret store, and
+  notifications live on it. With no desktop session, start the daemon inside
+  one: `dbus-run-session tetherd`.
+
+On a desktop, start it from the compositor instead (`exec-once = tetherd` in
+Hyprland, `exec tetherd` in Sway), or do nothing: a client starts `tetherd`
+when none is running.
+
 ## Pair the iPhone
 
 The daemon advertises itself over mDNS and the iOS app finds it. Both ends have

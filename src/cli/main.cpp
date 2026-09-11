@@ -1189,7 +1189,7 @@ static int print_pending(tether::Client& client) {
 // systemd is what runs the unit, so writing one where there is no systemd would
 // leave a dead file and instructions that go nowhere.
 static bool has_systemd() {
-    if (!tether::which_program("systemctl").empty())
+    if (tether::systemd_booted())
         return true;
     fprintf(stdout,
             _("No systemd on this machine, so there is no user service to manage. Start tetherd from "

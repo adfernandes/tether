@@ -88,6 +88,13 @@ for the whole machine is the user's decision. The class unit ships but stays
 disabled for the same reason, and `--install-btclass-unit` writes it without
 enabling it on the builds that have no package to ship it.
 
+**Without systemd** (Artix, Void, Devuan) there is no unit to enable and no drop-in
+to write, so `--bt-setup` prints edits to `/etc/bluetooth/main.conf` instead:
+`Experimental = true`, the same switch as `--experimental`, and `Class = 0x000408`,
+applied to the running adapter with `btmgmt`. Restart `bluetoothd` with the machine's
+own service manager. The class setting only holds where nothing overrides it, which is
+why it is not the systemd answer, see 2026-09-10 below.
+
 Without it `bluetoothd` still registers `org.bluez.Bearer.LE1`, but as an empty
 marker: no properties, no `Connect()`. So the interface being present is not
 evidence the API is available, and code that reads it that way sees an LE bearer
@@ -3053,3 +3060,26 @@ with no lock handler configured -- hypridle, swayidle -- will do nothing with it
 `lock_command` in `bluetooth.json` runs a command instead for those setups. No
 Wayland protocol is involved: implementing `ext-session-lock-v1` would mean shipping
 a screen locker, which is not this daemon's job.
+
+### 2026-09-10 - `--bt-setup` printed systemd commands on machines without it
+
+Requested as #158 for Artix. Both setup steps assumed systemd: the bearer API step wrote a
+`bluetooth.service.d` drop-in, and the class step enabled `tether-btclass@`. On Artix the Arch
+package still installs the unit into `/usr/lib/systemd/system`, so `set_class_command()`'s
+probe found it and printed `systemctl enable` on a machine with no `systemctl`.
+
+BlueZ reads both settings from `main.conf` `[General]` under any init. `Experimental = true`
+sets the same option `--experimental` does. `Class` sets the adapter's default major and
+minor class, but the `hostname` plugin rewrites the class from the chassis type
+`org.freedesktop.hostname1` reports, which is why it cannot stand in for the unit where
+hostnamed runs; the Computer / Laptop `0x7c010c` recorded on 2026-07-16 matches that. With no
+hostnamed the plugin has nothing to apply, so `main.conf` should hold across a restart.
+
+`systemd_booted()` picks the branch by testing `/run/systemd/system`, as `sd_booted()` does,
+rather than looking for `systemctl` on PATH. Without systemd the class step is a `sed` on
+`main.conf` plus `echo | sudo btmgmt --index hci0 class 4 8` for the running adapter, and
+the bearer step is a `sed` plus a restart through the machine's own service manager.
+
+Not yet verified on hardware: that `class=ok` survives a `bluetoothd` restart on a machine
+without hostnamed. The `sed` leaves a `main.conf` with no `Class` or `Experimental` line,
+commented or not, unchanged, and `--bt-setup` keeps listing the step.

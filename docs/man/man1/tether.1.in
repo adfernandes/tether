@@ -85,7 +85,8 @@ packages install the unit themselves. See \fB\-\-bt-setup\fR.
 \fB\-\-install-service\fR
 Write \fBtetherd.service\fR into \fB~/.config/systemd/user\fR and print the
 commands that enable it. Never enables or starts anything. Needed only for a
-portable build; the distro packages install the unit system\-wide.
+portable build; the distro packages install the unit system\-wide. Without
+systemd it writes nothing.
 .TP
 \fB\-\-uninstall-service\fR
 Remove the \fBtetherd.service\fR unit this user installed.

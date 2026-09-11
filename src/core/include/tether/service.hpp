@@ -12,6 +12,9 @@ namespace tether {
     // Absolute path of a program on PATH, empty when it is not there.
     std::string which_program(const std::string& name);
 
+    // Whether systemd is this machine's init, the check sd_booted() makes.
+    bool systemd_booted();
+
     // ExecStart= line for the systemd unit: an absolute program and its
     // arguments, pointed at the tetherd this build would start. systemd runs no
     // shell, so this is never quoted for one.

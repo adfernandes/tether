@@ -121,7 +121,14 @@ namespace tether::ui {
 
             sockaddr_un addr{};
             addr.sun_family = AF_UNIX;
-            std::string path = tether::get_runtime_dir() + "/tetherd.sock";
+            std::string path;
+            try {
+                path = tether::get_runtime_dir() + "/tetherd.sock";
+            } catch (const std::exception&) {
+                close(fd);
+                schedule_event_retry();
+                return G_SOURCE_REMOVE;
+            }
             std::strncpy(addr.sun_path, path.c_str(), sizeof(addr.sun_path) - 1);
 
             if (::connect(fd, reinterpret_cast<sockaddr*>(&addr), sizeof(addr)) < 0) {

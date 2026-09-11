@@ -81,6 +81,14 @@ namespace tether {
         return {};
     }
 
+    bool systemd_booted() {
+        // Flatpak sandbox hides the host's /run, so its host is assumed to run systemd
+        if (!flatpak_app_id().empty())
+            return true;
+        std::error_code ec;
+        return fs::is_directory("/run/systemd/system", ec);
+    }
+
     std::string tetherd_exec_command() {
         if (const char* appimage = std::getenv("APPIMAGE"); appimage && *appimage)
             return std::string(appimage) + " --daemon";
