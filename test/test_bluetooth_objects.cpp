@@ -253,10 +253,13 @@ TEST(Capability, CompatibilityWhenExperimentalIsOff) {
     EXPECT_EQ(cap.mode, DeliveryMode::Compatibility);
     EXPECT_EQ(cap.bearer_api, BearerApi::Absent);
     ASSERT_EQ(cap.setup.size(), 1u);
-    EXPECT_NE(cap.setup[0].command.find("bluetooth.service.d"), std::string::npos);
+    EXPECT_EQ(cap.setup[0].command, enable_experimental_command(tether::systemd_booted()));
+
     // ExecStart must resolve bluetoothd on the machine running the command
-    EXPECT_EQ(cap.setup[0].command.find("/usr/share/tether"), std::string::npos) << cap.setup[0].command;
-    EXPECT_NE(cap.setup[0].command.find("bluetoothd"), std::string::npos) << cap.setup[0].command;
+    const std::string systemd = enable_experimental_command(true);
+    EXPECT_NE(systemd.find("bluetooth.service.d"), std::string::npos);
+    EXPECT_EQ(systemd.find("/usr/share/tether"), std::string::npos) << systemd;
+    EXPECT_NE(systemd.find("bluetoothd"), std::string::npos) << systemd;
 }
 
 // Without --experimental bluetoothd registers Bearer.LE1 as an empty marker: no
@@ -280,7 +283,7 @@ TEST(Capability, AnEmptyBearerInterfaceIsNotProofOfTheApi) {
     EXPECT_FALSE(objects.devices[0].has_le_bearer);
     EXPECT_EQ(cap.bearer_api, BearerApi::Absent);
     ASSERT_EQ(cap.setup.size(), 1u);
-    EXPECT_NE(cap.setup[0].command.find("bluetooth.service.d"), std::string::npos);
+    EXPECT_EQ(cap.setup[0].command, enable_experimental_command(tether::systemd_booted()));
 }
 
 TEST(Capability, ClassicOnlyBondDoesNotDisproveBearerApi) {
