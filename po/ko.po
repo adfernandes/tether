@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: tether\n"
 "Report-Msgid-Bugs-To: zack@bartel.com\n"
-"POT-Creation-Date: 2026-09-10 09:49-0700\n"
+"POT-Creation-Date: 2026-09-10 22:16-0700\n"
 "PO-Revision-Date: 2026-08-23\n"
 "Last-Translator: Tether project\n"
 "Language-Team: Korean\n"
@@ -920,9 +920,8 @@ msgid ""
 "$XDG_STATE_HOME/tether, or start it with 'systemctl --user start "
 "tetherd.service'.\n"
 msgstr ""
-"데몬이 실행 중이 아니며 시작할 수도 없었습니다. $XDG_STATE_HOME/tether의 로그를 "
-"확인하거나 'systemctl --user start tetherd.service'로 시작하십시오."
-"\n"
+"데몬이 실행 중이 아니며 시작할 수도 없었습니다. $XDG_STATE_HOME/tether의 로그"
+"를 확인하거나 'systemctl --user start tetherd.service'로 시작하십시오.\n"
 
 #: src/cli/main.cpp
 #, c++-format
@@ -1496,6 +1495,14 @@ msgstr "알 수 없는 통화 동작입니다."
 msgid "Not a DTMF sequence."
 msgstr "DTMF 시퀀스가 아닙니다."
 
+#: src/core/src/net.cpp src/gtk/devices_view.cpp
+msgid "Bluetooth is unavailable on this machine."
+msgstr "이 컴퓨터에서는 Bluetooth를 사용할 수 없습니다."
+
+#: src/core/src/net.cpp
+msgid "Not an AirPods device."
+msgstr "AirPods 기기가 아닙니다."
+
 #: src/core/src/net.cpp
 msgid "Unknown listening mode."
 msgstr "알 수 없는 청취 모드입니다."
@@ -1708,10 +1715,6 @@ msgid "Not connected yet."
 msgstr "아직 연결되지 않았습니다."
 
 #: src/gtk/devices_view.cpp
-msgid "Bluetooth is unavailable on this machine."
-msgstr "이 컴퓨터에서는 Bluetooth를 사용할 수 없습니다."
-
-#: src/gtk/devices_view.cpp
 msgid "Scanning for nearby devices..."
 msgstr "근처 기기를 검색하는 중..."
 
@@ -1730,6 +1733,18 @@ msgstr "적응형"
 #: src/gtk/devices_view.cpp
 msgid "Noise Cancellation"
 msgstr "노이즈 캔슬링"
+
+#: src/gtk/devices_view.cpp src/gtk/messages_view.cpp
+msgid "Could not reach the Tether daemon."
+msgstr "Tether 데몬에 연결하지 못했습니다."
+
+#: src/gtk/devices_view.cpp
+msgid "Disconnect"
+msgstr "연결 해제"
+
+#: src/gtk/devices_view.cpp
+msgid "Connect"
+msgstr "연결"
 
 #: src/gtk/devices_view.cpp
 msgid "Tether is not managing the AirPods, so another program can use them."
@@ -1819,10 +1834,6 @@ msgstr "페어링 요청을 보내는 중..."
 #: src/gtk/devices_view.cpp
 msgid "Pair request sent. Approve on remote device!"
 msgstr "페어링 요청을 보냈습니다. 원격 기기에서 승인하십시오!"
-
-#: src/gtk/devices_view.cpp src/gtk/messages_view.cpp
-msgid "Could not reach the Tether daemon."
-msgstr "Tether 데몬에 연결하지 못했습니다."
 
 #: src/gtk/devices_view.cpp
 msgid "Pairing… confirm the prompt on the iPhone."

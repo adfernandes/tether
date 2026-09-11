@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: tether\n"
 "Report-Msgid-Bugs-To: zack@bartel.com\n"
-"POT-Creation-Date: 2026-09-10 09:49-0700\n"
+"POT-Creation-Date: 2026-09-10 22:16-0700\n"
 "PO-Revision-Date: 2026-08-23\n"
 "Last-Translator: Tether project\n"
 "Language-Team: Italian\n"
@@ -1544,6 +1544,14 @@ msgstr "Azione di chiamata sconosciuta."
 msgid "Not a DTMF sequence."
 msgstr "Non è una sequenza DTMF."
 
+#: src/core/src/net.cpp src/gtk/devices_view.cpp
+msgid "Bluetooth is unavailable on this machine."
+msgstr "Bluetooth non è disponibile su questa macchina."
+
+#: src/core/src/net.cpp
+msgid "Not an AirPods device."
+msgstr "Non è un dispositivo AirPods."
+
 #: src/core/src/net.cpp
 msgid "Unknown listening mode."
 msgstr "Modalità di ascolto sconosciuta."
@@ -1760,10 +1768,6 @@ msgid "Not connected yet."
 msgstr "Non ancora connesso."
 
 #: src/gtk/devices_view.cpp
-msgid "Bluetooth is unavailable on this machine."
-msgstr "Bluetooth non è disponibile su questa macchina."
-
-#: src/gtk/devices_view.cpp
 msgid "Scanning for nearby devices..."
 msgstr "Ricerca di dispositivi nelle vicinanze..."
 
@@ -1782,6 +1786,18 @@ msgstr "Adattiva"
 #: src/gtk/devices_view.cpp
 msgid "Noise Cancellation"
 msgstr "Cancellazione del rumore"
+
+#: src/gtk/devices_view.cpp src/gtk/messages_view.cpp
+msgid "Could not reach the Tether daemon."
+msgstr "Impossibile raggiungere il daemon di Tether."
+
+#: src/gtk/devices_view.cpp
+msgid "Disconnect"
+msgstr "Disconnetti"
+
+#: src/gtk/devices_view.cpp
+msgid "Connect"
+msgstr "Connetti"
 
 #: src/gtk/devices_view.cpp
 msgid "Tether is not managing the AirPods, so another program can use them."
@@ -1872,10 +1888,6 @@ msgstr "Invio della richiesta di accoppiamento..."
 #: src/gtk/devices_view.cpp
 msgid "Pair request sent. Approve on remote device!"
 msgstr "Richiesta di accoppiamento inviata. Approvala sul dispositivo remoto!"
-
-#: src/gtk/devices_view.cpp src/gtk/messages_view.cpp
-msgid "Could not reach the Tether daemon."
-msgstr "Impossibile raggiungere il daemon di Tether."
 
 #: src/gtk/devices_view.cpp
 msgid "Pairing… confirm the prompt on the iPhone."

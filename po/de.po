@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: tether\n"
 "Report-Msgid-Bugs-To: zack@bartel.com\n"
-"POT-Creation-Date: 2026-09-10 09:49-0700\n"
+"POT-Creation-Date: 2026-09-10 22:16-0700\n"
 "PO-Revision-Date: 2026-08-22\n"
 "Last-Translator: Tether project\n"
 "Language-Team: German\n"
@@ -1556,6 +1556,14 @@ msgstr "Unbekannte Anrufaktion."
 msgid "Not a DTMF sequence."
 msgstr "Keine DTMF-Folge."
 
+#: src/core/src/net.cpp src/gtk/devices_view.cpp
+msgid "Bluetooth is unavailable on this machine."
+msgstr "Bluetooth ist auf diesem Rechner nicht verfügbar."
+
+#: src/core/src/net.cpp
+msgid "Not an AirPods device."
+msgstr "Das ist kein AirPods-Gerät."
+
 #: src/core/src/net.cpp
 msgid "Unknown listening mode."
 msgstr "Unbekannter Hörmodus."
@@ -1772,10 +1780,6 @@ msgid "Not connected yet."
 msgstr "Noch nicht verbunden."
 
 #: src/gtk/devices_view.cpp
-msgid "Bluetooth is unavailable on this machine."
-msgstr "Bluetooth ist auf diesem Rechner nicht verfügbar."
-
-#: src/gtk/devices_view.cpp
 msgid "Scanning for nearby devices..."
 msgstr "Suche nach Geräten in der Nähe..."
 
@@ -1794,6 +1798,18 @@ msgstr "Adaptiv"
 #: src/gtk/devices_view.cpp
 msgid "Noise Cancellation"
 msgstr "Geräuschunterdrückung"
+
+#: src/gtk/devices_view.cpp src/gtk/messages_view.cpp
+msgid "Could not reach the Tether daemon."
+msgstr "Der Tether-Daemon war nicht erreichbar."
+
+#: src/gtk/devices_view.cpp
+msgid "Disconnect"
+msgstr "Trennen"
+
+#: src/gtk/devices_view.cpp
+msgid "Connect"
+msgstr "Verbinden"
 
 #: src/gtk/devices_view.cpp
 msgid "Tether is not managing the AirPods, so another program can use them."
@@ -1887,10 +1903,6 @@ msgstr "Kopplungsanfrage wird gesendet..."
 msgid "Pair request sent. Approve on remote device!"
 msgstr ""
 "Kopplungsanfrage gesendet. Bestätigen Sie sie auf dem entfernten Gerät!"
-
-#: src/gtk/devices_view.cpp src/gtk/messages_view.cpp
-msgid "Could not reach the Tether daemon."
-msgstr "Der Tether-Daemon war nicht erreichbar."
 
 #: src/gtk/devices_view.cpp
 msgid "Pairing… confirm the prompt on the iPhone."

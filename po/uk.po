@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: tether\n"
 "Report-Msgid-Bugs-To: zack@bartel.com\n"
-"POT-Creation-Date: 2026-09-10 09:49-0700\n"
+"POT-Creation-Date: 2026-09-10 22:16-0700\n"
 "PO-Revision-Date: 2026-08-23\n"
 "Last-Translator: Tether project\n"
 "Language-Team: Ukrainian\n"
@@ -1533,6 +1533,14 @@ msgstr "Невідома дія з викликом."
 msgid "Not a DTMF sequence."
 msgstr "Це не послідовність DTMF."
 
+#: src/core/src/net.cpp src/gtk/devices_view.cpp
+msgid "Bluetooth is unavailable on this machine."
+msgstr "Bluetooth недоступний на цій машині."
+
+#: src/core/src/net.cpp
+msgid "Not an AirPods device."
+msgstr "Це не пристрій AirPods."
+
 #: src/core/src/net.cpp
 msgid "Unknown listening mode."
 msgstr "Невідомий режим прослуховування."
@@ -1749,10 +1757,6 @@ msgid "Not connected yet."
 msgstr "Ще не під'єднано."
 
 #: src/gtk/devices_view.cpp
-msgid "Bluetooth is unavailable on this machine."
-msgstr "Bluetooth недоступний на цій машині."
-
-#: src/gtk/devices_view.cpp
 msgid "Scanning for nearby devices..."
 msgstr "Пошук пристроїв поблизу..."
 
@@ -1771,6 +1775,18 @@ msgstr "Адаптивний"
 #: src/gtk/devices_view.cpp
 msgid "Noise Cancellation"
 msgstr "Шумозаглушення"
+
+#: src/gtk/devices_view.cpp src/gtk/messages_view.cpp
+msgid "Could not reach the Tether daemon."
+msgstr "Не вдалося зв'язатися з демоном Tether."
+
+#: src/gtk/devices_view.cpp
+msgid "Disconnect"
+msgstr "Від'єднати"
+
+#: src/gtk/devices_view.cpp
+msgid "Connect"
+msgstr "Під'єднати"
 
 #: src/gtk/devices_view.cpp
 msgid "Tether is not managing the AirPods, so another program can use them."
@@ -1861,10 +1877,6 @@ msgstr "Надсилання запиту на створення пари..."
 msgid "Pair request sent. Approve on remote device!"
 msgstr ""
 "Запит на створення пари надіслано. Підтвердьте його на віддаленому пристрої!"
-
-#: src/gtk/devices_view.cpp src/gtk/messages_view.cpp
-msgid "Could not reach the Tether daemon."
-msgstr "Не вдалося зв'язатися з демоном Tether."
 
 #: src/gtk/devices_view.cpp
 msgid "Pairing… confirm the prompt on the iPhone."
