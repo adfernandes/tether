@@ -193,21 +193,35 @@ TEST(AirPods, TreatsTheBatteryStatusAsABitmask) {
 }
 
 TEST(AirPods, ParsesTheConnectedDeviceList) {
-    // Two hosts: this machine, then an iPhone sitting idle. Addresses are stored
-    // least-significant byte first.
-    const std::vector<uint8_t> packet = {0x04, 0x00, 0x04, 0x00, 0x2e, 0x00, 0x02, 0x9c, 0x52, 0xaf, 0x3c, 0xf2,
-                                         0xac, 0x01, 0x03, 0xf3, 0x6a, 0x30, 0xc8, 0x71, 0x81, 0x02, 0x15};
+    // Two hosts: this machine, then an iPhone sitting idle. The count is at offset 8
+    // and addresses are in display order.
+    const std::vector<uint8_t> packet = {0x04, 0x00, 0x04, 0x00, 0x2e, 0x00, 0x00, 0x00, 0x02,
+                                         0xac, 0xf2, 0x3c, 0xaf, 0x52, 0x9c, 0x00, 0x03,
+                                         0x60, 0x57, 0xc8, 0x30, 0x6a, 0xf7, 0x01, 0x15};
     auto peers = parse_connected_devices(packet.data(), packet.size());
     ASSERT_TRUE(peers.has_value());
     ASSERT_EQ(peers->size(), 2u);
     EXPECT_EQ((*peers)[0].address, "AC:F2:3C:AF:52:9C");
     EXPECT_EQ((*peers)[0].state, 0x03);
-    EXPECT_FALSE((*peers)[0].taking_over());
-    EXPECT_EQ((*peers)[1].address, "81:71:C8:30:6A:F3");
+    EXPECT_EQ((*peers)[1].address, "60:57:C8:30:6A:F7");
     // 0x15 is an iPhone sitting there doing nothing, which is the state this machine
     // claims the buds out of. Reading it as "taken" means never claiming at all.
     EXPECT_FALSE((*peers)[1].taking_over());
     EXPECT_FALSE((*peers)[1].active());
+
+    // Misreading the layout makes this machine's own entry a peer holding the buds.
+    const auto summary = summarize_peers(*peers, "AC:F2:3C:AF:52:9C");
+    EXPECT_FALSE(summary.taking_over);
+    EXPECT_FALSE(summary.active);
+
+    // Captured 2026-09-10 from AirPods Pro 3 with only this machine attached.
+    const std::vector<uint8_t> alone = {
+        0x04, 0x00, 0x04, 0x00, 0x2e, 0x00, 0x01, 0x00, 0x01, 0xac, 0xf2, 0x3c, 0xaf, 0x52, 0x9c, 0x02, 0x02};
+    auto only_us = parse_connected_devices(alone.data(), alone.size());
+    ASSERT_TRUE(only_us.has_value());
+    ASSERT_EQ(only_us->size(), 1u);
+    EXPECT_EQ((*only_us)[0].address, "AC:F2:3C:AF:52:9C");
+    EXPECT_EQ((*only_us)[0].state, 0x02);
 
     // A truncated list is not a list.
     EXPECT_FALSE(parse_connected_devices(packet.data(), packet.size() - 1).has_value());
@@ -243,14 +257,41 @@ TEST(AirPods, SummarisesPeersWithoutCountingItself) {
 }
 
 TEST(AirPods, ParsesTheAudioSource) {
-    // Here the address is not reversed.
-    const std::vector<uint8_t> packet = {0x04, 0x00, 0x04, 0x00, 0x0e, 0x00, 0x81, 0x71, 0xc8, 0x30, 0x6a, 0xf3, 0x01};
+    // Here the address is least-significant byte first.
+    const std::vector<uint8_t> packet = {0x04, 0x00, 0x04, 0x00, 0x0e, 0x00, 0xf7, 0x6a, 0x30, 0xc8, 0x57, 0x60, 0x01};
     auto event = parse_audio_source(packet.data(), packet.size());
     ASSERT_TRUE(event.has_value());
-    EXPECT_EQ(event->address, "81:71:C8:30:6A:F3");
+    EXPECT_EQ(event->address, "60:57:C8:30:6A:F7");
     EXPECT_EQ(event->source, AudioSource::Call);
 
     EXPECT_FALSE(parse_audio_source(packet.data(), packet.size() - 1).has_value());
+}
+
+TEST(AirPods, PausesForAPhoneCallAndResumesAfter) {
+    EXPECT_EQ(call_media_action(false, true, true, false), MediaAction::Pause);
+    EXPECT_EQ(call_media_action(true, true, true, true), MediaAction::None);
+    EXPECT_EQ(call_media_action(true, false, true, true), MediaAction::Resume);
+    // Playback that was already stopped when the call came in stays stopped.
+    EXPECT_EQ(call_media_action(true, false, true, false), MediaAction::None);
+    EXPECT_EQ(call_media_action(false, true, false, false), MediaAction::None);
+    // Switching handoff off during the call still gives the music back.
+    EXPECT_EQ(call_media_action(true, false, false, true), MediaAction::Resume);
+}
+
+// Measured on AirPods Pro 3: the buds route this machine's stream while the phone still owns
+// them, then hand the route back to the phone within seconds.
+TEST(AirPods, ClaimsWhenPlayingHereWithoutOwningTheBuds) {
+    const std::string local = "AC:F2:3C:AF:52:9C";
+    const AudioSourceEvent here{local, AudioSource::Media};
+    EXPECT_TRUE(claims_for_playback(here, local, false, false));
+    EXPECT_FALSE(claims_for_playback(here, local, true, false));
+    // No verdict yet: the opening claim covers a new session.
+    EXPECT_FALSE(claims_for_playback(here, local, std::nullopt, false));
+    // Taking the buds off a phone call is the one thing this must never do.
+    EXPECT_FALSE(claims_for_playback(here, local, false, true));
+    EXPECT_FALSE(claims_for_playback({"60:57:C8:30:6A:F7", AudioSource::Media}, local, false, false));
+    EXPECT_FALSE(claims_for_playback({local, AudioSource::None}, local, false, false));
+    EXPECT_FALSE(claims_for_playback(here, "", false, false));
 }
 
 TEST(AirPods, OwnershipFollowsThePeerTakingTheBuds) {

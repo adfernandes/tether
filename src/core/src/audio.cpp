@@ -6,12 +6,15 @@
 #include <glib.h>
 #include <sstream>
 #include <thread>
+#include <vector>
 
 namespace tether::audio {
 
     namespace {
 
         constexpr int POLL_INTERVAL_MS = 200;
+        // HACK: Between switching a card off and back on, so the audio server finishes tearing it down.
+        constexpr int PROFILE_SETTLE_MS = 2000;
 
         std::string trimmed(const std::string& text) {
             const size_t begin = text.find_first_not_of(" \t\r\n");
@@ -41,6 +44,14 @@ namespace tether::audio {
             if (ok)
                 *ok = true;
             return text;
+        }
+
+        std::vector<std::string> tab_fields(const std::string& line) {
+            std::vector<std::string> out;
+            std::istringstream fields(line);
+            for (std::string field; std::getline(fields, field, '\t');)
+                out.push_back(field);
+            return out;
         }
 
     } // namespace
@@ -93,6 +104,77 @@ namespace tether::audio {
         }
         debug::log(DEBUG, "audio: no sink for {} within {}ms", address, timeout_ms);
         return false;
+    }
+
+    // HACK
+    bool bluez_sink_stuck_in(const std::string& short_sinks,
+                             const std::string& short_inputs,
+                             const std::string& address) {
+        if (address.empty())
+            return false;
+        const std::string prefix = sink_prefix(address);
+        std::string index;
+        std::istringstream sinks(short_sinks);
+        for (std::string line; std::getline(sinks, line);) {
+            // index<TAB>name<TAB>driver<TAB>format<TAB>state
+            const auto fields = tab_fields(line);
+            if (fields.size() < 5 || fields[1].rfind(prefix, 0) != 0)
+                continue;
+            if (trimmed(fields[4]) != "SUSPENDED")
+                return false;
+            index = fields[0];
+            break;
+        }
+        if (index.empty())
+            return false;
+        std::istringstream inputs(short_inputs);
+        for (std::string line; std::getline(inputs, line);) {
+            // index<TAB>sink<TAB>client<TAB>driver<TAB>format
+            const auto fields = tab_fields(line);
+            if (fields.size() >= 2 && fields[1] == index)
+                return true;
+        }
+        return false;
+    }
+
+    std::string active_profile_in(const std::string& cards, const std::string& card) {
+        constexpr std::string_view ACTIVE = "Active Profile: ";
+        bool in_card = false;
+        std::istringstream lines(cards);
+        for (std::string line; std::getline(lines, line);) {
+            const std::string text = trimmed(line);
+            if (text.rfind("Card #", 0) == 0)
+                in_card = false;
+            else if (text == "Name: " + card)
+                in_card = true;
+            else if (in_card && text.rfind(ACTIVE, 0) == 0)
+                return text.substr(ACTIVE.size());
+        }
+        return {};
+    }
+
+    // HACK
+    bool bluez_sink_stuck(const std::string& address) {
+        if (address.empty())
+            return false;
+        return bluez_sink_stuck_in(run("pactl list short sinks"), run("pactl list short sink-inputs"), address);
+    }
+
+    // HACK
+    bool restart_bluez_card(const std::string& address) {
+        if (address.empty())
+            return false;
+        const std::string card = "bluez_card." + sink_prefix(address).substr(sizeof("bluez_output.") - 1);
+        const std::string profile = active_profile_in(run("pactl list cards"), card);
+        if (profile.empty() || profile == "off")
+            return false;
+        bool ok = false;
+        run(("pactl set-card-profile " + card + " off").c_str(), &ok);
+        if (!ok)
+            return false;
+        std::this_thread::sleep_for(std::chrono::milliseconds(PROFILE_SETTLE_MS));
+        run(("pactl set-card-profile " + card + " " + profile).c_str(), &ok);
+        return ok;
     }
 
 } // namespace tether::audio
