@@ -69,6 +69,8 @@ namespace tether::ui {
             GtkWidget* lbl_airpods_apple_id = nullptr;
             GtkWidget* airpods_mode_buttons[4] = {nullptr, nullptr, nullptr, nullptr};
             bool airpods_syncing = false;
+            GtkWidget* btn_airpods_connect = nullptr;
+            bool airpods_connecting = false;
 
             GtkWidget* lbl_bt_name = nullptr;
             GtkWidget* bt_setup_box = nullptr;
@@ -272,6 +274,21 @@ namespace tether::ui {
             daemon_send({{"command", "bt_airpods_mode"}, {"mode", AIRPODS_MODES[GPOINTER_TO_INT(data)].wire}});
         }
 
+        void on_airpods_connect_click(GtkWidget* button, gpointer) {
+            const nlohmann::json* device = find_bt_device(g_devices.selected_bt_address);
+            if (!device)
+                return;
+            if (!daemon_send({{"command", "bt_airpods_connect"},
+                              {"address", g_devices.selected_bt_address},
+                              {"connect", !device->value("connected", false)}})) {
+                set_status_main(_("Could not reach the Tether daemon."));
+                return;
+            }
+            // Held until the result, so a slow Connect is not sent twice.
+            g_devices.airpods_connecting = true;
+            gtk_widget_set_sensitive(button, FALSE);
+        }
+
         void update_airpods_pane() {
             const nlohmann::json& airpods = g_devices.bt_airpods;
             const bool managed = g_devices.bt_status.value("airpods_enabled", false);
@@ -283,6 +300,12 @@ namespace tether::ui {
                      !managed         ? ""
                      : levels.empty() ? _("Reading battery\u2026")
                                       : levels);
+
+            // bluez link action, so it works whether or not tether manages the buds
+            const nlohmann::json* device = find_bt_device(g_devices.selected_bt_address);
+            gtk_button_set_label(GTK_BUTTON(g_devices.btn_airpods_connect),
+                                 device && device->value("connected", false) ? _("Disconnect") : _("Connect"));
+            gtk_widget_set_sensitive(g_devices.btn_airpods_connect, device && !g_devices.airpods_connecting);
 
             const std::string current = json_string(airpods, "anc");
             g_devices.airpods_syncing = true;
@@ -840,6 +863,7 @@ namespace tether::ui {
 
     void devices_view_handle_disconnect() {
         set_bt_progress("");
+        g_devices.airpods_connecting = false;
         g_devices.send_queue.clear();
         g_devices.send_batch_total = 0;
         g_devices.send_failed = 0;
@@ -1363,6 +1387,13 @@ namespace tether::ui {
                 new std::string(event.value("code", "")));
             return true;
         }
+        if (command == "bt_airpods_connect_result") {
+            g_devices.airpods_connecting = false;
+            if (!event.value("success", false))
+                set_status_main(event.value("message", ""));
+            update_right_pane();
+            return true;
+        }
         if (command == "bt_pair_progress") {
             set_bt_progress(event.value("step", "") + "  " + event.value("detail", ""));
             return true;
@@ -1494,6 +1525,11 @@ namespace tether::ui {
         gtk_label_set_xalign(GTK_LABEL(g_devices.lbl_airpods_battery), 0.0);
         gtk_style_context_add_class(gtk_widget_get_style_context(g_devices.lbl_airpods_battery), "muted");
         gtk_box_pack_start(GTK_BOX(airpods_box), g_devices.lbl_airpods_battery, FALSE, FALSE, 0);
+
+        g_devices.btn_airpods_connect = gtk_button_new_with_label(_("Connect"));
+        gtk_widget_set_halign(g_devices.btn_airpods_connect, GTK_ALIGN_START);
+        g_signal_connect(g_devices.btn_airpods_connect, "clicked", G_CALLBACK(on_airpods_connect_click), nullptr);
+        gtk_box_pack_start(GTK_BOX(airpods_box), g_devices.btn_airpods_connect, FALSE, FALSE, 0);
 
         GtkWidget* lbl_mode_title = gtk_label_new(nullptr);
         gtk_label_set_xalign(GTK_LABEL(lbl_mode_title), 0.0);

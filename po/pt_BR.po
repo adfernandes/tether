@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: tether\n"
 "Report-Msgid-Bugs-To: zack@bartel.com\n"
-"POT-Creation-Date: 2026-09-10 09:49-0700\n"
+"POT-Creation-Date: 2026-09-10 22:16-0700\n"
 "PO-Revision-Date: 2026-08-23\n"
 "Last-Translator: Tether project\n"
 "Language-Team: Brazilian Portuguese\n"
@@ -1538,6 +1538,14 @@ msgstr "Ação de chamada desconhecida."
 msgid "Not a DTMF sequence."
 msgstr "Não é uma sequência DTMF."
 
+#: src/core/src/net.cpp src/gtk/devices_view.cpp
+msgid "Bluetooth is unavailable on this machine."
+msgstr "O Bluetooth está indisponível nesta máquina."
+
+#: src/core/src/net.cpp
+msgid "Not an AirPods device."
+msgstr "Não é um dispositivo AirPods."
+
 #: src/core/src/net.cpp
 msgid "Unknown listening mode."
 msgstr "Modo de escuta desconhecido."
@@ -1754,10 +1762,6 @@ msgid "Not connected yet."
 msgstr "Ainda não conectado."
 
 #: src/gtk/devices_view.cpp
-msgid "Bluetooth is unavailable on this machine."
-msgstr "O Bluetooth está indisponível nesta máquina."
-
-#: src/gtk/devices_view.cpp
 msgid "Scanning for nearby devices..."
 msgstr "Procurando dispositivos por perto..."
 
@@ -1776,6 +1780,18 @@ msgstr "Adaptativo"
 #: src/gtk/devices_view.cpp
 msgid "Noise Cancellation"
 msgstr "Cancelamento de ruído"
+
+#: src/gtk/devices_view.cpp src/gtk/messages_view.cpp
+msgid "Could not reach the Tether daemon."
+msgstr "Não foi possível alcançar o daemon do Tether."
+
+#: src/gtk/devices_view.cpp
+msgid "Disconnect"
+msgstr "Desconectar"
+
+#: src/gtk/devices_view.cpp
+msgid "Connect"
+msgstr "Conectar"
 
 #: src/gtk/devices_view.cpp
 msgid "Tether is not managing the AirPods, so another program can use them."
@@ -1866,10 +1882,6 @@ msgstr "Enviando solicitação de pareamento..."
 #: src/gtk/devices_view.cpp
 msgid "Pair request sent. Approve on remote device!"
 msgstr "Solicitação de pareamento enviada. Aprove no dispositivo remoto!"
-
-#: src/gtk/devices_view.cpp src/gtk/messages_view.cpp
-msgid "Could not reach the Tether daemon."
-msgstr "Não foi possível alcançar o daemon do Tether."
 
 #: src/gtk/devices_view.cpp
 msgid "Pairing… confirm the prompt on the iPhone."

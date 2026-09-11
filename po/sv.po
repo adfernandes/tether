@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: tether\n"
 "Report-Msgid-Bugs-To: zack@bartel.com\n"
-"POT-Creation-Date: 2026-09-10 09:49-0700\n"
+"POT-Creation-Date: 2026-09-10 22:16-0700\n"
 "PO-Revision-Date: 2026-08-23\n"
 "Last-Translator: Tether project\n"
 "Language-Team: Swedish\n"
@@ -937,9 +937,8 @@ msgid ""
 "$XDG_STATE_HOME/tether, or start it with 'systemctl --user start "
 "tetherd.service'.\n"
 msgstr ""
-"Demonen körs inte och gick inte att starta. Se loggen i "
-"$XDG_STATE_HOME/tether, eller starta den med 'systemctl --user start "
-"tetherd.service'.\n"
+"Demonen körs inte och gick inte att starta. Se loggen i $XDG_STATE_HOME/"
+"tether, eller starta den med 'systemctl --user start tetherd.service'.\n"
 
 #: src/cli/main.cpp
 #, c++-format
@@ -1523,6 +1522,14 @@ msgstr "Okänd samtalsåtgärd."
 msgid "Not a DTMF sequence."
 msgstr "Inte en DTMF-sekvens."
 
+#: src/core/src/net.cpp src/gtk/devices_view.cpp
+msgid "Bluetooth is unavailable on this machine."
+msgstr "Bluetooth är otillgängligt på den här maskinen."
+
+#: src/core/src/net.cpp
+msgid "Not an AirPods device."
+msgstr "Det här är inte en AirPods-enhet."
+
 #: src/core/src/net.cpp
 msgid "Unknown listening mode."
 msgstr "Okänt lyssningsläge."
@@ -1736,10 +1743,6 @@ msgid "Not connected yet."
 msgstr "Inte ansluten ännu."
 
 #: src/gtk/devices_view.cpp
-msgid "Bluetooth is unavailable on this machine."
-msgstr "Bluetooth är otillgängligt på den här maskinen."
-
-#: src/gtk/devices_view.cpp
 msgid "Scanning for nearby devices..."
 msgstr "Söker efter enheter i närheten..."
 
@@ -1758,6 +1761,18 @@ msgstr "Adaptivt"
 #: src/gtk/devices_view.cpp
 msgid "Noise Cancellation"
 msgstr "Brusreducering"
+
+#: src/gtk/devices_view.cpp src/gtk/messages_view.cpp
+msgid "Could not reach the Tether daemon."
+msgstr "Kunde inte nå Tether-demonen."
+
+#: src/gtk/devices_view.cpp
+msgid "Disconnect"
+msgstr "Koppla från"
+
+#: src/gtk/devices_view.cpp
+msgid "Connect"
+msgstr "Anslut"
 
 #: src/gtk/devices_view.cpp
 msgid "Tether is not managing the AirPods, so another program can use them."
@@ -1848,10 +1863,6 @@ msgstr "Skickar parkopplingsförfrågan..."
 #: src/gtk/devices_view.cpp
 msgid "Pair request sent. Approve on remote device!"
 msgstr "Parkopplingsförfrågan skickad. Godkänn på fjärrenheten!"
-
-#: src/gtk/devices_view.cpp src/gtk/messages_view.cpp
-msgid "Could not reach the Tether daemon."
-msgstr "Kunde inte nå Tether-demonen."
 
 #: src/gtk/devices_view.cpp
 msgid "Pairing… confirm the prompt on the iPhone."

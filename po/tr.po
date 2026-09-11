@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: tether\n"
 "Report-Msgid-Bugs-To: zack@bartel.com\n"
-"POT-Creation-Date: 2026-09-10 09:49-0700\n"
+"POT-Creation-Date: 2026-09-10 22:16-0700\n"
 "PO-Revision-Date: 2026-08-23\n"
 "Last-Translator: Tether project\n"
 "Language-Team: Turkish\n"
@@ -1521,6 +1521,14 @@ msgstr "Bilinmeyen çağrı işlemi."
 msgid "Not a DTMF sequence."
 msgstr "DTMF dizisi değil."
 
+#: src/core/src/net.cpp src/gtk/devices_view.cpp
+msgid "Bluetooth is unavailable on this machine."
+msgstr "Bu makinede Bluetooth kullanılamıyor."
+
+#: src/core/src/net.cpp
+msgid "Not an AirPods device."
+msgstr "Bu bir AirPods cihazı değil."
+
 #: src/core/src/net.cpp
 msgid "Unknown listening mode."
 msgstr "Bilinmeyen dinleme modu."
@@ -1734,10 +1742,6 @@ msgid "Not connected yet."
 msgstr "Henüz bağlanmadı."
 
 #: src/gtk/devices_view.cpp
-msgid "Bluetooth is unavailable on this machine."
-msgstr "Bu makinede Bluetooth kullanılamıyor."
-
-#: src/gtk/devices_view.cpp
 msgid "Scanning for nearby devices..."
 msgstr "Yakındaki aygıtlar taranıyor..."
 
@@ -1756,6 +1760,18 @@ msgstr "Uyarlanabilir"
 #: src/gtk/devices_view.cpp
 msgid "Noise Cancellation"
 msgstr "Gürültü Engelleme"
+
+#: src/gtk/devices_view.cpp src/gtk/messages_view.cpp
+msgid "Could not reach the Tether daemon."
+msgstr "Tether arka plan hizmetine ulaşılamadı."
+
+#: src/gtk/devices_view.cpp
+msgid "Disconnect"
+msgstr "Bağlantıyı kes"
+
+#: src/gtk/devices_view.cpp
+msgid "Connect"
+msgstr "Bağlan"
 
 #: src/gtk/devices_view.cpp
 msgid "Tether is not managing the AirPods, so another program can use them."
@@ -1844,10 +1860,6 @@ msgstr "Eşleşme isteği gönderiliyor..."
 #: src/gtk/devices_view.cpp
 msgid "Pair request sent. Approve on remote device!"
 msgstr "Eşleşme isteği gönderildi. Uzak aygıtta onaylayın!"
-
-#: src/gtk/devices_view.cpp src/gtk/messages_view.cpp
-msgid "Could not reach the Tether daemon."
-msgstr "Tether arka plan hizmetine ulaşılamadı."
 
 #: src/gtk/devices_view.cpp
 msgid "Pairing… confirm the prompt on the iPhone."

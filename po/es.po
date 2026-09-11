@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: tether\n"
 "Report-Msgid-Bugs-To: zack@bartel.com\n"
-"POT-Creation-Date: 2026-09-10 09:49-0700\n"
+"POT-Creation-Date: 2026-09-10 22:16-0700\n"
 "PO-Revision-Date: 2026-08-22\n"
 "Last-Translator: Tether project\n"
 "Language-Team: Spanish\n"
@@ -1546,6 +1546,14 @@ msgstr "Acción de llamada desconocida."
 msgid "Not a DTMF sequence."
 msgstr "No es una secuencia DTMF."
 
+#: src/core/src/net.cpp src/gtk/devices_view.cpp
+msgid "Bluetooth is unavailable on this machine."
+msgstr "Bluetooth no está disponible en este equipo."
+
+#: src/core/src/net.cpp
+msgid "Not an AirPods device."
+msgstr "No es un dispositivo AirPods."
+
 #: src/core/src/net.cpp
 msgid "Unknown listening mode."
 msgstr "Modo de escucha desconocido."
@@ -1764,10 +1772,6 @@ msgid "Not connected yet."
 msgstr "Aún no conectado."
 
 #: src/gtk/devices_view.cpp
-msgid "Bluetooth is unavailable on this machine."
-msgstr "Bluetooth no está disponible en este equipo."
-
-#: src/gtk/devices_view.cpp
 msgid "Scanning for nearby devices..."
 msgstr "Buscando dispositivos cercanos..."
 
@@ -1786,6 +1790,18 @@ msgstr "Adaptativo"
 #: src/gtk/devices_view.cpp
 msgid "Noise Cancellation"
 msgstr "Cancelación de ruido"
+
+#: src/gtk/devices_view.cpp src/gtk/messages_view.cpp
+msgid "Could not reach the Tether daemon."
+msgstr "No se pudo contactar con el daemon de Tether."
+
+#: src/gtk/devices_view.cpp
+msgid "Disconnect"
+msgstr "Desconectar"
+
+#: src/gtk/devices_view.cpp
+msgid "Connect"
+msgstr "Conectar"
 
 #: src/gtk/devices_view.cpp
 msgid "Tether is not managing the AirPods, so another program can use them."
@@ -1879,10 +1895,6 @@ msgstr "Enviando solicitud de emparejamiento..."
 msgid "Pair request sent. Approve on remote device!"
 msgstr ""
 "Solicitud de emparejamiento enviada. ¡Apruébela en el dispositivo remoto!"
-
-#: src/gtk/devices_view.cpp src/gtk/messages_view.cpp
-msgid "Could not reach the Tether daemon."
-msgstr "No se pudo contactar con el daemon de Tether."
 
 #: src/gtk/devices_view.cpp
 msgid "Pairing… confirm the prompt on the iPhone."

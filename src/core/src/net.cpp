@@ -574,6 +574,27 @@ namespace tether {
         broadcast_local_event(build_bt_status().dump());
     }
 
+    // AirPods only: a manual disconnect of the supervised iPhone would fight its reconnects.
+    static void run_bt_airpods_connect(const std::string& address, bool connect) {
+        bool ok = false;
+        std::string err;
+        if (!bluetooth::g_bluez) {
+            err = _("Bluetooth is unavailable on this machine.");
+        } else {
+            bool airpods = false;
+            for (const auto& device : bluetooth::g_bluez->snapshot().devices)
+                airpods = airpods || (device.address == address && device.looks_like_airpods());
+            if (!airpods)
+                err = _("Not an AirPods device.");
+            else if (connect)
+                ok = bluetooth::connect_device(*bluetooth::g_bluez, address, err);
+            else
+                ok = bluetooth::disconnect_device(*bluetooth::g_bluez, address, err);
+        }
+        broadcast_local_event(
+            nlohmann::json{{"command", "bt_airpods_connect_result"}, {"success", ok}, {"message", err}}.dump());
+    }
+
     nlohmann::json build_bt_threads() {
         nlohmann::json result;
         result["command"] = "bt_threads";
@@ -1031,6 +1052,10 @@ namespace tether {
                     } else if (j.contains("command") && j["command"] == "bt_unpair" && j.contains("address")) {
                         std::string address = j["address"];
                         std::thread([address]() { run_bt_unpair(address); }).detach();
+                    } else if (j.contains("command") && j["command"] == "bt_airpods_connect" && j.contains("address")) {
+                        std::string address = j["address"];
+                        const bool connect = j.value("connect", true);
+                        std::thread([address, connect]() { run_bt_airpods_connect(address, connect); }).detach();
                     } else if (j.contains("command") && j["command"] == "bt_set_device" && j.contains("address")) {
                         auto config = bluetooth::load_config();
                         config.device_address = j["address"];

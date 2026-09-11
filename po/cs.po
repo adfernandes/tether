@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: tether\n"
 "Report-Msgid-Bugs-To: zack@bartel.com\n"
-"POT-Creation-Date: 2026-09-10 09:49-0700\n"
+"POT-Creation-Date: 2026-09-10 22:16-0700\n"
 "PO-Revision-Date: 2026-08-23\n"
 "Last-Translator: Tether project\n"
 "Language-Team: Czech\n"
@@ -940,9 +940,8 @@ msgid ""
 "$XDG_STATE_HOME/tether, or start it with 'systemctl --user start "
 "tetherd.service'.\n"
 msgstr ""
-"Démon neběží a nepodařilo se jej spustit. Zkontrolujte log v "
-"$XDG_STATE_HOME/tether, nebo jej spusťte příkazem 'systemctl --user start "
-"tetherd.service'.\n"
+"Démon neběží a nepodařilo se jej spustit. Zkontrolujte log v $XDG_STATE_HOME/"
+"tether, nebo jej spusťte příkazem 'systemctl --user start tetherd.service'.\n"
 
 #: src/cli/main.cpp
 #, c++-format
@@ -1522,6 +1521,14 @@ msgstr "Neznámá akce hovoru."
 msgid "Not a DTMF sequence."
 msgstr "Není to sekvence DTMF."
 
+#: src/core/src/net.cpp src/gtk/devices_view.cpp
+msgid "Bluetooth is unavailable on this machine."
+msgstr "Bluetooth není na tomto stroji dostupné."
+
+#: src/core/src/net.cpp
+msgid "Not an AirPods device."
+msgstr "Není to zařízení AirPods."
+
 #: src/core/src/net.cpp
 msgid "Unknown listening mode."
 msgstr "Neznámý režim poslechu."
@@ -1737,10 +1744,6 @@ msgid "Not connected yet."
 msgstr "Zatím nepřipojeno."
 
 #: src/gtk/devices_view.cpp
-msgid "Bluetooth is unavailable on this machine."
-msgstr "Bluetooth není na tomto stroji dostupné."
-
-#: src/gtk/devices_view.cpp
 msgid "Scanning for nearby devices..."
 msgstr "Hledání zařízení v okolí..."
 
@@ -1759,6 +1762,18 @@ msgstr "Adaptivní"
 #: src/gtk/devices_view.cpp
 msgid "Noise Cancellation"
 msgstr "Potlačení hluku"
+
+#: src/gtk/devices_view.cpp src/gtk/messages_view.cpp
+msgid "Could not reach the Tether daemon."
+msgstr "Nepodařilo se spojit s démonem Tether."
+
+#: src/gtk/devices_view.cpp
+msgid "Disconnect"
+msgstr "Odpojit"
+
+#: src/gtk/devices_view.cpp
+msgid "Connect"
+msgstr "Připojit"
 
 #: src/gtk/devices_view.cpp
 msgid "Tether is not managing the AirPods, so another program can use them."
@@ -1846,10 +1861,6 @@ msgstr "Odesílání žádosti o spárování..."
 #: src/gtk/devices_view.cpp
 msgid "Pair request sent. Approve on remote device!"
 msgstr "Žádost o spárování odeslána. Schvalte ji na vzdáleném zařízení!"
-
-#: src/gtk/devices_view.cpp src/gtk/messages_view.cpp
-msgid "Could not reach the Tether daemon."
-msgstr "Nepodařilo se spojit s démonem Tether."
 
 #: src/gtk/devices_view.cpp
 msgid "Pairing… confirm the prompt on the iPhone."

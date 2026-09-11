@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: tether 0.2.29\n"
 "Report-Msgid-Bugs-To: zack@bartel.com\n"
-"POT-Creation-Date: 2026-09-10 09:49-0700\n"
+"POT-Creation-Date: 2026-09-10 22:16-0700\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -1365,6 +1365,14 @@ msgstr ""
 msgid "Not a DTMF sequence."
 msgstr ""
 
+#: src/core/src/net.cpp src/gtk/devices_view.cpp
+msgid "Bluetooth is unavailable on this machine."
+msgstr ""
+
+#: src/core/src/net.cpp
+msgid "Not an AirPods device."
+msgstr ""
+
 #: src/core/src/net.cpp
 msgid "Unknown listening mode."
 msgstr ""
@@ -1571,10 +1579,6 @@ msgid "Not connected yet."
 msgstr ""
 
 #: src/gtk/devices_view.cpp
-msgid "Bluetooth is unavailable on this machine."
-msgstr ""
-
-#: src/gtk/devices_view.cpp
 msgid "Scanning for nearby devices..."
 msgstr ""
 
@@ -1592,6 +1596,18 @@ msgstr ""
 
 #: src/gtk/devices_view.cpp
 msgid "Noise Cancellation"
+msgstr ""
+
+#: src/gtk/devices_view.cpp src/gtk/messages_view.cpp
+msgid "Could not reach the Tether daemon."
+msgstr ""
+
+#: src/gtk/devices_view.cpp
+msgid "Disconnect"
+msgstr ""
+
+#: src/gtk/devices_view.cpp
+msgid "Connect"
 msgstr ""
 
 #: src/gtk/devices_view.cpp
@@ -1676,10 +1692,6 @@ msgstr ""
 
 #: src/gtk/devices_view.cpp
 msgid "Pair request sent. Approve on remote device!"
-msgstr ""
-
-#: src/gtk/devices_view.cpp src/gtk/messages_view.cpp
-msgid "Could not reach the Tether daemon."
 msgstr ""
 
 #: src/gtk/devices_view.cpp

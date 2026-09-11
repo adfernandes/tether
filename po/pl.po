@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: tether\n"
 "Report-Msgid-Bugs-To: zack@bartel.com\n"
-"POT-Creation-Date: 2026-09-10 09:49-0700\n"
+"POT-Creation-Date: 2026-09-10 22:16-0700\n"
 "PO-Revision-Date: 2026-08-23\n"
 "Last-Translator: Tether project\n"
 "Language-Team: Polish\n"
@@ -1537,6 +1537,14 @@ msgstr "Nieznana akcja połączenia."
 msgid "Not a DTMF sequence."
 msgstr "To nie jest sekwencja DTMF."
 
+#: src/core/src/net.cpp src/gtk/devices_view.cpp
+msgid "Bluetooth is unavailable on this machine."
+msgstr "Bluetooth jest niedostępny na tej maszynie."
+
+#: src/core/src/net.cpp
+msgid "Not an AirPods device."
+msgstr "To nie jest urządzenie AirPods."
+
 #: src/core/src/net.cpp
 msgid "Unknown listening mode."
 msgstr "Nieznany tryb słuchania."
@@ -1753,10 +1761,6 @@ msgid "Not connected yet."
 msgstr "Jeszcze nie połączono."
 
 #: src/gtk/devices_view.cpp
-msgid "Bluetooth is unavailable on this machine."
-msgstr "Bluetooth jest niedostępny na tej maszynie."
-
-#: src/gtk/devices_view.cpp
 msgid "Scanning for nearby devices..."
 msgstr "Wyszukiwanie urządzeń w pobliżu..."
 
@@ -1775,6 +1779,18 @@ msgstr "Adaptacyjny"
 #: src/gtk/devices_view.cpp
 msgid "Noise Cancellation"
 msgstr "Redukcja szumów"
+
+#: src/gtk/devices_view.cpp src/gtk/messages_view.cpp
+msgid "Could not reach the Tether daemon."
+msgstr "Nie udało się połączyć z demonem Tether."
+
+#: src/gtk/devices_view.cpp
+msgid "Disconnect"
+msgstr "Rozłącz"
+
+#: src/gtk/devices_view.cpp
+msgid "Connect"
+msgstr "Połącz"
 
 #: src/gtk/devices_view.cpp
 msgid "Tether is not managing the AirPods, so another program can use them."
@@ -1863,10 +1879,6 @@ msgstr "Wysyłanie żądania parowania..."
 #: src/gtk/devices_view.cpp
 msgid "Pair request sent. Approve on remote device!"
 msgstr "Wysłano żądanie parowania. Zatwierdź je na zdalnym urządzeniu!"
-
-#: src/gtk/devices_view.cpp src/gtk/messages_view.cpp
-msgid "Could not reach the Tether daemon."
-msgstr "Nie udało się połączyć z demonem Tether."
 
 #: src/gtk/devices_view.cpp
 msgid "Pairing… confirm the prompt on the iPhone."

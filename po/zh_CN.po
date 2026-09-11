@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: tether\n"
 "Report-Msgid-Bugs-To: zack@bartel.com\n"
-"POT-Creation-Date: 2026-09-10 09:49-0700\n"
+"POT-Creation-Date: 2026-09-10 22:16-0700\n"
 "PO-Revision-Date: 2026-08-23\n"
 "Last-Translator: Tether project\n"
 "Language-Team: Simplified Chinese\n"
@@ -1458,6 +1458,14 @@ msgstr "未知的通话操作。"
 msgid "Not a DTMF sequence."
 msgstr "不是 DTMF 序列。"
 
+#: src/core/src/net.cpp src/gtk/devices_view.cpp
+msgid "Bluetooth is unavailable on this machine."
+msgstr "这台机器上蓝牙不可用。"
+
+#: src/core/src/net.cpp
+msgid "Not an AirPods device."
+msgstr "这不是 AirPods 设备。"
+
 #: src/core/src/net.cpp
 msgid "Unknown listening mode."
 msgstr "未知的聆听模式。"
@@ -1669,10 +1677,6 @@ msgid "Not connected yet."
 msgstr "尚未连接。"
 
 #: src/gtk/devices_view.cpp
-msgid "Bluetooth is unavailable on this machine."
-msgstr "这台机器上蓝牙不可用。"
-
-#: src/gtk/devices_view.cpp
 msgid "Scanning for nearby devices..."
 msgstr "正在搜索附近的设备……"
 
@@ -1691,6 +1695,18 @@ msgstr "自适应"
 #: src/gtk/devices_view.cpp
 msgid "Noise Cancellation"
 msgstr "降噪"
+
+#: src/gtk/devices_view.cpp src/gtk/messages_view.cpp
+msgid "Could not reach the Tether daemon."
+msgstr "无法连接到 Tether 守护进程。"
+
+#: src/gtk/devices_view.cpp
+msgid "Disconnect"
+msgstr "断开连接"
+
+#: src/gtk/devices_view.cpp
+msgid "Connect"
+msgstr "连接"
 
 #: src/gtk/devices_view.cpp
 msgid "Tether is not managing the AirPods, so another program can use them."
@@ -1778,10 +1794,6 @@ msgstr "正在发送配对请求……"
 #: src/gtk/devices_view.cpp
 msgid "Pair request sent. Approve on remote device!"
 msgstr "配对请求已发送。请在远程设备上批准！"
-
-#: src/gtk/devices_view.cpp src/gtk/messages_view.cpp
-msgid "Could not reach the Tether daemon."
-msgstr "无法连接到 Tether 守护进程。"
 
 #: src/gtk/devices_view.cpp
 msgid "Pairing… confirm the prompt on the iPhone."
