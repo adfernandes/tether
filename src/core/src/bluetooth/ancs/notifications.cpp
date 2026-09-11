@@ -43,12 +43,9 @@ namespace tether::bluetooth::ancs {
         }
     } // namespace
 
-    Decision NotificationRegistry::classify(const SourceEvent& event, bool initial) const {
+    Decision NotificationRegistry::classify(const SourceEvent& event) const {
         if (event.event == EventId::Removed)
             return Decision::Withdraw;
-
-        if (initial && event.pre_existing())
-            return Decision::Ignore;
 
         if (event.event == EventId::Modified)
             return Decision::Fetch;
@@ -76,6 +73,18 @@ namespace tether::bluetooth::ancs {
     }
 
     void NotificationRegistry::store(const Notification& notification) {
+        for (auto it = notifications_.begin(); it != notifications_.end();) {
+            const Notification& stored = it->second;
+            if (stored.session != session_ && stored.app_id == notification.app_id &&
+                stored.title == notification.title && stored.subtitle == notification.subtitle &&
+                stored.body == notification.body && stored.received == notification.received) {
+                order_.erase(std::remove(order_.begin(), order_.end(), it->first), order_.end());
+                it = notifications_.erase(it);
+            } else {
+                ++it;
+            }
+        }
+
         if (!notifications_.count(notification.uid))
             order_.push_back(notification.uid);
         notifications_[notification.uid] = notification;
@@ -128,7 +137,9 @@ namespace tether::bluetooth::ancs {
         return name;
     }
 
-    bool should_show_desktop_popup(const Notification& notification) { return notification.app_id != APP_ID_MESSAGES; }
+    bool should_show_desktop_popup(const Notification& notification) {
+        return !notification.pre_existing && notification.app_id != APP_ID_MESSAGES;
+    }
 
     std::vector<std::string> icon_candidates(const Notification& notification) {
         std::vector<std::string> out;
