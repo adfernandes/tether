@@ -61,6 +61,9 @@ namespace tether::bluetooth {
         void set_call_handler(CallsFn on_calls);
         void set_calls_enabled(bool enabled);
 
+        // Publishes the call list now if it changed, instead of on the next supervisor tick.
+        void refresh_calls();
+
         bool dial(const std::string& number, std::string& err);
         bool call_action(const std::string& path, const std::string& action, std::string& err);
         bool call_tones(const std::string& tones, std::string& err);

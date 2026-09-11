@@ -14,21 +14,15 @@ TEST(Audio, NamesTheSinkAfterTheAddress) {
 // No address means no sink to look for, and no pactl call.
 TEST(Audio, HasNoSinkWithoutAnAddress) { EXPECT_TRUE(bluez_sink("").empty()); }
 
-// Captured 2026-09-10 after an iPhone call tore down the AirPods transport: the sink
-// stayed suspended while the player kept feeding it.
-TEST(Audio, SeesAStreamStuckOnASuspendedBluetoothSink) {
-    const std::string sinks = "54\talsa_output.pci-0000_c1_00.6.analog-stereo\tPipeWire\ts32le 2ch 48000Hz\tSUSPENDED\n"
-                              "249\tbluez_output.F8_D3_F0_3C_84_4A.1\tPipeWire\ts16le 2ch 48000Hz\tSUSPENDED\n";
-    const std::string inputs = "236\t249\t235\tPipeWire\tfloat32le 2ch 48000Hz\n";
-    EXPECT_TRUE(bluez_sink_stuck_in(sinks, inputs, "F8:D3:F0:3C:84:4A"));
-
-    // Nothing attached: a suspended sink is only idle.
-    EXPECT_FALSE(bluez_sink_stuck_in(sinks, "", "F8:D3:F0:3C:84:4A"));
-    // A stream on another sink is not this one's.
-    EXPECT_FALSE(bluez_sink_stuck_in(sinks, "236\t54\t235\tPipeWire\tfloat32le 2ch 48000Hz\n", "F8:D3:F0:3C:84:4A"));
-    const std::string running = "249\tbluez_output.F8_D3_F0_3C_84_4A.1\tPipeWire\ts16le 2ch 48000Hz\tRUNNING\n";
-    EXPECT_FALSE(bluez_sink_stuck_in(running, inputs, "F8:D3:F0:3C:84:4A"));
-    EXPECT_FALSE(bluez_sink_stuck_in(sinks, inputs, ""));
+// Raw values, not percentages: a percentage round trip loses a step on every handoff.
+TEST(Audio, ReadsARawSinkVolume) {
+    // Captured 2026-09-11 from `pactl get-sink-volume` on PipeWire 1.6.8.
+    EXPECT_EQ(volume_in("Volume: front-left: 45877 /  70% / -9.29 dB,   front-right: 45877 /  70% / -9.29 dB\n"
+                        "        balance 0.00\n"),
+              "45877 45877");
+    EXPECT_EQ(volume_in("Volume: mono: 11453 /  17% / -45.43 dB\n"), "11453");
+    EXPECT_TRUE(volume_in("").empty());
+    EXPECT_TRUE(volume_in("Failure: No such entity\n").empty());
 }
 
 TEST(Audio, ReadsACardsActiveProfile) {
