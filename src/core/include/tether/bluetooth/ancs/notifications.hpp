@@ -24,6 +24,8 @@ namespace tether::bluetooth::ancs {
         bool silent = false;
         bool has_positive_action = false;
         bool has_negative_action = false;
+        // Already on the phone when the subscription came up.
+        bool pre_existing = false;
         uint64_t session = 0;
 
         bool operator==(const Notification&) const = default;
@@ -44,9 +46,7 @@ namespace tether::bluetooth::ancs {
     // should see, so it is never suppressed by having seen the UID before.
     class NotificationRegistry {
     public:
-        // `initial` marks the first subscription of a session, where
-        // pre-existing notifications are the phone's backlog rather than news.
-        Decision classify(const SourceEvent& event, bool initial) const;
+        Decision classify(const SourceEvent& event) const;
 
         void remember(const SourceEvent& event);
         void forget(uint32_t uid);

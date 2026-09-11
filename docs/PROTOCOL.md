@@ -468,7 +468,8 @@ Titles, subtitles and bodies are present when notification content mirroring is 
 which is the default -- the iPhone's own *Settings > Bluetooth > (i) > Show Message
 Notifications* toggle is the consent gate. With it off, only `app_id` and `app_name` are
 populated. Messages notifications (`com.apple.MobileSMS`) are retained but never raise a
-desktop popup, since MAP already delivers those with working read state.
+desktop popup, since MAP already delivers those with working read state. Notifications
+already on the phone when mirroring starts are listed too, but never raise a popup.
 
 Since 0.2.24 `bt_status` also carries `version`, the daemon's own `TETHER_VERSION`. A
 client that finds the field absent, or holding a version other than its own, is talking to

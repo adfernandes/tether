@@ -259,24 +259,26 @@ TEST(AncsSequencer, BoundsTheQueue) {
 
 // --- Delivery rules ------------------------------------------------------
 
-// iOS replays its whole backlog whenever the subscription comes up. Delivering
-// it would turn every reconnect into a burst of desktop popups.
-TEST(AncsNotifications, SkipsPreExistingOnFirstSubscribe) {
+// iOS replays its backlog whenever the subscription comes up, and not in one
+// batch. It belongs in the list, but popping it up would turn every reconnect
+// into a burst of desktop popups.
+TEST(AncsNotifications, ListsPreExistingWithoutAPopup) {
     NotificationRegistry registry;
-    auto pre_existing = event_for(1, EventId::Added, FlagPreExisting);
+    EXPECT_EQ(registry.classify(event_for(1, EventId::Added, FlagPreExisting)), Decision::Fetch);
 
-    EXPECT_EQ(registry.classify(pre_existing, true), Decision::Ignore);
-    EXPECT_EQ(registry.classify(pre_existing, false), Decision::Fetch)
-        << "after the initial sync a pre-existing flag is not a reason to hide it";
+    Notification backlog;
+    backlog.app_id = "com.example.chat";
+    backlog.pre_existing = true;
+    EXPECT_FALSE(should_show_desktop_popup(backlog));
 }
 
 TEST(AncsNotifications, DedupesRepeatedAddedEvents) {
     NotificationRegistry registry;
     auto added = event_for(7);
 
-    EXPECT_EQ(registry.classify(added, false), Decision::Fetch);
+    EXPECT_EQ(registry.classify(added), Decision::Fetch);
     registry.remember(added);
-    EXPECT_EQ(registry.classify(added, false), Decision::Ignore) << "a replay of the same UID is not news";
+    EXPECT_EQ(registry.classify(added), Decision::Ignore) << "a replay of the same UID is not news";
 }
 
 // A modification is a genuine update — a call that became a missed call, a
@@ -286,7 +288,7 @@ TEST(AncsNotifications, NeverSuppressesAModification) {
     auto added = event_for(7);
     registry.remember(added);
 
-    EXPECT_EQ(registry.classify(event_for(7, EventId::Modified), false), Decision::Fetch);
+    EXPECT_EQ(registry.classify(event_for(7, EventId::Modified)), Decision::Fetch);
 }
 
 TEST(AncsNotifications, WithdrawsRemovedNotifications) {
@@ -294,10 +296,10 @@ TEST(AncsNotifications, WithdrawsRemovedNotifications) {
     auto added = event_for(7);
     registry.remember(added);
 
-    EXPECT_EQ(registry.classify(event_for(7, EventId::Removed), false), Decision::Withdraw);
+    EXPECT_EQ(registry.classify(event_for(7, EventId::Removed)), Decision::Withdraw);
 
     registry.forget(7);
-    EXPECT_EQ(registry.classify(added, false), Decision::Fetch) << "the UID is free to be seen again";
+    EXPECT_EQ(registry.classify(added), Decision::Fetch) << "the UID is free to be seen again";
 }
 
 // MAP already delivers these with read state that stays in sync, so an ANCS
@@ -341,5 +343,5 @@ TEST(AncsNotifications, ClearingForgetsEverything) {
 
     registry.clear();
     EXPECT_EQ(registry.size(), 0u);
-    EXPECT_EQ(registry.classify(event_for(1), false), Decision::Fetch);
+    EXPECT_EQ(registry.classify(event_for(1)), Decision::Fetch);
 }

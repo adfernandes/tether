@@ -40,7 +40,6 @@ namespace tether::bluetooth::ancs {
         bool subscribed = false;
 
         std::atomic<bool> ready{false};
-        bool initial_sync = true;
         bool content_enabled = false;
         std::string reason = "Waiting for the iPhone's notification service.";
 
@@ -402,7 +401,7 @@ namespace tether::bluetooth::ancs {
         Decision decision;
         {
             std::lock_guard<std::mutex> lock(registry_mutex);
-            decision = registry.classify(event, initial_sync);
+            decision = registry.classify(event);
             if (decision == Decision::Ignore)
                 registry.remember(event);
             else if (decision == Decision::Withdraw)
@@ -418,6 +417,9 @@ namespace tether::bluetooth::ancs {
         case Decision::Fetch:
             break;
         }
+
+        if (event.pre_existing() && sequencer->queued() >= MAX_QUEUED_REQUESTS / 2)
+            return;
 
         std::vector<NotificationAttributeId> attributes{NotificationAttributeId::AppIdentifier,
                                                         NotificationAttributeId::Date};
@@ -490,6 +492,7 @@ namespace tether::bluetooth::ancs {
         notification.silent = event.silent();
         notification.has_positive_action = event.has_positive_action();
         notification.has_negative_action = event.has_negative_action();
+        notification.pre_existing = event.pre_existing();
         // ANCS dates are the phone's wall clock with no zone, some apps send none at all.
         const int64_t delivered =
             parse_map_timestamp(response.attribute(static_cast<uint8_t>(NotificationAttributeId::Date)));
@@ -537,8 +540,7 @@ namespace tether::bluetooth::ancs {
         // The LE bearer drops and returns constantly, which shows up here as the
         // path alternating with "". That is one session ending, not a different
         // phone: wiping the registry for it would empty the notification list on
-        // every blip, and the phone's replay would then be suppressed as
-        // pre-existing, so nothing would ever come back.
+        // every blip, and iOS does not always replay its backlog to refill it.
         const bool same_device =
             device_path.empty() || state_->last_known_device.empty() || device_path == state_->last_known_device;
         if (!device_path.empty())
@@ -553,9 +555,6 @@ namespace tether::bluetooth::ancs {
         state_->next_verify = 0;
         state_->sequencer->reset();
         state_->in_progress.clear();
-        // A new LE session replays the phone's backlog, so the next batch of
-        // pre-existing notifications is a sync rather than news.
-        state_->initial_sync = true;
         {
             std::lock_guard<std::mutex> lock(state_->registry_mutex);
             if (same_device) {
@@ -643,7 +642,6 @@ namespace tether::bluetooth::ancs {
                 return;
             }
             s->subscribed = true;
-            s->initial_sync = true;
             uint64_t session = 0;
             {
                 std::lock_guard<std::mutex> lock(s->registry_mutex);
@@ -677,11 +675,6 @@ namespace tether::bluetooth::ancs {
             }
             s->handle_source_event(event, now);
         }
-
-        // The phone's backlog arrives immediately after subscribing, so once a
-        // batch has been processed anything later is genuinely new.
-        if (!source.empty())
-            s->initial_sync = false;
 
         s->sequencer->tick(now);
 

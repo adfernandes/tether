@@ -105,15 +105,15 @@ TEST(AncsRegistry, ANewSessionStopsRecycledUidsReadingAsReplays) {
 
     SourceEvent first;
     first.uid = 9;
-    EXPECT_EQ(registry.classify(first, false), Decision::Fetch);
+    EXPECT_EQ(registry.classify(first), Decision::Fetch);
     registry.remember(first);
-    EXPECT_EQ(registry.classify(first, false), Decision::Ignore) << "same session, same uid: a replay";
+    EXPECT_EQ(registry.classify(first), Decision::Ignore) << "same session, same uid: a replay";
 
     registry.begin_session();
 
     SourceEvent recycled;
     recycled.uid = 9; // a different notification, same counter value
-    EXPECT_EQ(registry.classify(recycled, false), Decision::Fetch)
+    EXPECT_EQ(registry.classify(recycled), Decision::Fetch)
         << "a recycled uid from a new session was dropped as a replay";
 }
 
@@ -130,6 +130,36 @@ TEST(AncsRegistry, ANewSessionKeepsWhatIsOnScreen) {
     ASSERT_NE(registry.find(9), nullptr) << "a session change emptied the list";
     EXPECT_EQ(registry.find(9)->session, before) << "the stored copy must keep the session that issued its uid";
     EXPECT_NE(registry.session(), before);
+}
+
+// A reconnect replays the backlog under fresh uids. Without replacing the stale
+// copy, every reconnect would list each notification again.
+TEST(AncsRegistry, AReplayUnderANewSessionReplacesTheStaleCopy) {
+    NotificationRegistry registry;
+    Notification raid = make(9, "com.nianticlabs.pokemongo");
+    raid.title = "Raid Invitation";
+    raid.received = 100;
+    registry.store(raid);
+    Notification card = make(3, "com.apple.Passbook");
+    card.title = "Apple Card";
+    card.received = 100;
+    registry.store(card);
+
+    registry.begin_session();
+
+    Notification replay = raid;
+    replay.uid = 29;
+    registry.store(replay);
+
+    EXPECT_EQ(registry.size(), 2u) << "the replay was listed twice";
+    EXPECT_EQ(registry.find(9), nullptr) << "the copy kept must carry the live uid";
+    EXPECT_NE(registry.find(29), nullptr);
+    EXPECT_NE(registry.find(3), nullptr) << "a different notification from the old session was dropped";
+
+    Notification twin = replay;
+    twin.uid = 30;
+    registry.store(twin);
+    EXPECT_EQ(registry.size(), 3u) << "identical notifications within one session are both real";
 }
 
 TEST(AncsRegistry, RecentIsOrderedByDeliveryTime) {

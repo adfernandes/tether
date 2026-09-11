@@ -567,15 +567,18 @@ int main(int argc, char** argv) {
                 [&notifier](const tether::bluetooth::ancs::Notification& notification) {
                     // Messages notifications are the only side channel that says
                     // which conversation a MAP message belongs to.
-                    if (notification.app_id == tether::bluetooth::ancs::APP_ID_MESSAGES) {
+                    if (!notification.pre_existing && notification.app_id == tether::bluetooth::ancs::APP_ID_MESSAGES) {
                         tether::bluetooth::observe_message_notification(notification.title,
                                                                         notification.subtitle,
                                                                         notification.body,
                                                                         static_cast<int64_t>(std::time(nullptr)));
                     }
 
-                    const std::string otp = tether::otp_extract(notification.title + "\n" + notification.subtitle +
-                                                                "\n" + notification.body);
+                    // A code in the backlog is stale.
+                    std::string otp;
+                    if (!notification.pre_existing)
+                        otp = tether::otp_extract(notification.title + "\n" + notification.subtitle + "\n" +
+                                                  notification.body);
                     tether::otp_publish(otp);
 
                     nlohmann::json event = tether::bluetooth::ancs::to_json(notification);
