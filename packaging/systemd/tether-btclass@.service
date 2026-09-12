@@ -3,8 +3,9 @@
 # bluetoothd resets the class to its own default every time it
 # starts, and when it does, MAP and PBAP stop working with an OBEX error.
 #
-# %i is the adapter, e.g. tether-btclass@hci0.service.
-Description=Set Bluetooth Class of Device to A/V Hands-Free on %i for Tether
+# %i is a hint, not a requirement. Contollers can fail handshake and comes back 
+# under the next free index, so the instance name is wrong while the machine still has exactly one adapter.
+Description=Set Bluetooth Class of Device to A/V Hands-Free for Tether
 Documentation=https://github.com/zackb/tether/blob/main/docs/BLUETOOTH.md
 After=bluetooth.service
 PartOf=bluetooth.service
@@ -13,9 +14,13 @@ PartOf=bluetooth.service
 Type=oneshot
 RemainAfterExit=yes
 # btmgmt epolls its stdin before it runs the command, rejects /dev/null with EPERM.
-ExecStart=/bin/sh -c 'for i in 1 2 3 4 5 6 7 8 9 10; do \
-    echo | btmgmt --index %i class 4 8 >/dev/null 2>&1; \
-    echo | btmgmt --index %i info 2>/dev/null | grep -q "class 0x..0408" && exit 0; \
+ExecStart=/bin/sh -c 'for t in $$(seq 30); do \
+    a=%i; \
+    [ -e /sys/class/bluetooth/$$a ] || a=$$(ls /sys/class/bluetooth 2>/dev/null | head -n1); \
+    if [ -n "$$a" ]; then \
+        echo | btmgmt --index $$a class 4 8 >/dev/null 2>&1; \
+        echo | btmgmt --index $$a info 2>/dev/null | grep -q "class 0x..0408" && exit 0; \
+    fi; \
     sleep 1; \
 done; exit 1'
 TimeoutStartSec=60
