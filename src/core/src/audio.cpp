@@ -12,6 +12,8 @@ namespace tether::audio {
     namespace {
 
         constexpr int POLL_INTERVAL_MS = 200;
+        // A paused player stops feeding its sink in tens of milliseconds.
+        constexpr int SINK_QUIET_POLL_MS = 25;
         // How long a card takes to report a profile it was switched to.
         constexpr int PROFILE_WAIT_MS = 1500;
 
@@ -112,6 +114,30 @@ namespace tether::audio {
         return false;
     }
 
+    bool sink_quiet(const std::string& sink, int timeout_ms) {
+        if (sink.empty())
+            return true;
+        const auto deadline = std::chrono::steady_clock::now() + std::chrono::milliseconds(timeout_ms);
+        while (true) {
+            bool running = false;
+            std::istringstream lines(run("pactl list short sinks"));
+            for (std::string line; std::getline(lines, line);) {
+                if (line.find(sink) == std::string::npos)
+                    continue;
+                // index<TAB>name<TAB>driver<TAB>format<TAB>rate<TAB>state
+                running = line.rfind("RUNNING") != std::string::npos;
+                break;
+            }
+            if (!running)
+                return true;
+            if (std::chrono::steady_clock::now() >= deadline)
+                break;
+            std::this_thread::sleep_for(std::chrono::milliseconds(SINK_QUIET_POLL_MS));
+        }
+        debug::log(DEBUG, "audio: {} still running after {}ms", sink, timeout_ms);
+        return false;
+    }
+
     std::string active_profile_in(const std::string& cards, const std::string& card) {
         constexpr std::string_view ACTIVE = "Active Profile: ";
         bool in_card = false;
@@ -161,6 +187,14 @@ namespace tether::audio {
         while (!bluez_sink(address).empty() && std::chrono::steady_clock::now() < deadline)
             std::this_thread::sleep_for(std::chrono::milliseconds(POLL_INTERVAL_MS));
         return profile;
+    }
+
+    bool revive_bluez_card(const std::string& address) {
+        const std::string card = card_name(address);
+        if (active_profile_in(run("pactl list cards"), card) != "off")
+            return false;
+        debug::log(INFO, "audio: {} came back with its profile off; switching A2DP on", card);
+        return restore_bluez_card(address, "a2dp-sink");
     }
 
     bool restore_bluez_card(const std::string& address, const std::string& profile) {

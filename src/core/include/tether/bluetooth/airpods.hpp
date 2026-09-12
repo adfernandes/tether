@@ -126,6 +126,8 @@ namespace tether::bluetooth {
         bool peer_active = false;
         // A peer has a call or media on the buds, held until they have stopped reporting it for a few seconds.
         bool peer_audio = false;
+        bool local_audio = false;
+        std::optional<bool> owns;
         AirPodsBattery battery;
         // Unset until the buds report one. Not every model has the feature.
         std::optional<AncMode> anc;
@@ -172,6 +174,9 @@ namespace tether::bluetooth {
                              std::optional<bool> owns,
                              bool peer_audio);
 
+    // Whether a session that has claimed the buds to validate itself should hand ownership straight back.
+    bool releases_when_idle(bool local_audio, bool peer_present, bool yielded);
+
     // The two registration packets a host sends for every other host in the buds' list, which is
     // what moves it from unvalidated to validated. Empty for an address that will not parse.
     std::vector<uint8_t> tipi_add_device(const std::string& self, const std::string& target);
@@ -182,6 +187,7 @@ namespace tether::bluetooth {
     struct PeerSummary {
         bool taking_over = false;
         bool active = false;
+        bool present = false;
 
         bool operator==(const PeerSummary&) const = default;
     };
