@@ -71,7 +71,7 @@ TEST(Passkey, FormatsSixDigitsWithLeadingZeros) {
 
 TEST(BluetoothConfig, RoundTrips) {
     Config config;
-    config.device_address = "60:57:C8:30:6A:F7";
+    config.device_address = "02:00:00:00:00:01";
     config.auth_strategy = AuthStrategy::ExplicitPair;
     config.ancs_enabled = false;
     config.enabled = false;
@@ -117,7 +117,7 @@ TEST(BluetoothConfig, ClampsTheAwayGraceToAtLeastASecond) {
 // re-dialling a link the user disconnected.
 TEST(BluetoothConfig, SupervisedAddressIsEmptyWhenDisabled) {
     Config config;
-    config.device_address = "60:57:C8:30:6A:F7";
+    config.device_address = "02:00:00:00:00:01";
     EXPECT_EQ(supervised_address(config), config.device_address);
 
     config.enabled = false;

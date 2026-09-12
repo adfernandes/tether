@@ -615,4 +615,29 @@ namespace tether::bluetooth {
         return impl_->preferred_adapter_id;
     }
 
+    bool gatt_link_alive(GDBusConnection* conn, const std::string& characteristic_path) {
+        if (!conn || characteristic_path.empty())
+            return true;
+        GError* error = nullptr;
+        GVariant* reply = g_dbus_connection_call_sync(
+            conn,
+            BLUEZ_NAME,
+            characteristic_path.c_str(),
+            "org.bluez.GattCharacteristic1",
+            "ReadValue",
+            g_variant_new("(@a{sv})", g_variant_new_array(G_VARIANT_TYPE("{sv}"), nullptr, 0)),
+            nullptr,
+            G_DBUS_CALL_FLAGS_NONE,
+            2000,
+            nullptr,
+            &error);
+        if (reply) {
+            g_variant_unref(reply);
+            return true;
+        }
+        const bool down = error && std::string(error->message).find("Not connected") != std::string::npos;
+        g_clear_error(&error);
+        return !down;
+    }
+
 } // namespace tether::bluetooth

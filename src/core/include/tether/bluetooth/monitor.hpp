@@ -64,4 +64,7 @@ namespace tether::bluetooth {
     std::optional<bool> probe_secure_connections(const std::string& adapter_id,
                                                  std::chrono::milliseconds timeout = std::chrono::seconds(1));
 
+    // Whether the ATT link under a GATT characteristic is up.
+    bool gatt_link_alive(GDBusConnection* conn, const std::string& characteristic_path);
+
 } // namespace tether::bluetooth

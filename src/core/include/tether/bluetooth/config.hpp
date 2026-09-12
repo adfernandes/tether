@@ -26,7 +26,7 @@ namespace tether::bluetooth {
 
     // Persisted at ~/.config/tether/bluetooth.json.
     struct Config {
-        // Address of the selected iPhone, e.g. "81:71:C8:30:6A:F3".
+        // Address of the selected iPhone, e.g. "02:00:00:00:00:04".
         std::string device_address;
         AuthStrategy auth_strategy = AuthStrategy::ConnectFirst;
         // Whether to mirror notifications. Dual bond turns it on; nothing else writes it but the user

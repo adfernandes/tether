@@ -9,17 +9,17 @@ using namespace tether::bluetooth;
 
 TEST(BtDiagnostics, RedactsBareAddress) {
     Redactor r;
-    EXPECT_EQ(r.text("connecting to 60:57:C8:30:6A:F7"), "connecting to <address-1>");
+    EXPECT_EQ(r.text("connecting to 02:00:00:00:00:01"), "connecting to <address-1>");
 }
 
 TEST(BtDiagnostics, RedactsDeviceNodeInObjectPath) {
     Redactor r;
-    EXPECT_EQ(r.text("/org/bluez/hci0/dev_60_57_C8_30_6A_F7"), "/org/bluez/hci0/dev_<address-1>");
+    EXPECT_EQ(r.text("/org/bluez/hci0/dev_02_00_00_00_00_01"), "/org/bluez/hci0/dev_<address-1>");
 }
 
 TEST(BtDiagnostics, SameDeviceGetsSamePlaceholderAcrossSpellings) {
     Redactor r;
-    const std::string out = r.text("dev_60_57_C8_30_6A_F7 is 60:57:c8:30:6a:f7");
+    const std::string out = r.text("dev_02_00_00_00_00_01 is 02:00:00:00:00:01");
     EXPECT_EQ(out, "dev_<address-1> is <address-1>");
 }
 
@@ -60,8 +60,8 @@ TEST(BtDiagnostics, LeavesAGenericDeviceNameAlone) {
 // one placeholder rather than being half-eaten by the patterns.
 TEST(BtDiagnostics, AnAliasWinsOverThePatternsInsideIt) {
     Redactor r;
-    r.hide("Zack 60:57:C8:30:6A:F7", "name");
-    EXPECT_EQ(r.text("connecting  Zack 60:57:C8:30:6A:F7"), "connecting  <name-1>");
+    r.hide("Zack 02:00:00:00:00:01", "name");
+    EXPECT_EQ(r.text("connecting  Zack 02:00:00:00:00:01"), "connecting  <name-1>");
 }
 
 TEST(BtDiagnostics, LeavesTimestampsAndErrorCodesAlone) {
@@ -104,7 +104,7 @@ TEST(BtDiagnostics, DropsContentKeysRatherThanRedactingThem) {
         {"body", "meet me at the usual place"},
         {"sender", "Jane"},
         {"name", "Jane's iPhone"},
-        {"address", "60:57:C8:30:6A:F7"},
+        {"address", "02:00:00:00:00:01"},
     };
 
     const nlohmann::json out = r.value(in);
@@ -169,14 +169,14 @@ TEST(BtDiagnostics, TimelineIsBounded) {
 TEST(BtDiagnostics, ReportCarriesNoAddressOrContent) {
     clear_diagnostic_timeline();
     record_diagnostic_event({{"command", "bt_connection_changed"},
-                             {"link_reason", "Connecting to 60:57:C8:30:6A:F7"},
+                             {"link_reason", "Connecting to 02:00:00:00:00:01"},
                              {"map_open", false}});
 
     const nlohmann::json status = {{"adapters", {{{"address", "AA:BB:CC:DD:EE:FF"}, {"name", "someone-laptop"}}}}};
-    const nlohmann::json connection = {{"link_reason", "no route to 60:57:C8:30:6A:F7"}};
+    const nlohmann::json connection = {{"link_reason", "no route to 02:00:00:00:00:01"}};
 
     const std::string dumped = build_diagnostics(status, connection).dump();
-    EXPECT_EQ(dumped.find("60:57:C8:30:6A:F7"), std::string::npos);
+    EXPECT_EQ(dumped.find("02:00:00:00:00:01"), std::string::npos);
     EXPECT_EQ(dumped.find("AA:BB:CC:DD:EE:FF"), std::string::npos);
     EXPECT_EQ(dumped.find("someone-laptop"), std::string::npos);
 }
