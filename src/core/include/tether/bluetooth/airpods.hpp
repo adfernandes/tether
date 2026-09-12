@@ -35,9 +35,8 @@ namespace tether::bluetooth {
     const char* to_string(AncMode mode);
     std::optional<AncMode> anc_mode_from_string(const std::string& name);
 
-    // Ownership state of one host attached to the buds, the `B` field of a
-    // connected-devices notification. The owner carries bit 0x02 on every model measured:
-    // an iPhone idles at 0x15 and owns at 0x17 on some buds, 0x05 and 0x07 on others.
+    // Ownership state of one host attached to the buds, the `B` field of a connected-devices
+    // notification. **Bit 0x02 is the owner**.
     inline constexpr uint8_t AAP_PEER_OWNER = 0x02;
     inline constexpr uint8_t AAP_PEER_ENGAGED = 0x10;
     // Connected and idle. An iPhone sits here for as long as it is paired and doing
@@ -52,10 +51,10 @@ namespace tether::bluetooth {
         uint8_t role = 0;
         uint8_t state = 0;
 
-        // Owns the buds, which is not the same as using them: an iPhone keeps the bit after a call.
         bool active() const { return (state & AAP_PEER_OWNER) != 0; }
-        // Escalating towards taking the buds, or holding them, on buds that report 0x10 and up.
-        // Claiming against this leaves the host contested and the firmware closes the link.
+        // Escalating towards taking the buds, on the models that report 0x10 and up. Claiming
+        // against this leaves the host contested and the firmware closes the link. Owning is
+        // deliberately not part of it: an owner that has finished is what a reclaim claims from.
         bool taking_over() const { return state >= AAP_PEER_ENGAGED && state != AAP_PEER_PASSIVE; }
 
         bool operator==(const AapPeer&) const = default;
@@ -135,7 +134,8 @@ namespace tether::bluetooth {
         // Written for display, shown verbatim.
         std::string reason;
 
-        // A peer owns the buds and is playing through them: what handoff yields to.
+        // A peer owns the buds and is playing through them: what handoff yields to. Ownership
+        // alone is not enough, because the phone keeps it until another host claims.
         bool peer_busy() const { return peer_active && peer_audio; }
 
         bool operator==(const AirPodsState&) const = default;
@@ -171,6 +171,11 @@ namespace tether::bluetooth {
                              const std::string& local,
                              std::optional<bool> owns,
                              bool peer_audio);
+
+    // The two registration packets a host sends for every other host in the buds' list, which is
+    // what moves it from unvalidated to validated. Empty for an address that will not parse.
+    std::vector<uint8_t> tipi_add_device(const std::string& self, const std::string& target);
+    std::vector<uint8_t> tipi_media_info(const std::string& self, const std::string& target);
 
     // Whether any host other than `local` is engaged with the buds, or actively
     // holding them. A machine's own entry is never a peer.
