@@ -24,6 +24,11 @@ namespace tether::audio {
     // empty when nothing was switched.
     std::string release_bluez_card(const std::string& address);
 
+    // Switches a Bluetooth card off `off` and back onto A2DP. The audio server saves the profile
+    // a handoff switched off and restores it on the next connect, so buds can arrive with no sink
+    // at all and nothing to play through. True when one was switched back on.
+    bool revive_bluez_card(const std::string& address);
+
     // Switches the card back to `profile`, which builds a new sink under a new index. False when
     // the card is still not on it after one retry.
     bool restore_bluez_card(const std::string& address, const std::string& profile);
@@ -33,6 +38,11 @@ namespace tether::audio {
 
     // Sets a raw volume from sink_volume() and reads it back. False when it did not take.
     bool set_sink_volume(const std::string& sink, const std::string& volume);
+
+    // Waits for a sink to stop carrying a stream. Switching a card off under a live stream
+    // makes the audio server move it to the speakers, heard as a burst of whatever was
+    // playing. False when it is still running at the deadline.
+    bool sink_quiet(const std::string& sink, int timeout_ms);
 
     // Parsers for `pactl list cards` and `pactl get-sink-volume`, exposed for tests.
     std::string active_profile_in(const std::string& cards, const std::string& card);

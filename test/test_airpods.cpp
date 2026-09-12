@@ -314,6 +314,10 @@ TEST(AirPods, SummarisesPeersWithoutCountingItself) {
 
     // Without a local address every entry counts, which is the safe way round.
     EXPECT_TRUE(summarize_peers(peers, "").active);
+    // `present` errs the other way: with no local address there is no peer to hand the buds to.
+    EXPECT_TRUE(summarize_peers(peers, "AC:F2:3C:AF:52:9C").present);
+    EXPECT_FALSE(summarize_peers(peers, "").present);
+    EXPECT_FALSE(summarize_peers({{"AC:F2:3C:AF:52:9C", 0x02, 0x02}}, "AC:F2:3C:AF:52:9C").present);
 }
 
 TEST(AirPods, ParsesTheAudioSource) {
@@ -341,6 +345,18 @@ TEST(AirPods, ClaimsWhenPlayingHereWithoutOwningTheBuds) {
     EXPECT_FALSE(claims_for_playback({"60:57:C8:30:6A:F7", AudioSource::Media}, local, false, false));
     EXPECT_FALSE(claims_for_playback({local, AudioSource::None}, local, false, false));
     EXPECT_FALSE(claims_for_playback(here, "", false, false));
+}
+
+// The opening claim validates this host; keeping the buds it took is what stops the phone
+// from routing to them at all. Reported on 0.2.30, issue #85.
+TEST(AirPods, GivesOwnershipBackWhenNothingIsPlayingHere) {
+    EXPECT_TRUE(releases_when_idle(false, true, false));
+    // Playing here is the whole reason to hold them.
+    EXPECT_FALSE(releases_when_idle(true, true, false));
+    // Alone with the buds there is nobody to hand them to.
+    EXPECT_FALSE(releases_when_idle(false, false, false));
+    // Already given up for a call: that release is the handoff's to undo.
+    EXPECT_FALSE(releases_when_idle(false, true, true));
 }
 
 TEST(AirPods, OwnershipFollowsThePeerTakingTheBuds) {

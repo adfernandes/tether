@@ -58,6 +58,8 @@ constexpr int HANDOFF_RECLAIM_ATTEMPTS = 3;
 constexpr int HANDOFF_GUARD_SECONDS = 3;
 // How long to wait for the buds' sink to come back before resuming anything.
 constexpr int SINK_RETURN_TIMEOUT_MS = 8000;
+// MPRIS pause, how long to let the player actually stop feeding sink before switching the card off under it.
+constexpr int SINK_QUIET_TIMEOUT_MS = 300;
 // After a rebuilt Bluetooth sink reappears, time for the audio server to move streams back onto it.
 constexpr int SINK_SETTLE_SECONDS = 1;
 
@@ -316,12 +318,16 @@ int main(int argc, char** argv) {
         }
 
         if (action == tether::bluetooth::HandoffAction::Release) {
-            std::thread([handoff, target, &run_ownership] {
+            const bool streaming = state.local_audio;
+            std::thread([handoff, target, streaming, &run_ownership] {
                 const size_t paused = tether::g_media ? tether::g_media->pause() : 0;
                 const std::string sink = tether::audio::bluez_sink(target);
                 const bool ours = !sink.empty() && tether::audio::default_sink() == sink;
                 const std::string volume = tether::audio::sink_volume(sink);
-                const std::string profile = tether::audio::release_bluez_card(target);
+                if (streaming || paused > 0)
+                    tether::audio::sink_quiet(sink, SINK_QUIET_TIMEOUT_MS);
+                const std::string profile =
+                    (streaming || paused > 0) ? tether::audio::release_bluez_card(target) : std::string{};
                 if (tether::bluetooth::g_airpods)
                     tether::bluetooth::g_airpods->set_ownership(false);
                 debug::log(INFO,
@@ -419,12 +425,17 @@ int main(int argc, char** argv) {
 
     // AirPods battery arrives on its own L2CAP channel, not through BlueZ.
     tether::MediaControl media;
-    tether::bluetooth::EarState last_ear;
+
+    struct {
+        tether::bluetooth::EarState ear;
+        std::optional<bool> owns;
+    } prev;
+
     tether::bluetooth::AirPodsWatcher airpods(
-        [&media, &last_ear, handoff, &native_handoff, &run_ownership](const tether::bluetooth::AirPodsState& state) {
+        [&media, &prev, handoff, &native_handoff, &run_ownership](const tether::bluetooth::AirPodsState& state) {
             const auto config = tether::bluetooth::load_config();
             const auto mode = config.airpods_enabled ? config.airpods_pause : tether::bluetooth::PauseMode::Never;
-            switch (tether::bluetooth::ear_media_action(last_ear, state.ear, mode, media.holding())) {
+            switch (tether::bluetooth::ear_media_action(prev.ear, state.ear, mode, media.holding())) {
             case tether::bluetooth::MediaAction::Pause:
                 if (const size_t paused = media.pause())
                     debug::log(INFO, "airpods: paused {} player(s), a bud came out", paused);
@@ -440,10 +451,18 @@ int main(int argc, char** argv) {
             if (state.address.empty() && !handoff->holding_buds())
                 media.forget();
 
+            // Losing the owner bit is the first sign the phone has taken the buds
+            if (native_handoff.load() && prev.owns.value_or(false) && state.owns == false && state.local_audio &&
+                !handoff->holding_buds()) {
+                if (const size_t paused = media.pause())
+                    debug::log(INFO, "airpods: paused {} player(s), the phone took the buds", paused);
+            }
+            prev.owns = state.owns;
+
             if (native_handoff.load())
                 run_ownership(state);
 
-            last_ear = state.ear;
+            prev.ear = state.ear;
 
             tether::broadcast_local_event(tether::bluetooth::to_json(state).dump());
         });
@@ -546,12 +565,18 @@ int main(int argc, char** argv) {
         }).detach();
     };
 
-    const auto follow_airpods = [&bluez, &airpods, &native_handoff]() {
+    // The buds this callback last saw connected, so the profile check runs on the connect edge.
+    std::string airpods_at;
+    const auto follow_airpods = [&bluez, &airpods, &native_handoff, handoff, &airpods_at]() {
         const auto snapshot = bluez.snapshot();
         const auto* device = tether::bluetooth::find_airpods(snapshot);
         // The buds report this machine back in their own peer list.
         const auto* adapter = tether::bluetooth::preferred_adapter(snapshot, bluez.preferred_adapter_id());
         native_handoff.store(adapter != nullptr && adapter->presents_as_apple());
+        const std::string now_at = device != nullptr ? device->address : std::string{};
+        if (!now_at.empty() && now_at != airpods_at && !handoff->holding_buds())
+            tether::audio::revive_bluez_card(now_at);
+        airpods_at = now_at;
         airpods.set_device(device ? device->address : std::string{},
                            device ? device->name : std::string{},
                            adapter ? adapter->address : std::string{});

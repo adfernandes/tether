@@ -689,6 +689,17 @@ review:
 The claim sent when the session comes up is deliberate: AirPods Pro 2 validates a host by
 itself, Pro 3 never does, and an unvalidated host is dropped at the first pod movement.
 
+**That claim validates the host, it does not entitle it to keep the buds.** Three seconds
+later (`IDLE_RELEASE_MS`) the session hands ownership straight back, unless the buds have
+reported an audio source for *this* machine in the meantime. `releases_when_idle()` is pure
+and tested: give them back when another host is in the list, nothing is playing here and
+the buds were not already yielded for a call. Buds held by a machine that is not using them
+do not appear as an output route on the phone at all, which is what "Linux stole my AirPods
+at boot" is. The way back is the existing claim for local playback: the card profile is
+deliberately left alone here, because tearing the sink down means the next thing the user
+plays goes to the speakers, the buds never report a local audio source, and nothing ever
+claims again.
+
 #### Disconnect handoff
 
 The fallback. When the iPhone has a call and the AirPods are connected to *this machine*,
@@ -3265,3 +3276,79 @@ Not covered: a controller that re-enumerates at runtime with no `bluetoothd` res
 re-runs the unit there, and `bluetoothd` applies its own default class to the new adapter, so
 the class is wrong until `bluetooth.service` restarts. A udev rule tagging adapter `add` with
 `SYSTEMD_WANTS` would close that, and would also remove the manual enable step.
+
+### 2026-09-12 - The buds were taken at boot and never given back
+
+Reported on 0.2.30 against both Pro 2 and Pro 3 (issue #85): after starting the machine, the
+iPhone could not see the AirPods at all, and the only way back was forcing the connection
+from the phone's own Bluetooth menu.
+
+Every session claims ownership five seconds after the channel opens
+(`CLAIM_SETTLE_MS`). The claim is gated on `peer_taking_over` and `yielded` and on nothing
+else -- not on whether this machine has any audio, and not on `airpods_handoff`. An idle
+iPhone sits at `0x15`, which `taking_over()` excludes on purpose, so nothing blocked it. On
+the other side, `ownership_action()` only gives the buds up for a peer that owns them *and*
+has audio on them, so a phone that was merely idle never got them back. The machine held
+ownership from boot until the user intervened.
+
+Not a new failure: the same claim is what took the buds from an iMac mid-media on 2026-09-11
+below. The fix then was the `yielded` flag, which is false on a fresh daemon and on a first
+connect -- exactly the boot case.
+
+The claim itself has to stay, for the Pro 3 validation reason above. What was missing is the
+other half of the arbitration: three seconds after the claim, ownership goes back unless the
+buds have reported an audio source for this machine. `releases_when_idle()` in
+`src/core/src/bluetooth/airpods.cpp`, and `PeerSummary::present` so a session alone with the
+buds keeps them.
+
+Deliberately not touching the card profile on this path, unlike the call handoff. Releasing
+it destroys the sink, and with no bluez sink the next thing the user plays goes to the
+speakers, the buds never report an audio source for this machine, and the claim for local
+playback can never fire. An idle `MediaTransport1` does not stop the phone taking the buds.
+
+**Verified on hardware the same day, Pro 3, twice**: with the phone owning the buds and both
+sides quiet, `claim sent` at opened+5s, verdict `0x01`, `nothing playing here, handing ownership
+back` at +3.003s, verdict `0x00`, phone back to `0x07`. A pod out and back in without closing the
+case left the link up past thirty seconds, so releasing straight after the validation claim does
+**not** cost this host its validation. No gating to `0x10` and above is needed.
+
+Three preconditions silently decline the release, and each one blocked a test run before the
+first success. A peer must be in the buds' host list, or there is nobody to hand them to. Nothing
+may be streaming here -- a *paused* Electron player still holds an uncorked stream and the buds
+still report media for this machine, so such a player has to be quit, not paused. And the phone
+must be quiet, or `peer_busy()` releases at ~0.4s, long before the validation claim is due.
+
+### 2026-09-12 - Four more, from testing the release above
+
+**The release tore the sink down over an idle card.** `release_bluez_card()` ran on every
+handoff. When this machine was not playing, that left no sink, so the next thing the user played
+went to the speakers, the buds never reported an audio source for this machine, and the claim for
+local playback could never fire -- once measured at 3m52s of dead audio. The teardown now needs
+`AirPodsState::local_audio`, the buds' own view of whether they carry this machine's audio.
+`paused > 0` was tried first and is wrong: a browser tab streams with no MPRIS player at all, and
+leaving that running pumps audio into buds just given away, which produced a release/reclaim
+ping-pong every time the phone paused.
+
+**The card teardown raced the pause.** MPRIS `Pause` is a request; the player keeps feeding the
+sink for a moment after it returns, and a card switched off under a live stream has the audio
+server move it to the speakers. `audio::sink_quiet()` waits up to `SINK_QUIET_TIMEOUT_MS` (300)
+for the sink to leave `RUNNING` first. That removed the burst on the call path. The bound is
+short because the buds still have to reach the phone before iOS picks the call's route; it is a
+bounded wait, not a confirmation, and `still running after 300ms` does appear for Electron
+players without being audible.
+
+**Phone media gives no warning, and cannot be fixed here.** `AirPodsState::owns` now carries this
+machine's owner bit from the host list, and losing it pauses MPRIS at once -- 471ms earlier than
+waiting for the release decision. It is not enough. The phone takes the A2DP transport at the
+same instant it takes ownership, so the host-list packet is already past tense and the audio
+server rescues the stream before a D-Bus pause reaches the player. A call is fixable only because
+the call list fires while it is still ringing. The remaining lever is audio-server side: stopping
+PipeWire rescuing streams off a sink that vanishes, PulseAudio's `module-rescue-streams`
+equivalent in WirePlumber's linking policy. Not attempted.
+
+**An `off` profile outlives the daemon.** Listed as unverified under 2026-09-11; it is real and
+survives a reboot. WirePlumber saves the profile a handoff switched off and restores it on the
+next connect, so the buds arrive with no sink and everything plays out of the laptop speakers. A
+fresh daemon has an empty `handoff->released` and restores nothing. `audio::revive_bluez_card()`
+runs on the AirPods connect edge -- not on every BlueZ property change, the check costs a `pactl`
+of its own -- and switches A2DP back on for buds this run did not release.
