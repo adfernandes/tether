@@ -30,10 +30,10 @@ namespace {
     // Two phones, each with a gateway; one is ringing, the other is on a call.
     // Recorded from bluetoothd 5.87 --experimental against a live iPhone.
     constexpr const char* TWO_GATEWAYS = R"({
-      '/org/bluez/hci0/dev_60_57_C8_30_6A_F7': {
-        'org.bluez.Device1': { 'Address': <'60:57:C8:30:6A:F7'>, 'Alias': <'Zack 15 Pro'> }
+      '/org/bluez/hci0/dev_02_00_00_00_00_01': {
+        'org.bluez.Device1': { 'Address': <'02:00:00:00:00:01'>, 'Alias': <'Zack 15 Pro'> }
       },
-      '/org/bluez/hci0/dev_60_57_C8_30_6A_F7/telephony0': {
+      '/org/bluez/hci0/dev_02_00_00_00_00_01/telephony0': {
         'org.bluez.Telephony1': {
           'UUID': <'0000111f-0000-1000-8000-00805f9b34fb'>,
           'State': <'connected'>,
@@ -46,7 +46,7 @@ namespace {
           'InbandRingtone': <false>
         }
       },
-      '/org/bluez/hci0/dev_60_57_C8_30_6A_F7/telephony0/call1': {
+      '/org/bluez/hci0/dev_02_00_00_00_00_01/telephony0/call1': {
         'org.bluez.Call1': {
           'LineIdentification': <'+15555550123'>,
           'Name': <''>,
@@ -101,9 +101,9 @@ TEST(Telephony, ParsesTheGateway) {
     Payload payload(TWO_GATEWAYS);
     const BluezObjects objects = parse_managed_objects(payload.v);
 
-    const Telephony* gw = objects.find_telephony("/org/bluez/hci0/dev_60_57_C8_30_6A_F7");
+    const Telephony* gw = objects.find_telephony("/org/bluez/hci0/dev_02_00_00_00_00_01");
     ASSERT_NE(gw, nullptr);
-    EXPECT_EQ(gw->path, "/org/bluez/hci0/dev_60_57_C8_30_6A_F7/telephony0");
+    EXPECT_EQ(gw->path, "/org/bluez/hci0/dev_02_00_00_00_00_01/telephony0");
     EXPECT_EQ(gw->operator_name, "AT&T");
     EXPECT_EQ(gw->signal, 1);
     EXPECT_EQ(gw->battery, 4);
@@ -121,7 +121,7 @@ TEST(Telephony, ParsesOnlyTheSelectedGatewaysCalls) {
     Payload payload(TWO_GATEWAYS);
     const BluezObjects objects = parse_managed_objects(payload.v);
 
-    const auto calls = objects.calls_for("/org/bluez/hci0/dev_60_57_C8_30_6A_F7/telephony0");
+    const auto calls = objects.calls_for("/org/bluez/hci0/dev_02_00_00_00_00_01/telephony0");
     ASSERT_EQ(calls.size(), 1u);
     EXPECT_EQ(calls[0].number, "+15555550123");
     EXPECT_EQ(calls[0].state, "incoming");
@@ -129,37 +129,37 @@ TEST(Telephony, ParsesOnlyTheSelectedGatewaysCalls) {
     EXPECT_FALSE(calls[0].connected());
 
     EXPECT_TRUE(objects.calls_for("").empty());
-    EXPECT_TRUE(objects.calls_for("/org/bluez/hci0/dev_60_57_C8_30_6A_F7/telephony9").empty());
+    EXPECT_TRUE(objects.calls_for("/org/bluez/hci0/dev_02_00_00_00_00_01/telephony9").empty());
 }
 
 // The gateway path is a prefix of its calls' paths, and BlueZ numbers both per
 // device: telephony1 must not collect telephony10's calls.
 TEST(Telephony, GatewayPathIsMatchedWholeNotAsAPrefix) {
     Payload payload(R"({
-      '/org/bluez/hci0/dev_60_57_C8_30_6A_F7/telephony1/call1': {
+      '/org/bluez/hci0/dev_02_00_00_00_00_01/telephony1/call1': {
         'org.bluez.Call1': { 'State': <'active'> }
       },
-      '/org/bluez/hci0/dev_60_57_C8_30_6A_F7/telephony10/call1': {
+      '/org/bluez/hci0/dev_02_00_00_00_00_01/telephony10/call1': {
         'org.bluez.Call1': { 'State': <'active'> }
       }
     })");
     const BluezObjects objects = parse_managed_objects(payload.v);
-    EXPECT_EQ(objects.calls_for("/org/bluez/hci0/dev_60_57_C8_30_6A_F7/telephony1").size(), 1u);
-    EXPECT_EQ(objects.calls_for("/org/bluez/hci0/dev_60_57_C8_30_6A_F7/telephony10").size(), 1u);
+    EXPECT_EQ(objects.calls_for("/org/bluez/hci0/dev_02_00_00_00_00_01/telephony1").size(), 1u);
+    EXPECT_EQ(objects.calls_for("/org/bluez/hci0/dev_02_00_00_00_00_01/telephony10").size(), 1u);
 }
 
 // The objects exist only under bluetoothd --experimental and only while HFP is
 // connected. Their absence is the normal state, not a parse failure.
 TEST(Telephony, AbsentWhenHandsFreeIsNotConnected) {
     Payload payload(R"({
-      '/org/bluez/hci0/dev_60_57_C8_30_6A_F7': {
-        'org.bluez.Device1': { 'Address': <'60:57:C8:30:6A:F7'> }
+      '/org/bluez/hci0/dev_02_00_00_00_00_01': {
+        'org.bluez.Device1': { 'Address': <'02:00:00:00:00:01'> }
       }
     })");
     const BluezObjects objects = parse_managed_objects(payload.v);
     EXPECT_TRUE(objects.telephony.empty());
     EXPECT_TRUE(objects.calls.empty());
-    EXPECT_EQ(objects.find_telephony("/org/bluez/hci0/dev_60_57_C8_30_6A_F7"), nullptr);
+    EXPECT_EQ(objects.find_telephony("/org/bluez/hci0/dev_02_00_00_00_00_01"), nullptr);
 }
 
 // A gateway that is still bringing up its service level connection is not ready
@@ -229,7 +229,7 @@ TEST(Telephony, WithheldCallerIdIsNotANumber) {
 TEST(Telephony, SerializesCallsForClients) {
     Payload payload(TWO_GATEWAYS);
     const BluezObjects objects = parse_managed_objects(payload.v);
-    const nlohmann::json j = to_json(objects.calls_for("/org/bluez/hci0/dev_60_57_C8_30_6A_F7/telephony0"));
+    const nlohmann::json j = to_json(objects.calls_for("/org/bluez/hci0/dev_02_00_00_00_00_01/telephony0"));
 
     ASSERT_EQ(j.size(), 1u);
     EXPECT_EQ(j[0]["number"], "+15555550123");
@@ -242,7 +242,7 @@ TEST(Telephony, SerializesCallsForClients) {
 TEST(Telephony, SerializesTheGatewayForClients) {
     Payload payload(TWO_GATEWAYS);
     const BluezObjects objects = parse_managed_objects(payload.v);
-    const nlohmann::json j = to_json(*objects.find_telephony("/org/bluez/hci0/dev_60_57_C8_30_6A_F7"));
+    const nlohmann::json j = to_json(*objects.find_telephony("/org/bluez/hci0/dev_02_00_00_00_00_01"));
 
     EXPECT_TRUE(j["available"]);
     EXPECT_EQ(j["operator"], "AT&T");
@@ -258,7 +258,7 @@ namespace {
     constexpr const char* PIPEWIRE_ROOT = R"({
       '/org/pipewire/Telephony/ag1': {
         'org.pipewire.Telephony.AudioGateway1': {
-          'Address': <'60:57:C8:30:6A:F7'>,
+          'Address': <'02:00:00:00:00:01'>,
           'SpeakerVolume': <byte 15>,
           'MicrophoneVolume': <byte 15>
         },
@@ -310,14 +310,14 @@ namespace {
     }
 
     std::unique_ptr<TelephonyClient> client_of(std::vector<std::unique_ptr<TelephonySource>> sources) {
-        return std::make_unique<TelephonyClient>(std::move(sources), "60:57:C8:30:6A:F7");
+        return std::make_unique<TelephonyClient>(std::move(sources), "02:00:00:00:00:01");
     }
 
 } // namespace
 
 TEST(PipewireTelephony, MatchesTheGatewayByAddress) {
     Payload payload(PIPEWIRE_ROOT);
-    const TelephonySnapshot snap = parse_pipewire_telephony(payload.v, "60:57:c8:30:6a:f7");
+    const TelephonySnapshot snap = parse_pipewire_telephony(payload.v, "02:00:00:00:00:01");
 
     EXPECT_EQ(snap.gateway.path, "/org/pipewire/Telephony/ag1") << "address match must be case-insensitive";
     EXPECT_TRUE(snap.gateway.ready()) << "a registered gateway means the service level connection is up";
@@ -328,7 +328,7 @@ TEST(PipewireTelephony, MatchesTheGatewayByAddress) {
 // from it is how the Hang up button goes missing.
 TEST(PipewireTelephony, RootManagerCarriesNoCalls) {
     Payload payload(PIPEWIRE_ROOT);
-    const TelephonySnapshot snap = parse_pipewire_telephony(payload.v, "60:57:C8:30:6A:F7");
+    const TelephonySnapshot snap = parse_pipewire_telephony(payload.v, "02:00:00:00:00:01");
     EXPECT_TRUE(snap.calls.empty());
 }
 
@@ -366,7 +366,7 @@ TEST(PipewireTelephony, UnknownAddressYieldsNoGateway) {
 // their defaults rather than being invented.
 TEST(PipewireTelephony, ReportsNoCellularIndicators) {
     Payload payload(PIPEWIRE_ROOT);
-    const TelephonySnapshot snap = parse_pipewire_telephony(payload.v, "60:57:C8:30:6A:F7");
+    const TelephonySnapshot snap = parse_pipewire_telephony(payload.v, "02:00:00:00:00:01");
 
     EXPECT_TRUE(snap.gateway.operator_name.empty());
     EXPECT_EQ(snap.gateway.signal, 0);
@@ -376,7 +376,7 @@ TEST(PipewireTelephony, ReportsNoCellularIndicators) {
 
 TEST(PipewireTelephony, EmptyPayloadIsNotAFailure) {
     Payload payload("@a{oa{sa{sv}}} {}");
-    const TelephonySnapshot snap = parse_pipewire_telephony(payload.v, "60:57:C8:30:6A:F7");
+    const TelephonySnapshot snap = parse_pipewire_telephony(payload.v, "02:00:00:00:00:01");
     EXPECT_TRUE(snap.gateway.path.empty());
 }
 

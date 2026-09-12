@@ -315,7 +315,7 @@ namespace tether::bluetooth {
 
             bool le_connected() const override {
                 auto device = lookup();
-                return device && device->le_link_up();
+                return device && link_up(*device);
             }
 
             std::string preferred_bearer() const override {
@@ -364,7 +364,7 @@ namespace tether::bluetooth {
                     }
                 }
 
-                if (!device->le_link_up())
+                if (!link_up(*device))
                     set_preferred_bearer("bredr");
                 if (call(device->path, IFACE_DEVICE, "Connect", err))
                     return ConnectResult::Requested;
@@ -502,6 +502,14 @@ namespace tether::bluetooth {
                         return device;
                 }
                 return std::nullopt;
+            }
+
+            // A BR/EDR reconnect sets ServicesResolved again while the stale ANCS
+            // Notifying flag survives, so the inferred LE link is confirmed with a read.
+            bool link_up(const Device& device) const {
+                if (device.le_connected)
+                    return true;
+                return device.le_link_up() && gatt_link_alive(monitor_.connection(), device.gap_name_path);
             }
 
             bool call(const std::string& path,

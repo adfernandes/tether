@@ -22,6 +22,7 @@ namespace tether::bluetooth {
         constexpr const char* IFACE_BEARER_BREDR = "org.bluez.Bearer.BREDR1";
         constexpr const char* IFACE_CHARACTERISTIC = "org.bluez.GattCharacteristic1";
         constexpr const char* UUID_ANCS_NOTIFICATION_SOURCE = "9fbf120d-6301-42d9-8c58-25e699a21dbd";
+        constexpr const char* UUID_GAP_DEVICE_NAME = "00002a00-0000-1000-8000-00805f9b34fb";
 
         bool iequals(const std::string& a, const std::string& b) {
             return a.size() == b.size() &&
@@ -343,6 +344,7 @@ namespace tether::bluetooth {
         const gchar* path = nullptr;
         GVariant* ifaces = nullptr;
         std::vector<std::string> ancs_char_paths;
+        std::vector<std::string> gap_name_paths;
         g_variant_iter_init(&iter, dict);
         while (g_variant_iter_loop(&iter, "{&o@a{sa{sv}}}", &path, &ifaces)) {
             read_adapter(path, ifaces, out);
@@ -353,8 +355,11 @@ namespace tether::bluetooth {
             GVariant* chr = g_variant_lookup_value(ifaces, IFACE_CHARACTERISTIC, G_VARIANT_TYPE("a{sv}"));
             if (!chr)
                 continue;
-            if (iequals(get_string(chr, "UUID"), UUID_ANCS_NOTIFICATION_SOURCE) && get_bool(chr, "Notifying"))
+            const std::string uuid = get_string(chr, "UUID");
+            if (iequals(uuid, UUID_ANCS_NOTIFICATION_SOURCE) && get_bool(chr, "Notifying"))
                 ancs_char_paths.emplace_back(path);
+            else if (iequals(uuid, UUID_GAP_DEVICE_NAME))
+                gap_name_paths.emplace_back(path);
             g_variant_unref(chr);
         }
         g_variant_unref(dict);
@@ -365,6 +370,12 @@ namespace tether::bluetooth {
             for (auto& device : out.devices) {
                 if (char_path.rfind(device.path + "/", 0) == 0)
                     device.ancs_notifying = true;
+            }
+        }
+        for (const auto& char_path : gap_name_paths) {
+            for (auto& device : out.devices) {
+                if (char_path.rfind(device.path + "/", 0) == 0)
+                    device.gap_name_path = char_path;
             }
         }
 

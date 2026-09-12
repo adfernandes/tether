@@ -82,6 +82,7 @@ namespace tether::bluetooth::ancs {
         void unsubscribe();
         void drop_gatt_paths();
         void verify_subscription();
+        bool link_alive() const;
         void handle_source_event(const SourceEvent& event, int64_t now);
         void handle_response(const Request& request, const Response& response, int64_t now);
         std::string app_display_name(const std::string& app_id);
@@ -243,6 +244,10 @@ namespace tether::bluetooth::ancs {
         if (!monitor || !monitor->connection())
             return false;
 
+        // cached tree can accept StartNotify with no link
+        if (!link_alive())
+            return false;
+
         GDBusConnection* conn = monitor->connection();
         bool object_gone = false;
         auto start_notify = [&](const std::string& path) {
@@ -377,12 +382,16 @@ namespace tether::bluetooth::ancs {
             g_variant_unref(reply);
         }
 
-        if (!object_gone && notifying)
+        // Notifying stays set on a cached tree after the LE link drops.
+        const bool link_gone = !object_gone && notifying && !link_alive();
+        if (!object_gone && notifying && !link_gone)
             return;
 
         debug::log(INFO,
                    "ancs: the notification subscription is no longer live ({}), rebuilding it",
-                   object_gone ? "characteristics gone" : "BlueZ cleared Notifying");
+                   object_gone ? "characteristics gone"
+                   : link_gone ? "LE link gone"
+                               : "BlueZ cleared Notifying");
         if (object_gone) {
             drop_gatt_paths();
             set_status(false, "Waiting for the iPhone's notification service.");
@@ -394,6 +403,14 @@ namespace tether::bluetooth::ancs {
         }
         sequencer->reset();
         in_progress.clear();
+    }
+
+    bool AncsClientState::link_alive() const {
+        for (const auto& device : monitor->snapshot().devices) {
+            if (device.path == device_path)
+                return gatt_link_alive(monitor->connection(), device.gap_name_path);
+        }
+        return true;
     }
 
     void AncsClientState::handle_source_event(const SourceEvent& event, int64_t now) {

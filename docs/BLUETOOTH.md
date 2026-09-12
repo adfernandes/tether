@@ -2526,7 +2526,7 @@ iPhone's Control Center audio picker. Adding `a2dp_sink` produced the card insta
 
 ```
 $ pactl list cards short
-827  bluez_card.60_57_C8_30_6A_F7  module-bluez5-device.c
+827  bluez_card.02_00_00_00_00_01  module-bluez5-device.c
 ...
     Active Profile: audio-gateway
 ```
@@ -3057,7 +3057,7 @@ threshold as the trigger. RSSI is not available to this daemon, measured against
 BlueZ 5.87 with the phone bonded and connected:
 
 ```
-$ busctl --system get-property org.bluez /org/bluez/hci0/dev_60_57_C8_30_6A_F7 \
+$ busctl --system get-property org.bluez /org/bluez/hci0/dev_02_00_00_00_00_01 \
     org.bluez.Device1 RSSI
 Failed to get property RSSI on interface org.bluez.Device1: No such property 'RSSI'
 ```
@@ -3069,7 +3069,7 @@ machine, including the connected iPhone, and stays absent through eight seconds 
 active discovery. The kernel does hold the number, and it is out of reach:
 
 ```
-$ btmgmt --index 0 conn-info 60:57:C8:30:6A:F7
+$ btmgmt --index 0 conn-info 02:00:00:00:00:01
 Get Conn Info failed, status 0x14 (Permission Denied)
 ```
 
@@ -3352,3 +3352,58 @@ next connect, so the buds arrive with no sink and everything plays out of the la
 fresh daemon has an empty `handoff->released` and restores nothing. `audio::revive_bluez_card()`
 runs on the AirPods connect edge -- not on every BlueZ property change, the check costs a `pactl`
 of its own -- and switches A2DP back on for buds this run did not release.
+
+### 2026-09-12 - A BR/EDR reconnect re-latched the LE link
+
+| | |
+|---|---|
+| Controller | MediaTek `usb:v0E8Dp0717`, HCI version 13 |
+| BlueZ | 5.87 with `--experimental` |
+| Phone | iPhone 15 Pro, iOS 26 |
+
+Back from out of range, MAP, PBAP and HFP all reconnected and notifications never returned.
+No `notification session` line, no `0xa2`, no resubscribe: the daemon did not think anything
+was wrong. `--bt-connection` read "LE: yes" and "Notification mirroring is active." The bus:
+
+| Signal | Value |
+|---|---|
+| `Bearer.LE1.Connected` | false |
+| `Bearer.BREDR1.Connected` | true, reconnected |
+| ANCS notify sources `Notifying` | true |
+| `Device1.ServicesResolved` | **true** |
+
+The 2026-09-06 fix required `ServicesResolved` beside the notify flag because it went false
+when only LE dropped. That test kept BR/EDR up. Here BR/EDR dropped too, and its rediscovery on
+return set the device-wide `ServicesResolved` true again, over a cached GATT tree still marked
+`Notifying`. `le_link_up()` latched through the other bearer, so the supervisor's LE recovery
+was unreachable again, and `verify_subscription()`, which reads only `Notifying`, kept `ready`
+true and the path held.
+
+No property distinguishes the case. A read does:
+
+```
+$ busctl call org.bluez .../service0001/char0002 org.bluez.GattCharacteristic1 ReadValue a{sv} 0
+Call failed: Not connected        (3ms)
+```
+
+`gatt_link_alive()` reads the GAP Device Name (0x2A00) and reports down only on
+`Not connected`. It confirms an inferred LE link in the bearer ops' `le_connected()`, and in the
+ANCS client before `StartNotify` and in `verify_subscription()`, which now drops `ready` with
+`LE link gone` so the path clears after `ANCS_BEARER_GRACE_SECONDS`.
+
+Verified by walking out of range with the fix installed:
+
+```
+15:52:49  Bearer.LE1 disconnected (Timeout)
+15:53:26  Bearer.BREDR1 disconnected (Timeout)
+15:53:51  ancs: the notification subscription is no longer live (LE link gone), rebuilding it
+15:54:15  ancs: The iPhone is not connected over LE.
+          soliciting ANCS every 180s while away
+16:01:19  ancs: notification session 5 started
+```
+
+A new notification popped up afterwards with nothing touched on the phone.
+
+Not settled: the read on a live *inbound* link where `Bearer.LE1.Connected` reads false
+(2026-08-19). Any error other than `Not connected` counts as up; if BlueZ answers
+`Not connected` there, this drops a working session every 30 seconds.

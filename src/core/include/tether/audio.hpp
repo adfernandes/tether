@@ -9,7 +9,7 @@ namespace tether::audio {
     // The sink the audio server is currently sending new streams to.
     std::string default_sink();
 
-    // The sink for a Bluetooth device ("bluez_output.AC_F2_3C_AF_52_9C.1")
+    // The sink for a Bluetooth device ("bluez_output.02_00_00_00_00_02.1")
     // or empty when the device has no sink right now.
     std::string bluez_sink(const std::string& address);
 

@@ -35,7 +35,7 @@ namespace {
     constexpr const char* ADAPTER_FULL = R"({
       '/org/bluez/hci0': {
         'org.bluez.Adapter1': {
-          'Address': <'AC:F2:3C:AF:52:9C'>,
+          'Address': <'02:00:00:00:00:02'>,
           'Alias': <'btw'>,
           'Class': <uint32 8127496>,
           'Powered': <true>,
@@ -52,7 +52,7 @@ namespace {
     constexpr const char* ADAPTER_NO_ADVERTISING = R"({
       '/org/bluez/hci0': {
         'org.bluez.Adapter1': {
-          'Address': <'AC:F2:3C:AF:52:9C'>,
+          'Address': <'02:00:00:00:00:02'>,
           'Alias': <'btw'>,
           'Class': <uint32 8127496>,
           'Powered': <true>,
@@ -63,9 +63,9 @@ namespace {
 
     // An iPhone bonded on both transports, exposing MAP, PBAP and ANCS.
     constexpr const char* IPHONE_BONDED = R"({
-      '/org/bluez/hci0/dev_60_57_C8_30_6A_F7': {
+      '/org/bluez/hci0/dev_02_00_00_00_00_01': {
         'org.bluez.Device1': {
-          'Address': <'60:57:C8:30:6A:F7'>,
+          'Address': <'02:00:00:00:00:01'>,
           'Alias': <'Zack 15 Pro'>,
           'Adapter': <objectpath '/org/bluez/hci0'>,
           'Paired': <true>,
@@ -100,7 +100,7 @@ TEST(BluetoothObjects, ParsesAdapterProperties) {
     ASSERT_EQ(objects.adapters.size(), 1u);
     const auto& a = objects.adapters[0];
     EXPECT_EQ(a.path, "/org/bluez/hci0");
-    EXPECT_EQ(a.address, "AC:F2:3C:AF:52:9C");
+    EXPECT_EQ(a.address, "02:00:00:00:00:02");
     EXPECT_EQ(a.name, "btw");
     EXPECT_TRUE(a.powered);
     EXPECT_TRUE(a.has_role("central"));
@@ -132,7 +132,7 @@ TEST(BluetoothObjects, ParsesDeviceAndBearer) {
 
     ASSERT_EQ(objects.devices.size(), 1u);
     const auto& d = objects.devices[0];
-    EXPECT_EQ(d.address, "60:57:C8:30:6A:F7");
+    EXPECT_EQ(d.address, "02:00:00:00:00:01");
     EXPECT_EQ(d.name, "Zack 15 Pro");
     EXPECT_EQ(d.adapter_path, "/org/bluez/hci0");
     EXPECT_TRUE(d.bonded);
@@ -241,7 +241,7 @@ TEST(Capability, SecureConnectionsStateIsInjectedRatherThanReadDuringResolution)
 // is conclusive.
 TEST(Capability, CompatibilityWhenExperimentalIsOff) {
     Payload p(join(ADAPTER_FULL, R"({
-      '/org/bluez/hci0/dev_60_57_C8_30_6A_F7': {
+      '/org/bluez/hci0/dev_02_00_00_00_00_01': {
         'org.bluez.Device1': { 'Paired': <true>, 'Bonded': <true> }
       }
     })")
@@ -268,7 +268,7 @@ TEST(Capability, CompatibilityWhenExperimentalIsOff) {
 // -- which in turn latched notification mirroring off after every pairing.
 TEST(Capability, AnEmptyBearerInterfaceIsNotProofOfTheApi) {
     Payload p(join(ADAPTER_FULL, R"({
-      '/org/bluez/hci0/dev_60_57_C8_30_6A_F7': {
+      '/org/bluez/hci0/dev_02_00_00_00_00_01': {
         'org.bluez.Device1': { 'Paired': <true>, 'Bonded': <true> },
         'org.bluez.Bearer.LE1': {},
         'org.bluez.Bearer.BREDR1': {}
@@ -288,7 +288,7 @@ TEST(Capability, AnEmptyBearerInterfaceIsNotProofOfTheApi) {
 
 TEST(Capability, ClassicOnlyBondDoesNotDisproveBearerApi) {
     Payload p(join(ADAPTER_FULL, R"({
-      '/org/bluez/hci0/dev_F8_D3_F0_3C_84_4A': {
+      '/org/bluez/hci0/dev_02_00_00_00_00_03': {
         'org.bluez.Device1': { 'Paired': <true>, 'Bonded': <true> }
       }
     })")
@@ -308,7 +308,7 @@ TEST(Capability, ClassicOnlyBondDoesNotDisproveBearerApi) {
 // -- was a dead end in every bug report it produced.
 TEST(Capability, ClassicOnlyIphoneBondIsNamedAsSuch) {
     Payload p(join(ADAPTER_FULL, R"({
-      '/org/bluez/hci0/dev_60_57_C8_30_6A_F7': {
+      '/org/bluez/hci0/dev_02_00_00_00_00_01': {
         'org.bluez.Device1': {
           'Paired': <true>,
           'Bonded': <true>,
@@ -347,7 +347,7 @@ TEST(Capability, ClassicOnlyIphoneBondIsNamedAsSuch) {
 // the controller had derived the LE keys at all.
 TEST(Capability, APopulatedLeBearerIsNotProofOfAnLeBond) {
     Payload p(join(ADAPTER_FULL, R"({
-      '/org/bluez/hci0/dev_60_57_C8_30_6A_F7': {
+      '/org/bluez/hci0/dev_02_00_00_00_00_01': {
         'org.bluez.Device1': {
           'Paired': <true>,
           'Bonded': <true>,
@@ -379,7 +379,7 @@ TEST(Capability, APopulatedLeBearerIsNotProofOfAnLeBond) {
 // terminate -- which is exactly what issue #118 recorded, three times over.
 TEST(Capability, NoRepairAdviceWhenTheAdapterCannotAdvertise) {
     Payload p(join(ADAPTER_NO_ADVERTISING, R"({
-      '/org/bluez/hci0/dev_60_57_C8_30_6A_F7': {
+      '/org/bluez/hci0/dev_02_00_00_00_00_01': {
         'org.bluez.Device1': {
           'Paired': <true>,
           'Bonded': <true>,
@@ -412,7 +412,7 @@ TEST(Capability, NoRepairAdviceWhenTheAdapterCannotAdvertise) {
 // those as a broken bond fires on nearly every machine.
 TEST(Capability, ClassicOnlyBondOnANonPhoneIsNotReported) {
     Payload p(join(ADAPTER_FULL, R"({
-      '/org/bluez/hci0/dev_F8_D3_F0_3C_84_4A': {
+      '/org/bluez/hci0/dev_02_00_00_00_00_03': {
         'org.bluez.Device1': { 'Paired': <true>, 'Bonded': <true>, 'Alias': <'ZBZ AirPros'> }
       }
     })")
@@ -433,12 +433,12 @@ TEST(Capability, ClassicOnlyBondOnANonPhoneIsNotReported) {
 // presence is the more trustworthy signal of the two.
 TEST(DeviceParsing, AnAncsNotifySessionProvesTheLeLinkIsUp) {
     Payload p(join(ADAPTER_FULL, R"({
-      '/org/bluez/hci0/dev_60_57_C8_30_6A_F7': {
+      '/org/bluez/hci0/dev_02_00_00_00_00_01': {
         'org.bluez.Device1': { 'Paired': <true>, 'Bonded': <true>, 'Connected': <true>,
                                'ServicesResolved': <true> },
         'org.bluez.Bearer.LE1': { 'Paired': <true>, 'Bonded': <true>, 'Connected': <false> }
       },
-      '/org/bluez/hci0/dev_60_57_C8_30_6A_F7/service004f/char0050': {
+      '/org/bluez/hci0/dev_02_00_00_00_00_01/service004f/char0050': {
         'org.bluez.GattCharacteristic1': { 'UUID': <'9FBF120D-6301-42D9-8C58-25E699A21DBD'>, 'Notifying': <true> }
       }
     })")
@@ -459,13 +459,13 @@ TEST(DeviceParsing, AnAncsNotifySessionProvesTheLeLinkIsUp) {
 // recovery, the solicitation and the outbound dial all off the table.
 TEST(DeviceParsing, ANotifyFlagLeftOverADeadLeBearerIsNotALink) {
     Payload p(join(ADAPTER_FULL, R"({
-      '/org/bluez/hci0/dev_60_57_C8_30_6A_F7': {
+      '/org/bluez/hci0/dev_02_00_00_00_00_01': {
         'org.bluez.Device1': { 'Paired': <true>, 'Bonded': <true>, 'Connected': <true>,
                                'ServicesResolved': <false> },
         'org.bluez.Bearer.LE1': { 'Paired': <true>, 'Bonded': <true>, 'Connected': <false> },
         'org.bluez.Bearer.BREDR1': { 'Connected': <true> }
       },
-      '/org/bluez/hci0/dev_60_57_C8_30_6A_F7/service004f/char0050': {
+      '/org/bluez/hci0/dev_02_00_00_00_00_01/service004f/char0050': {
         'org.bluez.GattCharacteristic1': { 'UUID': <'9FBF120D-6301-42D9-8C58-25E699A21DBD'>, 'Notifying': <true> }
       }
     })")
@@ -479,17 +479,43 @@ TEST(DeviceParsing, ANotifyFlagLeftOverADeadLeBearerIsNotALink) {
     EXPECT_TRUE(objects.devices[0].classic_link_up()) << "Classic is up throughout; only LE dropped";
 }
 
+// Captured after BR/EDR dropped out of range and came back without LE: BR/EDR
+// discovery sets ServicesResolved again, so the parsed properties read as a live
+// LE link. Only a read through gap_name_path can tell, so the path must be found.
+TEST(DeviceParsing, ClassicReconnectLeavesAStaleLeLinkThatNeedsAReadToDisprove) {
+    Payload p(join(ADAPTER_FULL, R"({
+      '/org/bluez/hci0/dev_02_00_00_00_00_01': {
+        'org.bluez.Device1': { 'Paired': <true>, 'Bonded': <true>, 'Connected': <true>,
+                               'ServicesResolved': <true> },
+        'org.bluez.Bearer.LE1': { 'Paired': <true>, 'Bonded': <true>, 'Connected': <false> },
+        'org.bluez.Bearer.BREDR1': { 'Connected': <true> }
+      },
+      '/org/bluez/hci0/dev_02_00_00_00_00_01/service0001/char0002': {
+        'org.bluez.GattCharacteristic1': { 'UUID': <'00002a00-0000-1000-8000-00805f9b34fb'> }
+      },
+      '/org/bluez/hci0/dev_02_00_00_00_00_01/service0059/char005d': {
+        'org.bluez.GattCharacteristic1': { 'UUID': <'9fbf120d-6301-42d9-8c58-25e699a21dbd'>, 'Notifying': <true> }
+      }
+    })")
+                  .c_str());
+    auto objects = parse_managed_objects(p.v);
+
+    ASSERT_EQ(objects.devices.size(), 1u);
+    EXPECT_TRUE(objects.devices[0].le_link_up()) << "the fixture is not reproducing the latch";
+    EXPECT_EQ(objects.devices[0].gap_name_path, "/org/bluez/hci0/dev_02_00_00_00_00_01/service0001/char0002");
+}
+
 // The characteristic has to belong to this device. A sibling device's GATT tree
 // saying nothing about ours is the whole reason the paths are matched.
 TEST(DeviceParsing, AnAncsNotifySessionBelongsToOneDeviceOnly) {
     Payload p(join(ADAPTER_FULL, R"({
-      '/org/bluez/hci0/dev_60_57_C8_30_6A_F7': {
+      '/org/bluez/hci0/dev_02_00_00_00_00_01': {
         'org.bluez.Device1': { 'Paired': <true>, 'Bonded': <true> }
       },
-      '/org/bluez/hci0/dev_F8_D3_F0_3C_84_4A': {
+      '/org/bluez/hci0/dev_02_00_00_00_00_03': {
         'org.bluez.Device1': { 'Paired': <true>, 'Bonded': <true> }
       },
-      '/org/bluez/hci0/dev_F8_D3_F0_3C_84_4A/service004f/char0050': {
+      '/org/bluez/hci0/dev_02_00_00_00_00_03/service004f/char0050': {
         'org.bluez.GattCharacteristic1': { 'UUID': <'9fbf120d-6301-42d9-8c58-25e699a21dbd'>, 'Notifying': <true> }
       }
     })")
@@ -509,11 +535,11 @@ TEST(DeviceParsing, AnAncsNotifySessionBelongsToOneDeviceOnly) {
 // one, which stopped the bearer supervisor dialling it at all.
 TEST(DeviceParsing, CachedCharacteristicsWithoutNotifyAreNotALink) {
     Payload p(join(ADAPTER_FULL, R"({
-      '/org/bluez/hci0/dev_60_57_C8_30_6A_F7': {
+      '/org/bluez/hci0/dev_02_00_00_00_00_01': {
         'org.bluez.Device1': { 'Paired': <true>, 'Bonded': <true>, 'Connected': <true>, 'ServicesResolved': <true> },
         'org.bluez.Bearer.LE1': { 'Paired': <true>, 'Bonded': <true>, 'Connected': <false> }
       },
-      '/org/bluez/hci0/dev_60_57_C8_30_6A_F7/service006f/char0073': {
+      '/org/bluez/hci0/dev_02_00_00_00_00_01/service006f/char0073': {
         'org.bluez.GattCharacteristic1': { 'UUID': <'9fbf120d-6301-42d9-8c58-25e699a21dbd'>, 'Notifying': <false> }
       }
     })")
@@ -527,7 +553,7 @@ TEST(DeviceParsing, CachedCharacteristicsWithoutNotifyAreNotALink) {
 
 TEST(DeviceParsing, NoGattTreeAtAllMeansNoLeLink) {
     Payload p(join(ADAPTER_FULL, R"({
-      '/org/bluez/hci0/dev_60_57_C8_30_6A_F7': {
+      '/org/bluez/hci0/dev_02_00_00_00_00_01': {
         'org.bluez.Device1': { 'Paired': <true>, 'Bonded': <true>, 'Connected': <true> },
         'org.bluez.Bearer.LE1': { 'Paired': <true>, 'Bonded': <true>, 'Connected': <false> }
       }
@@ -714,9 +740,9 @@ TEST(PreferredAdapter, PrefersPoweredThenFirst) {
 // "Unable to find service record". Reading the aggregate as the Classic link
 // makes the daemon report a healthy BR/EDR connection and never reconnect it.
 constexpr const char* IPHONE_LE_ONLY_LINK = R"({
-  '/org/bluez/hci0/dev_60_57_C8_30_6A_F7': {
+  '/org/bluez/hci0/dev_02_00_00_00_00_01': {
     'org.bluez.Device1': {
-      'Address': <'60:57:C8:30:6A:F7'>,
+      'Address': <'02:00:00:00:00:01'>,
       'Adapter': <objectpath '/org/bluez/hci0'>,
       'Paired': <true>,
       'Bonded': <true>,
@@ -783,9 +809,9 @@ TEST(BluetoothObjects, ClassicLinkFallsBackToTheAggregateWithoutBearers) {
 // "BR/EDR is down" would let a stub contradict a link that is genuinely up.
 TEST(BluetoothObjects, StubBearerIsNotMistakenForAReading) {
     constexpr const char* STUB_BEARERS = R"({
-      '/org/bluez/hci0/dev_60_57_C8_30_6A_F7': {
+      '/org/bluez/hci0/dev_02_00_00_00_00_01': {
         'org.bluez.Device1': {
-          'Address': <'60:57:C8:30:6A:F7'>,
+          'Address': <'02:00:00:00:00:01'>,
           'Adapter': <objectpath '/org/bluez/hci0'>,
           'Paired': <true>,
           'Connected': <true>,

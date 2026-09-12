@@ -64,6 +64,9 @@ namespace tether::bluetooth {
 
         bool ancs_notifying = false;
 
+        // GAP Device Name characteristic
+        std::string gap_name_path;
+
         // Device1.ServicesResolved
         bool services_resolved = false;
 
