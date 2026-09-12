@@ -530,14 +530,27 @@ connected-devices  04 00 04 00 2E 00 [?] [?] [count] ([mac] * 6 [role] [state]) 
 audio-source       04 00 04 00 0E 00 [mac] * 6 [type]
 ```
 
-`state` is the ownership field. **The owner carries bit `0x02`**; never compare exact values.
-The numbers differ between buds: an iPhone idles at `0x15` and owns at `0x17` on the buds the
-first implementation was written against, and at `0x05` and `0x07` on AirPods Pro 3 measured
-2026-09-10, where this machine reads `0x00` and `0x02`. Pro 1 leaves an idle iPhone at `0x01`.
-An earlier threshold rule (`0x17` and above owns) never fired on the Pro 3 values.
+`state` carries ownership in **bit `0x02`**, and nothing here should be compared for equality.
+Measured 2026-09-11 across five handoffs, each one confirmed by the firmware's own verdict packet
+arriving in the same instant:
 
-A peer blocks a claim when it sits at `0x10` or above and is not `0x15`. Owning alone does
-not: on Pro 3 the iPhone keeps `0x02` after its call ends, until another host claims.
+| host | idle | owning |
+|---|---|---|
+| this machine | `0x00` | `0x02` |
+| the iPhone, AirPods Pro 3 | `0x05` | `0x07` |
+| the models the AC reference was written against | `0x15` | `0x17` |
+
+Bit `0x10` is separate: it marks a host that firmware treats as engaged, and a claim sent into
+that range leaves this host contested. So a peer blocks a claim when it sits at `0x10` or above
+and is not `0x15` -- **owning does not block one**, because an owner that has finished its call is
+exactly what a reclaim takes the buds from. The iPhone keeps the owner bit until another host
+claims, so ownership alone never means "still using them" either; that needs the audio source.
+
+The AC reference reads the low values as validation state instead (`0x00` validated,
+`0x01` pending, `0x02` unvalidated, `0x03` both, `0x05` a stuck session) and says ownership is not
+in this field. That does not match this hardware: our own entry alternates `0x00` and `0x02` in
+lockstep with the verdict packet, which would mean flapping between validated and unvalidated on
+every handoff. Both readings agree that `0x10` and up is engagement.
 `0x15` is carved out because it is what a **connected, idle iPhone** reports, permanently, and
 it is the state this machine claims the buds *out of*. Treating it as "a peer has them" means
 the claim is never sent and the phone keeps the buds -- which is exactly what a first cut of
@@ -643,6 +656,14 @@ Music on the phone reaches this path only through the buds.
 
 While the buds are given up the watcher sends no claim of its own -- not the one a session
 sends when it opens, and not one for local playback. Only the reclaim claims.
+
+**Every other host in the buds' list is registered, once per session.** Two `0x10` smart-routing
+packets, `tipi_add_device()` and `tipi_media_info()`, carry the target's address and this
+machine's. Android sends them, and so does the AC fork, which holds that they are what
+moves a host from unvalidated to validated. That rationale rests on a B-field reading this
+hardware contradicts, so treat the packets as unproven here until a capture shows them changing
+something. **The session's notification request goes out again 500ms after every claim**: the
+firmware resets its AAP state on each handoff and silently drops what a session set up before it.
 
 **The call has to arrive before the phone moves the audio.** When the phone takes A2DP the
 Bluetooth sink fails and WirePlumber moves any stream still playing to the laptop speakers, so
@@ -802,7 +823,7 @@ Three attempts in a row that reach a deadline having delivered nothing are repor
 `busy` rather than retried quietly, because the remedy is to stop the other program and
 nothing in the log would otherwise say so.
 
-Anything else on the machine speaking AAP is such a program: LibrePods, AirPods Center,
+Anything else on the machine speaking AAP is such a program: LibrePods, AC,
 a status-bar widget that reads battery itself. Only one of them can hold the channel.
 
 ## Conflicts
@@ -867,7 +888,7 @@ checks the daemon does not make.
 | The link reads down forever with `br-connection-unknown`, while messages, contacts and notifications all work | This computer offers the iPhone no BR/EDR profile to connect to, and BlueZ only reports a link up while some local profile is connected | Nothing. Tether no longer waits on that link -- see 2026-08-23 below. Call support does not change this: BlueZ's hands-free profile is not one of the local profiles BlueZ counts |
 | The iPhone's audio moves to the computer when Tether connects | The machine advertises itself as a Bluetooth speaker/headset, and iOS routes to it. Not caused by Tether beyond bringing the link up | See "Keeping the phone's audio on the phone" below |
 | `tether --bt-calls` reports call control off | PipeWire took the profile *and* its telephony D-Bus service is off, the iPhone reconnected on its own and never opened hands-free, or `bluetoothd` is running without `--experimental` | Either give BlueZ the profile by dropping `hfp_hf` from `bluez5.roles`, or set `bluez5.telephony-dbus-service = true` and let Tether drive PipeWire's gateway -- see "Calls". The daemon cycles the BR/EDR bearer once per outage for the second cause; confirm with `busctl --system tree org.bluez \| grep telephony` and `busctl --user tree org.pipewire.Telephony` |
-| AirPods are listed but the battery stays blank, and the row says another program is using the channel | The AAP channel takes one client, and something else has it | Stop the other AirPods program (LibrePods, AirPods Center, a status-bar widget that reads battery), or hand it over with `tether --bt-airpods-enable off` |
+| AirPods are listed but the battery stays blank, and the row says another program is using the channel | The AAP channel takes one client, and something else has it | Stop the other AirPods program (LibrePods, AC, a status-bar widget that reads battery), or hand it over with `tether --bt-airpods-enable off` |
 | Setting the AirPods listening mode to `off` does nothing, while the other three work | The buds declined it. Apple leaves Off out of the noise-control rotation by default on Pro models, and there is no refusal to report | Add Off to the rotation on the phone, under Settings > Bluetooth > (i) > Noise Control. Tether keeps showing the mode the buds are actually in |
 | The AirPods handoff checkbox is greyed out | Neither path is available: the adapter does not present itself as Apple hardware, so handoff would have to trigger on the iPhone's call state, and call control is off | Set the adapter Device ID for ownership handoff, or turn on calls: `tether --bt-calls-enable on` |
 | A call started but the AirPods stayed on this computer | They were not connected here when it started, handoff is off, or the call was dialled from this computer | Nothing to do in the first and last case -- pick the AirPods on the phone. Otherwise `tether --bt-airpods-handoff on` |
@@ -3165,10 +3186,12 @@ The second run, 10:05 to 10:10, was worse:
   source none, while the iPhone still read `0x07` and its call was still going.
 - The night before, 20:33:39, the iPhone took `0x07` for a call and still held it at 20:37:48,
   with Linux playing in between. The owner bit does not mark the end of a call either.
-- Calls at 09:51:10, 10:05:31 and 10:08:56 put SCO on this machine (`corrupted SCO packet` in
-  the kernel log): iOS routed the call to the laptop's hands-free link, not the buds. At 10:05
-  the iPhone read `0x01` while an iMac on the same iCloud account held the buds at `0x07`
-  playing media. 10:08:56 came seven seconds after the early reclaim.
+- Calls at 09:51:10, 10:05:31 and 10:08:56 put SCO on this machine (`corrupted SCO packet` in the
+  kernel log). That was first read as "iOS routed the call here"; it is not. Measured at 17:09 and
+  17:10, the same lines appear while the call plays in the buds, so they only say the iPhone set
+  up a hands-free link with the laptop. At 10:05 the iPhone read `0x01` while an iMac on the same
+  iCloud account held the buds at `0x07` playing media, which is the better explanation of why
+  the call went to the phone's speaker: the buds' second slot was taken.
 - 10:05:15 the claim a session sends when it opens took the buds from that iMac mid-media,
   while this machine had given them up.
 
@@ -3180,6 +3203,30 @@ briefly from the laptop speakers at the start of each. At 11:13:12 WirePlumber l
 transport failure at 12.000 and the release, which pauses first, logged at 12.053; at 11:13:35,
 35.569 and 35.626. SCO had reached this machine 300 to 550ms before each failure, so the phone
 was already committed to the call while Tether waited for its one-second call-list tick.
+
+Later the same day the reporter sent the source of their fork, AC v2.3.0, whose
+`DOCUMENTATION.md` records ~15 versions spent on these same failures. Three things it does that
+Tether did not, now adopted: the host registration packets above, re-sending configuration after
+each handoff, and a three-second claim cooldown rather than one.
+
+Its B-field table briefly retired the owner-bit reading here, which was a mistake, corrected the
+same evening by five handoffs at 17:09 and 17:10: our own entry alternates `0x00` and `0x02`, the
+iPhone `0x05` and `0x07`, each transition arriving with the matching verdict packet. Bit `0x02` is
+ownership on this hardware whatever it means on theirs, and the wire protocol section above now
+records the measurement rather than either guess.
+
+The suspicion that Tether's own LE work spoils call routing, taken from the fork's v2.3.0 entry,
+does not survive measurement either. Three calls dialled on the iPhone with the buds attached to
+this machine -- tetherd stopped, tetherd running, tetherd running with ANCS off -- all routed to
+the AirPods. An earlier round of the same test looked damning until the logs showed the buds had
+dropped off this machine before two of the three runs; a run where the buds are not attached here
+proves nothing, so check `Device1.Connected` before each call.
+
+Two of its findings are not adopted. It releases A2DP proactively during a three-second grace at
+connect, with a 15s watchdog, to dodge a firmware disconnect timer this project has not measured.
+And its own v2.3.0 entry reports that its BLE scan, run while Tether brings up its BR/EDR link,
+leaves that link degraded and iOS then refuses the buds for calls -- its fix was a startup delay.
+Whether Tether's own LE work does the same to it is worth measuring before any code changes.
 
 Not yet verified on hardware: the full sequence on Pro 3, iPhone media rather than a call,
 the owner bit on Pro 2, and whether an `off` profile persists if tetherd dies while the buds

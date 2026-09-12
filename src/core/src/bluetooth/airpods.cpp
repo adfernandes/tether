@@ -74,8 +74,9 @@ namespace tether::bluetooth {
         // The firmware's own ownership verdict arrives on the same shape.
         constexpr uint8_t OWNS_CONNECTION_PREFIX[] = {0x04, 0x00, 0x04, 0x00, 0x09, 0x00, 0x06};
 
-        // Claims are answered slowly and the firmware saturates on a burst of them.
-        constexpr int CLAIM_COOLDOWN_MS = 1000;
+        // Claims are answered slowly and the firmware saturates on a burst of them. Three seconds
+        // is what the AirPods Center reference settled on after seek storms disconnected the buds.
+        constexpr int CLAIM_COOLDOWN_MS = 3000;
 
         constexpr uint8_t HANDSHAKE_ACK[] = {0x01, 0x00, 0x04, 0x00};
         constexpr uint8_t FEATURES_ACK[] = {0x04, 0x00, 0x04, 0x00, 0x2b, 0x00};
@@ -114,6 +115,9 @@ namespace tether::bluetooth {
         // How long the buds must stop reporting a peer's audio before it counts as over:
         // some models report no audio source every twenty seconds or so during a call.
         constexpr int PEER_AUDIO_SETTLE_MS = 3000;
+        // After a claim, before the session's notification request goes out again. The
+        // firmware discards anything sent while it is still broadcasting its own state.
+        constexpr int CONFIG_RESEND_MS = 500;
 
         constexpr int CONNECT_TIMEOUT_MS = 8000;
         constexpr int FIRST_PACKET_TIMEOUT_MS = 8000;
@@ -421,6 +425,52 @@ namespace tether::bluetooth {
                !peer_audio;
     }
 
+    namespace {
+
+        // Both TiPi packets are opcode 0x10 (smart routing) and look alike. The target's
+        // address least-significant byte first, then a body of length-tagged ASCII keys.
+        std::vector<uint8_t> tipi_packet(const std::string& self,
+                                         const std::string& target,
+                                         const char* head,
+                                         size_t head_len,
+                                         const char* tail,
+                                         size_t tail_len) {
+            uint8_t addr[6] = {};
+            if (self.size() != 17 || !parse_address(target, addr))
+                return {};
+            static constexpr uint8_t PREFIX[] = {0x04, 0x00, 0x04, 0x00, 0x10, 0x00};
+            std::vector<uint8_t> packet(std::begin(PREFIX), std::end(PREFIX));
+            packet.insert(packet.end(), std::begin(addr), std::end(addr));
+            packet.insert(packet.end(), head, head + head_len);
+            packet.insert(packet.end(), self.begin(), self.end());
+            packet.insert(packet.end(), tail, tail + tail_len);
+            return packet;
+        }
+
+        constexpr char TIPI_ADD_HEAD[] = "\x52\x00\x01\xe5\x48idleTime\x08\x47newTipi\x01\x49"
+                                         "btAddress\x51";
+        constexpr char TIPI_ADD_TAIL[] = "\x46"
+                                         "btName\x47"
+                                         "Android\x50nearbyAudioScore\x0e";
+        constexpr char TIPI_MEDIA_HEAD[] = "\x6c\x00\x01\xe5\x4a"
+                                           "playingApp\x42NA\x52hostStreamingState\x42NO\x49"
+                                           "btAddress\x51";
+        constexpr char TIPI_MEDIA_TAIL[] = "\x46"
+                                           "btName\x47"
+                                           "Android\x58otherDeviceAudioCategory\x30\x64";
+
+    } // namespace
+
+    std::vector<uint8_t> tipi_add_device(const std::string& self, const std::string& target) {
+        return tipi_packet(
+            self, target, TIPI_ADD_HEAD, sizeof(TIPI_ADD_HEAD) - 1, TIPI_ADD_TAIL, sizeof(TIPI_ADD_TAIL) - 1);
+    }
+
+    std::vector<uint8_t> tipi_media_info(const std::string& self, const std::string& target) {
+        return tipi_packet(
+            self, target, TIPI_MEDIA_HEAD, sizeof(TIPI_MEDIA_HEAD) - 1, TIPI_MEDIA_TAIL, sizeof(TIPI_MEDIA_TAIL) - 1);
+    }
+
     PeerSummary summarize_peers(const std::vector<AapPeer>& peers, const std::string& local) {
         PeerSummary summary;
         for (const auto& peer : peers) {
@@ -493,6 +543,9 @@ namespace tether::bluetooth {
         std::optional<bool> pending_ownership;
         // This machine gave the buds up: no claim of the watcher's own goes out until it takes them back.
         bool yielded = false;
+        // A claim has just gone out, so the session's notification request is due again: the
+        // firmware resets its AAP state on every handoff and silently drops what was set before.
+        bool config_resend_due = false;
         std::chrono::steady_clock::time_point last_claim{};
         bool stopping = false;
         bool enabled = true;
@@ -578,6 +631,35 @@ namespace tether::bluetooth {
             publish(delivered ? AirPodsStatus::Live : AirPodsStatus::Connecting, "");
         }
 
+        // Registers every other host in the buds' list, once each per session. A host the
+        // firmware has not been told about stays unvalidated, and an unvalidated host is the
+        // one it evicts when the pods move while another host is engaged.
+        bool register_hosts(int fd, const std::vector<AapPeer>& peers, std::vector<std::string>& sent) {
+            std::string local;
+            {
+                std::lock_guard<std::mutex> lock(mutex);
+                local = local_address;
+            }
+            if (local.empty())
+                return true;
+            for (const auto& peer : peers) {
+                if (peer.address == local || std::find(sent.begin(), sent.end(), peer.address) != sent.end())
+                    continue;
+                sent.push_back(peer.address);
+                for (const auto& packet :
+                     {tipi_media_info(local, peer.address), tipi_add_device(local, peer.address)}) {
+                    if (packet.empty())
+                        continue;
+                    if (!write_all(fd, packet.data(), packet.size())) {
+                        debug::log(DEBUG, "airpods: host registration write failed: {}", std::strerror(errno));
+                        return false;
+                    }
+                }
+                debug::log(DEBUG, "airpods: registered host {} with the buds", peer.address);
+            }
+            return true;
+        }
+
         // Takes or gives up ownership, on the worker thread. A claim sent while a peer
         // is taking the buds is the one packet that reliably kills the link, so the
         // peer state from the last connected-devices notification gates it. An idle
@@ -607,6 +689,8 @@ namespace tether::bluetooth {
             }
             if (write_all(fd, CLAIM, sizeof(CLAIM))) {
                 debug::log(DEBUG, "airpods: claim sent");
+                std::lock_guard<std::mutex> lock(mutex);
+                config_resend_due = true;
                 return true;
             }
             debug::log(DEBUG, "airpods: claim write failed: {}", std::strerror(errno));
@@ -739,6 +823,10 @@ namespace tether::bluetooth {
             };
 
             std::map<std::string, uint8_t> peer_states;
+            // Hosts this session has registered with the buds, once each.
+            std::vector<std::string> tipi_sent;
+            // When the session's notification request is due again after a claim.
+            std::optional<clock::time_point> config_at;
             bool warned_unlisted = false;
             std::optional<bool> owns;
             bool peer_audio = false;
@@ -756,6 +844,13 @@ namespace tether::bluetooth {
             std::array<uint8_t, 1024> buffer{};
             while (!retargeted(address)) {
                 const auto now = clock::now();
+                {
+                    std::lock_guard<std::mutex> lock(mutex);
+                    if (config_resend_due) {
+                        config_resend_due = false;
+                        config_at = now + std::chrono::milliseconds(CONFIG_RESEND_MS);
+                    }
+                }
                 // Until the buds send a notification, stray bytes do not keep an attempt alive:
                 // a channel another client holds stays open and says nothing useful.
                 const auto quiet_since = delivered ? last_packet : opened;
@@ -770,6 +865,8 @@ namespace tether::bluetooth {
                     timeout = std::min(timeout, until(*claim_at));
                 if (peer_audio_ends_at)
                     timeout = std::min(timeout, until(*peer_audio_ends_at));
+                if (config_at)
+                    timeout = std::min(timeout, until(*config_at));
                 const int ready = wait_for(fd, wake_fd, POLLIN, std::max(timeout, 0));
                 if (ready == 0) {
                     drain_wake();
@@ -789,6 +886,15 @@ namespace tether::bluetooth {
                     if (peer_audio_ends_at && fired >= *peer_audio_ends_at) {
                         peer_audio_ends_at.reset();
                         set_peer_audio(false);
+                        continue;
+                    }
+                    // The firmware drops what a session set up before a handoff, so the
+                    // notification request goes out again after taking the buds back.
+                    if (config_at && fired >= *config_at) {
+                        config_at.reset();
+                        if (!write_all(fd, REQUEST_NOTIFICATIONS, sizeof(REQUEST_NOTIFICATIONS)))
+                            break;
+                        debug::log(DEBUG, "airpods: notification request re-sent after claiming");
                         continue;
                     }
                     if (claim_at && fired >= *claim_at) {
@@ -857,6 +963,8 @@ namespace tether::bluetooth {
                 if (auto peers = parse_connected_devices(buffer.data(), size)) {
                     delivered = true;
                     note_peers(*peers, peer_states, warned_unlisted, delivered);
+                    if (!register_hosts(fd, *peers, tipi_sent))
+                        break;
                     // The host list proves the channel is ours; the claim waits for the audio link.
                     if (!claim_sent && !claim_at)
                         claim_at = std::max(last_packet, opened + std::chrono::milliseconds(CLAIM_SETTLE_MS));

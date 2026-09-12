@@ -241,18 +241,57 @@ TEST(AirPods, SeparatesAnIdlePeerFromOneTakingTheBuds) {
     EXPECT_FALSE(peer(0x15).active());
     // AirPods Pro 1 leaves a healthy iPhone at 0x01 forever.
     EXPECT_FALSE(peer(0x01).taking_over());
-
-    // AirPods Pro 3 never report 0x10 and up: the iPhone read 0x05 and 0x07 on 2026-09-10, and
-    // 0x02 on 2026-09-11, where it kept 0x02 after the call ended. Owning must not block a claim.
-    EXPECT_FALSE(peer(0x05).active());
-    EXPECT_TRUE(peer(0x07).active());
-    EXPECT_TRUE(peer(0x02).active());
-    EXPECT_FALSE(peer(0x02).taking_over());
-    EXPECT_FALSE(peer(0x07).taking_over());
 }
 
-// Handoff yields to a phone that owns the buds and plays through them, never to ownership alone.
-TEST(AirPods, AnOwnerThatStoppedPlayingIsNotBusy) {
+// Ownership moves with bit 0x02. Captured 2026-09-11 over five handoffs, each confirmed by the
+// firmware's own verdict packet: the iPhone idles at 0x05 and owns at 0x07, this machine 0x00 and
+// 0x02, and neither ever reaches 0x10. An owner that has finished is what a reclaim claims from,
+// so owning must not read as taking over.
+TEST(AirPods, ReadsOwnershipFromTheOwnerBit) {
+    const auto peer = [](uint8_t state) { return AapPeer{"81:71:C8:30:6A:F3", 0x02, state}; };
+    EXPECT_FALSE(peer(0x05).active());
+    EXPECT_TRUE(peer(0x07).active());
+    EXPECT_FALSE(peer(0x00).active());
+    EXPECT_TRUE(peer(0x02).active());
+    EXPECT_FALSE(peer(0x07).taking_over());
+    EXPECT_FALSE(peer(0x02).taking_over());
+    // The same bit separates the pair reported by the models the reference was written against.
+    EXPECT_FALSE(peer(0x15).active());
+    EXPECT_TRUE(peer(0x17).active());
+}
+
+// The registration packets the buds expect for every other host, ported from a working
+// implementation. The layout is fixed: opcode, the target address least-significant byte first,
+// then ASCII keys with this machine's address in the middle.
+TEST(AirPods, BuildsTheHostRegistrationPackets) {
+    const std::string self = "AC:F2:3C:AF:52:9C";
+    const auto add = tipi_add_device(self, "60:57:C8:30:6A:F7");
+    ASSERT_EQ(add.size(), 96u);
+    EXPECT_EQ(std::vector<uint8_t>(add.begin(), add.begin() + 6),
+              (std::vector<uint8_t>{0x04, 0x00, 0x04, 0x00, 0x10, 0x00}));
+    EXPECT_EQ(std::vector<uint8_t>(add.begin() + 6, add.begin() + 12),
+              (std::vector<uint8_t>{0xf7, 0x6a, 0x30, 0xc8, 0x57, 0x60}));
+    // Body offsets counted from the end of the prefix.
+    EXPECT_EQ(std::string(add.begin() + 6 + 11, add.begin() + 6 + 19), "idleTime");
+    EXPECT_EQ(std::string(add.begin() + 6 + 40, add.begin() + 6 + 57), self);
+    EXPECT_EQ(std::string(add.begin() + 6 + 65, add.begin() + 6 + 72), "Android");
+    EXPECT_EQ(add.back(), 0x0e);
+
+    const auto media = tipi_media_info(self, "60:57:C8:30:6A:F7");
+    ASSERT_EQ(media.size(), 122u);
+    EXPECT_EQ(std::string(media.begin() + 6 + 11, media.begin() + 6 + 21), "playingApp");
+    EXPECT_EQ(std::string(media.begin() + 6 + 25, media.begin() + 6 + 43), "hostStreamingState");
+    EXPECT_EQ(std::string(media.begin() + 6 + 57, media.begin() + 6 + 74), self);
+    EXPECT_EQ(media.back(), 0x64);
+
+    // An address that will not parse is no packet at all.
+    EXPECT_TRUE(tipi_add_device(self, "nonsense").empty());
+    EXPECT_TRUE(tipi_media_info("", "60:57:C8:30:6A:F7").empty());
+}
+
+// Handoff yields to a phone that owns the buds and is playing through them. Ownership alone is a
+// phone that finished its call and kept the bit; audio alone is a host that owns nothing.
+TEST(AirPods, YieldsOnlyToAnOwnerWithAudio) {
     AirPodsState state;
     state.peer_active = true;
     EXPECT_FALSE(state.peer_busy());
