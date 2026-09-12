@@ -856,6 +856,7 @@ checks the daemon does not make.
 |---|---|---|
 | `systemctl enable --now tether-btclass@hci0` hangs in `activating (start)` forever | `btmgmt` epolls its stdin before running the command, and epoll rejects the `/dev/null` systemd hands it, so it waits having done nothing | Update the unit -- it pipes into `btmgmt` now. On an older build, `sudo btmgmt class 4 8` by hand sets the class until `bluetoothd` restarts, see 2026-09-01 below |
 | `systemctl enable --now tether-btclass@hci0` says `Unit tether-btclass@hci0.service does not exist` | A portable build (AppImage, Flatpak) installed no unit -- only the distro packages do | `tether --bt-setup` and run the command it prints, which writes the unit first, see 2026-09-05 below |
+| `tether-btclass@hci0` fails with `Invalid Index`, having worked for months | The controller re-enumerated -- a failed firmware handshake resets it over USB and it comes back as `hci1` -- so the instance name points at an adapter that no longer exists | Update the unit -- it resolves the adapter itself now and the instance name is only a hint, see 2026-09-11 below. By hand, `ls /sys/class/bluetooth` names the live adapter |
 | Messages and contacts worked, then stopped, and the error mentions a service record | `bluetoothd` restarted and reset the Class of Device | `sudo systemctl enable --now tether-btclass@hci0`, then re-pair if the phone dropped the bond |
 | The phone never offers notifications / Sync Contacts | The class is wrong, or the ANCS advertisement is not running | Check for `class=ok` in `tether --bt-status`, can take minutes |
 | MAP or PBAP reports `forbidden` | The matching toggle on the phone is off | Turn it on. This is not a pairing failure |
@@ -3232,3 +3233,35 @@ Not yet verified on hardware: the full sequence on Pro 3, iPhone media rather th
 the owner bit on Pro 2, and whether an `off` profile persists if tetherd dies while the buds
 are away. WirePlumber restores a saved `off` profile unless `session.dont-restore-off-profile`
 is set.
+
+### 2026-09-11 - The Class of Device unit was pinned to an index the adapter had left
+
+`tether-btclass@hci0` started failing with `Invalid Index` on a machine where it had worked
+for months. Nothing in Tether had changed. The kernel log has the whole story:
+
+```
+Bluetooth: hci0: Execution of wmt command timed out
+Bluetooth: hci0: Failed to send wmt func ctrl (-110)
+usb 3-5: reset high-speed USB device number 4 using xhci_hcd
+Bluetooth: hci1: Device setup in 1693823 usecs
+```
+
+The MediaTek controller's firmware handshake timed out, the USB device was reset, and the
+controller came back under the next free index. `hci0` was gone; `/sys/class/bluetooth` held
+only `hci1`. A unit instantiated on the index cannot survive that, and the failure reads like
+a missing adapter rather than a renamed one.
+
+The instance name is now a hint rather than the target. Each attempt uses `%i` if
+`/sys/class/bluetooth/%i` exists and otherwise takes the first adapter present, so an already
+enabled `tether-btclass@hci0` keeps working under any index and every documented command
+stays as written. Resolving inside the loop rather than once also covers a re-enumeration
+that lands mid-loop. The retry window went from 10s to 30s: the reset above put the new
+adapter on the bus 13s after boot, which the old window missed even with a correct name.
+
+`$$` in `ExecStart` is a literal `$` -- systemd expands `$a` as one of its own variables and
+would hand the shell an empty string.
+
+Not covered: a controller that re-enumerates at runtime with no `bluetoothd` restart. Nothing
+re-runs the unit there, and `bluetoothd` applies its own default class to the new adapter, so
+the class is wrong until `bluetooth.service` restarts. A udev rule tagging adapter `add` with
+`SYSTEMD_WANTS` would close that, and would also remove the manual enable step.

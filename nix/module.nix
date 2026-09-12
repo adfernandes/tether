@@ -17,12 +17,19 @@ let
         Type = "oneshot";
         RemainAfterExit = true;
         # btmgmt epolls its stdin before it runs the command,
+        # ${adapter} is a hint: a controller that re-enumerates comes back under
+        # the next free index, so resolve the adapter on every attempt.
         ExecStart = pkgs.writeShellScript "tether-btclass-${adapter}" ''
-          for attempt in 1 2 3 4 5 6 7 8 9 10; do
-            echo | ${pkgs.bluez}/bin/btmgmt --index ${adapter} class 4 8 >/dev/null 2>&1
-            if echo | ${pkgs.bluez}/bin/btmgmt --index ${adapter} info 2>/dev/null \
-              | ${pkgs.gnugrep}/bin/grep -q "class 0x..0408"; then
-              exit 0
+          for attempt in $(${pkgs.coreutils}/bin/seq 30); do
+            hci=${adapter}
+            [ -e /sys/class/bluetooth/$hci ] \
+              || hci=$(${pkgs.coreutils}/bin/ls /sys/class/bluetooth 2>/dev/null | ${pkgs.coreutils}/bin/head -n1)
+            if [ -n "$hci" ]; then
+              echo | ${pkgs.bluez}/bin/btmgmt --index $hci class 4 8 >/dev/null 2>&1
+              if echo | ${pkgs.bluez}/bin/btmgmt --index $hci info 2>/dev/null \
+                | ${pkgs.gnugrep}/bin/grep -q "class 0x..0408"; then
+                exit 0
+              fi
             fi
             ${pkgs.coreutils}/bin/sleep 1
           done
