@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: tether\n"
 "Report-Msgid-Bugs-To: zack@bartel.com\n"
-"POT-Creation-Date: 2026-09-10 22:16-0700\n"
+"POT-Creation-Date: 2026-09-12 10:39-0700\n"
 "PO-Revision-Date: 2026-08-23\n"
 "Last-Translator: Tether project\n"
 "Language-Team: Czech\n"
@@ -388,7 +388,7 @@ msgstr "Režim"
 msgid "Bearer API"
 msgstr "Bearer API"
 
-#: src/cli/main.cpp
+#: src/cli/main.cpp src/core/src/bluetooth/pairing.cpp
 msgid "unknown"
 msgstr "neznámé"
 
@@ -1200,6 +1200,10 @@ msgstr ""
 msgid "Connected over BR/EDR and LE."
 msgstr "Připojeno přes BR/EDR a LE."
 
+#: src/core/src/bluetooth/connection.cpp
+msgid "Nothing to send."
+msgstr "Není co odeslat."
+
 #: src/core/src/bluetooth/connection.cpp src/gtk/messages_view.cpp
 msgid "Messages are not connected."
 msgstr "Zprávy nejsou připojeny."
@@ -1365,6 +1369,23 @@ msgstr ""
 "nebude hlásit jako A/V Hands-Free (major 4, minor 8)."
 
 #: src/core/src/bluetooth/pairing.cpp
+msgid "No Bluetooth adapter is available."
+msgstr "Není dostupný žádný Bluetooth adaptér."
+
+#: src/core/src/bluetooth/pairing.cpp
+msgid "Could not prepare the ANCS advertisement."
+msgstr "Nepodařilo se připravit ANCS oznámení."
+
+#: src/core/src/bluetooth/pairing.cpp
+#, c++-format
+msgid "Could not advertise for ANCS: {}"
+msgstr "Nepodařilo se vysílat ANCS: {}"
+
+#: src/core/src/bluetooth/pairing.cpp src/core/src/net.cpp
+msgid "Bluetooth is unavailable."
+msgstr "Bluetooth není dostupné."
+
+#: src/core/src/bluetooth/pairing.cpp
 #, c++-format
 msgid ""
 "{0} wants to pair.\n"
@@ -1390,6 +1411,101 @@ msgstr "Potvrdit"
 #: src/core/src/bluetooth/pairing.cpp src/gtk/messages_view.cpp
 msgid "Cancel"
 msgstr "Zrušit"
+
+#: src/core/src/bluetooth/pairing.cpp
+#, c++-format
+msgid ""
+"Device {} is not visible to BlueZ. Unlock the iPhone and open its Bluetooth "
+"settings so it is discoverable, then try again."
+msgstr ""
+"Zařízení {} není pro BlueZ viditelné. Odemkněte iPhone a otevřete jeho "
+"nastavení Bluetooth, aby byl viditelný, a zkuste to znovu."
+
+#: src/core/src/bluetooth/pairing.cpp
+msgid "Could not register a Bluetooth pairing agent."
+msgstr "Nepodařilo se zaregistrovat Bluetooth párovacího agenta."
+
+#: src/core/src/bluetooth/pairing.cpp
+#, c++-format
+msgid ""
+"The pairing code could not be shown for confirmation: this computer has no "
+"display, and whatever started the pairing did not answer either. Run tether "
+"--bt-pair {} from a terminal and confirm the code there."
+msgstr ""
+"Párovací kód nebylo možné zobrazit k potvrzení: tento počítač nemá displej a "
+"to, co párování spustilo, také neodpovědělo. Spusťte v terminálu tether --bt-"
+"pair {} a potvrďte kód tam."
+
+#: src/core/src/bluetooth/pairing.cpp
+msgid "Pairing was not confirmed on this computer."
+msgstr "Párování nebylo na tomto počítači potvrzeno."
+
+#: src/core/src/bluetooth/pairing.cpp
+msgid "The iPhone declined the pairing request."
+msgstr "iPhone odmítl žádost o párování."
+
+#: src/core/src/bluetooth/pairing.cpp
+#, c++-format
+msgid ""
+"The iPhone refused the connection before pairing started{0}. Delete every "
+"entry for this computer on the iPhone (Settings -> Bluetooth, there can be "
+"two), run tether --bt-unpair {1}, then try again."
+msgstr ""
+"iPhone odmítl spojení dříve, než párování začalo{0}. Smažte na iPhonu každý "
+"záznam tohoto počítače (Nastavení -> Bluetooth, mohou být dva), spusťte "
+"tether --bt-unpair {1} a zkuste to znovu."
+
+#: src/core/src/bluetooth/pairing.cpp
+msgid "Pairing did not complete. Confirm the prompt on the iPhone."
+msgstr "Párování nebylo dokončeno. Potvrďte výzvu na iPhonu."
+
+#: src/core/src/bluetooth/pairing.cpp
+#, c++-format
+msgid "Pairing failed: {}"
+msgstr "Párování selhalo: {}"
+
+#: src/core/src/bluetooth/pairing.cpp
+#, c++-format
+msgid "Paired with {}."
+msgstr "Spárováno s {}."
+
+#: src/core/src/bluetooth/pairing.cpp
+msgid "No Bluetooth adapter is present."
+msgstr "Není přítomen žádný Bluetooth adaptér."
+
+#: src/core/src/bluetooth/pairing.cpp
+msgid "BlueZ refused to start scanning."
+msgstr "BlueZ odmítl spustit vyhledávání."
+
+#: src/core/src/bluetooth/pairing.cpp
+msgid ""
+"BlueZ is holding a discovery session that never ended, so scanning cannot "
+"start. Restart the Bluetooth service (sudo systemctl restart bluetooth) and "
+"try again."
+msgstr ""
+"BlueZ drží relaci vyhledávání, která nikdy neskončila, takže vyhledávání "
+"nelze spustit. Restartujte službu Bluetooth (sudo systemctl restart "
+"bluetooth) a zkuste to znovu."
+
+#: src/core/src/bluetooth/pairing.cpp
+#, c++-format
+msgid "Device {} is not known to BlueZ."
+msgstr "Zařízení {} není pro BlueZ známé."
+
+#: src/core/src/bluetooth/pairing.cpp
+#, c++-format
+msgid "Could not remove the bond: {}"
+msgstr "Nepodařilo se odstranit vazbu: {}"
+
+#: src/core/src/bluetooth/pairing.cpp
+msgid ""
+"Removed the bond. Also delete this computer from the iPhone's Bluetooth "
+"settings before pairing again — a stale record there will block a clean "
+"retry."
+msgstr ""
+"Vazba odstraněna. Před opětovným párováním smažte tento počítač také z "
+"nastavení Bluetooth na iPhonu — zastaralý záznam tam zabrání čistému "
+"opakování."
 
 #. TRANSLATORS: the feature name Tether shows for this profile.
 #: src/core/src/bluetooth/profile_supervisor.cpp src/daemon/main.cpp
@@ -1521,6 +1637,18 @@ msgstr "Neznámá akce hovoru."
 msgid "Not a DTMF sequence."
 msgstr "Není to sekvence DTMF."
 
+#: src/core/src/net.cpp
+msgid "A Bluetooth scan is already running."
+msgstr "Vyhledávání Bluetooth už probíhá."
+
+#: src/core/src/net.cpp
+msgid "Bluetooth scan finished."
+msgstr "Vyhledávání Bluetooth dokončeno."
+
+#: src/core/src/net.cpp
+msgid "Another pairing attempt is already in progress."
+msgstr "Už probíhá jiný pokus o párování."
+
 #: src/core/src/net.cpp src/gtk/devices_view.cpp
 msgid "Bluetooth is unavailable on this machine."
 msgstr "Bluetooth není na tomto stroji dostupné."
@@ -1556,8 +1684,18 @@ msgstr ""
 "oprávnění může být nutné udělit znovu, i když vypadá zapnuté."
 
 #: src/core/src/net.cpp
-msgid "Bluetooth is unavailable."
-msgstr "Bluetooth není dostupné."
+#, c++-format
+msgid "Sent {}"
+msgstr "Odesláno {}"
+
+#: src/core/src/net.cpp
+#, c++-format
+msgid "Send failed: {}"
+msgstr "Odeslání selhalo: {}"
+
+#: src/core/src/net.cpp
+msgid "unknown error"
+msgstr "neznámá chyba"
 
 #. TRANSLATORS: {0} is the device name, {1} is a shortened key fingerprint.
 #: src/core/src/net.cpp
@@ -1923,6 +2061,14 @@ msgstr "Démon není dostupný."
 #: src/gtk/devices_view.cpp
 msgid "Send File"
 msgstr "Odeslat soubor"
+
+#: src/gtk/devices_view.cpp
+msgid "_Cancel"
+msgstr "_Zrušit"
+
+#: src/gtk/devices_view.cpp
+msgid "_Send"
+msgstr "_Odeslat"
 
 #: src/gtk/devices_view.cpp
 msgid "Folders can't be sent — drop files instead."

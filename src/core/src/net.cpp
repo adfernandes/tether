@@ -292,7 +292,7 @@ namespace tether {
             return bluetooth::g_bt_connections->status();
         return nlohmann::json{{"command", "bt_connection_changed"},
                               {"device_present", false},
-                              {"link_reason", "Bluetooth is unavailable."},
+                              {"link_reason", _("Bluetooth is unavailable.")},
                               {"profile_reason", ""}};
     }
 
@@ -463,7 +463,7 @@ namespace tether {
 
         if (g_bt_scan_busy.exchange(true)) {
             event["success"] = false;
-            event["message"] = "A Bluetooth scan is already running.";
+            event["message"] = _("A Bluetooth scan is already running.");
             broadcast_local_event(event.dump());
             return;
         }
@@ -478,7 +478,7 @@ namespace tether {
 
         g_bt_scan_busy = false;
         event["success"] = ok;
-        event["message"] = ok ? "Bluetooth scan finished." : (err.empty() ? "Bluetooth is unavailable." : err);
+        event["message"] = ok ? _("Bluetooth scan finished.") : (err.empty() ? _("Bluetooth is unavailable.") : err);
         broadcast_local_event(build_bt_devices().dump());
         broadcast_local_event(event.dump());
     }
@@ -507,7 +507,7 @@ namespace tether {
             event["command"] = "bt_pair_result";
             event["success"] = false;
             event["status"] = "error";
-            event["message"] = "Bluetooth is unavailable.";
+            event["message"] = _("Bluetooth is unavailable.");
             broadcast_local_event(event.dump());
             return;
         }
@@ -517,7 +517,7 @@ namespace tether {
             event["command"] = "bt_pair_result";
             event["success"] = false;
             event["status"] = "busy";
-            event["message"] = "Another pairing attempt is already in progress.";
+            event["message"] = _("Another pairing attempt is already in progress.");
             broadcast_local_event(event.dump());
             return;
         }
@@ -1446,8 +1446,9 @@ namespace tether {
                                 nlohmann::json resp;
                                 resp["command"] = "file_send_complete";
                                 resp["success"] = ok;
-                                resp["message"] = ok ? ("Sent " + std::filesystem::path(path).filename().string())
-                                                     : ("Send failed: " + (err.empty() ? "unknown error" : err));
+                                resp["message"] =
+                                    ok ? tr_format(_("Sent {}"), std::filesystem::path(path).filename().string())
+                                       : tr_format(_("Send failed: {}"), err.empty() ? _("unknown error") : err);
 
                                 broadcast_local_event(resp.dump());
                             }

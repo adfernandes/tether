@@ -70,7 +70,7 @@ namespace tether::bluetooth {
 
     bool send_message(const std::string& thread_key, const std::string& body, Message& sent_out, std::string& err_out) {
         if (body.empty()) {
-            err_out = "Nothing to send.";
+            err_out = _("Nothing to send.");
             return false;
         }
 

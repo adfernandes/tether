@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: tether\n"
 "Report-Msgid-Bugs-To: zack@bartel.com\n"
-"POT-Creation-Date: 2026-09-10 22:16-0700\n"
+"POT-Creation-Date: 2026-09-12 10:39-0700\n"
 "PO-Revision-Date: 2026-08-23\n"
 "Last-Translator: Tether project\n"
 "Language-Team: Ukrainian\n"
@@ -392,7 +392,7 @@ msgstr "Режим"
 msgid "Bearer API"
 msgstr "API bearer"
 
-#: src/cli/main.cpp
+#: src/cli/main.cpp src/core/src/bluetooth/pairing.cpp
 msgid "unknown"
 msgstr "невідомо"
 
@@ -1210,6 +1210,10 @@ msgstr ""
 msgid "Connected over BR/EDR and LE."
 msgstr "Під'єднано через BR/EDR і LE."
 
+#: src/core/src/bluetooth/connection.cpp
+msgid "Nothing to send."
+msgstr "Немає чого надсилати."
+
 #: src/core/src/bluetooth/connection.cpp src/gtk/messages_view.cpp
 msgid "Messages are not connected."
 msgstr "Повідомлення не під'єднано."
@@ -1377,6 +1381,23 @@ msgstr ""
 "не подаватиме себе як A/V Hands-Free (major 4, minor 8)."
 
 #: src/core/src/bluetooth/pairing.cpp
+msgid "No Bluetooth adapter is available."
+msgstr "Немає доступного адаптера Bluetooth."
+
+#: src/core/src/bluetooth/pairing.cpp
+msgid "Could not prepare the ANCS advertisement."
+msgstr "Не вдалося підготувати оголошення ANCS."
+
+#: src/core/src/bluetooth/pairing.cpp
+#, c++-format
+msgid "Could not advertise for ANCS: {}"
+msgstr "Не вдалося оголосити ANCS: {}"
+
+#: src/core/src/bluetooth/pairing.cpp src/core/src/net.cpp
+msgid "Bluetooth is unavailable."
+msgstr "Bluetooth недоступний."
+
+#: src/core/src/bluetooth/pairing.cpp
 #, c++-format
 msgid ""
 "{0} wants to pair.\n"
@@ -1402,6 +1423,101 @@ msgstr "Підтвердити"
 #: src/core/src/bluetooth/pairing.cpp src/gtk/messages_view.cpp
 msgid "Cancel"
 msgstr "Скасувати"
+
+#: src/core/src/bluetooth/pairing.cpp
+#, c++-format
+msgid ""
+"Device {} is not visible to BlueZ. Unlock the iPhone and open its Bluetooth "
+"settings so it is discoverable, then try again."
+msgstr ""
+"Пристрій {} не видно для BlueZ. Розблокуйте iPhone і відкрийте його "
+"параметри Bluetooth, щоб він став видимим, потім спробуйте ще раз."
+
+#: src/core/src/bluetooth/pairing.cpp
+msgid "Could not register a Bluetooth pairing agent."
+msgstr "Не вдалося зареєструвати агента пари Bluetooth."
+
+#: src/core/src/bluetooth/pairing.cpp
+#, c++-format
+msgid ""
+"The pairing code could not be shown for confirmation: this computer has no "
+"display, and whatever started the pairing did not answer either. Run tether "
+"--bt-pair {} from a terminal and confirm the code there."
+msgstr ""
+"Код пари не вдалося показати для підтвердження: цей комп'ютер не має екрана, "
+"і те, що почало створення пари, теж не відповіло. Виконайте в терміналі "
+"tether --bt-pair {} і підтвердьте код там."
+
+#: src/core/src/bluetooth/pairing.cpp
+msgid "Pairing was not confirmed on this computer."
+msgstr "Пару не підтверджено на цьому комп'ютері."
+
+#: src/core/src/bluetooth/pairing.cpp
+msgid "The iPhone declined the pairing request."
+msgstr "iPhone відхилив запит на створення пари."
+
+#: src/core/src/bluetooth/pairing.cpp
+#, c++-format
+msgid ""
+"The iPhone refused the connection before pairing started{0}. Delete every "
+"entry for this computer on the iPhone (Settings -> Bluetooth, there can be "
+"two), run tether --bt-unpair {1}, then try again."
+msgstr ""
+"iPhone відхилив з'єднання до початку створення пари{0}. Вилучіть на iPhone "
+"кожен запис цього комп'ютера (Параметри -> Bluetooth, їх може бути два), "
+"виконайте tether --bt-unpair {1}, потім спробуйте ще раз."
+
+#: src/core/src/bluetooth/pairing.cpp
+msgid "Pairing did not complete. Confirm the prompt on the iPhone."
+msgstr "Створення пари не завершено. Підтвердьте запит на iPhone."
+
+#: src/core/src/bluetooth/pairing.cpp
+#, c++-format
+msgid "Pairing failed: {}"
+msgstr "Не вдалося створити пару: {}"
+
+#: src/core/src/bluetooth/pairing.cpp
+#, c++-format
+msgid "Paired with {}."
+msgstr "Створено пару з {}."
+
+#: src/core/src/bluetooth/pairing.cpp
+msgid "No Bluetooth adapter is present."
+msgstr "Адаптера Bluetooth немає."
+
+#: src/core/src/bluetooth/pairing.cpp
+msgid "BlueZ refused to start scanning."
+msgstr "BlueZ відмовився почати пошук."
+
+#: src/core/src/bluetooth/pairing.cpp
+msgid ""
+"BlueZ is holding a discovery session that never ended, so scanning cannot "
+"start. Restart the Bluetooth service (sudo systemctl restart bluetooth) and "
+"try again."
+msgstr ""
+"BlueZ утримує сеанс виявлення, який так і не завершився, тож пошук не може "
+"початися. Перезапустіть службу Bluetooth (sudo systemctl restart bluetooth) "
+"і спробуйте ще раз."
+
+#: src/core/src/bluetooth/pairing.cpp
+#, c++-format
+msgid "Device {} is not known to BlueZ."
+msgstr "Пристрій {} невідомий BlueZ."
+
+#: src/core/src/bluetooth/pairing.cpp
+#, c++-format
+msgid "Could not remove the bond: {}"
+msgstr "Не вдалося вилучити зв'язок: {}"
+
+#: src/core/src/bluetooth/pairing.cpp
+msgid ""
+"Removed the bond. Also delete this computer from the iPhone's Bluetooth "
+"settings before pairing again — a stale record there will block a clean "
+"retry."
+msgstr ""
+"Зв'язок вилучено. Перед повторним створенням пари вилучіть цей комп'ютер "
+"також у параметрах Bluetooth на iPhone — застарілий запис там завадить "
+"чистій повторній спробі."
 
 #. TRANSLATORS: the feature name Tether shows for this profile.
 #: src/core/src/bluetooth/profile_supervisor.cpp src/daemon/main.cpp
@@ -1533,6 +1649,18 @@ msgstr "Невідома дія з викликом."
 msgid "Not a DTMF sequence."
 msgstr "Це не послідовність DTMF."
 
+#: src/core/src/net.cpp
+msgid "A Bluetooth scan is already running."
+msgstr "Пошук Bluetooth уже триває."
+
+#: src/core/src/net.cpp
+msgid "Bluetooth scan finished."
+msgstr "Пошук Bluetooth завершено."
+
+#: src/core/src/net.cpp
+msgid "Another pairing attempt is already in progress."
+msgstr "Інша спроба створення пари вже триває."
+
 #: src/core/src/net.cpp src/gtk/devices_view.cpp
 msgid "Bluetooth is unavailable on this machine."
 msgstr "Bluetooth недоступний на цій машині."
@@ -1569,8 +1697,18 @@ msgstr ""
 "ввімкненим."
 
 #: src/core/src/net.cpp
-msgid "Bluetooth is unavailable."
-msgstr "Bluetooth недоступний."
+#, c++-format
+msgid "Sent {}"
+msgstr "Надіслано {}"
+
+#: src/core/src/net.cpp
+#, c++-format
+msgid "Send failed: {}"
+msgstr "Не вдалося надіслати: {}"
+
+#: src/core/src/net.cpp
+msgid "unknown error"
+msgstr "невідома помилка"
 
 #. TRANSLATORS: {0} is the device name, {1} is a shortened key fingerprint.
 #: src/core/src/net.cpp
@@ -1939,6 +2077,14 @@ msgstr "Демон недоступний."
 #: src/gtk/devices_view.cpp
 msgid "Send File"
 msgstr "Надіслати файл"
+
+#: src/gtk/devices_view.cpp
+msgid "_Cancel"
+msgstr "_Скасувати"
+
+#: src/gtk/devices_view.cpp
+msgid "_Send"
+msgstr "_Надіслати"
 
 #: src/gtk/devices_view.cpp
 msgid "Folders can't be sent — drop files instead."
