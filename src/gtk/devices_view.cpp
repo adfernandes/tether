@@ -721,9 +721,9 @@ namespace tether::ui {
             GtkWidget* dialog = gtk_file_chooser_dialog_new(_("Send File"),
                                                             GTK_WINDOW(main_window()),
                                                             GTK_FILE_CHOOSER_ACTION_OPEN,
-                                                            "_Cancel",
+                                                            _("_Cancel"),
                                                             GTK_RESPONSE_CANCEL,
-                                                            "_Send",
+                                                            _("_Send"),
                                                             GTK_RESPONSE_ACCEPT,
                                                             nullptr);
             gtk_file_chooser_set_select_multiple(GTK_FILE_CHOOSER(dialog), TRUE);

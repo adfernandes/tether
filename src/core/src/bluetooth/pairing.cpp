@@ -325,7 +325,7 @@ namespace tether::bluetooth {
         // Puts the solicitation advert on air, replacing whatever was there.
         bool start_advert(BluezMonitor& monitor, const std::string& adapter_path, std::string& err) {
             if (adapter_path.empty()) {
-                err = "No Bluetooth adapter is available.";
+                err = _("No Bluetooth adapter is available.");
                 return false;
             }
             std::lock_guard<std::mutex> lock(g_advert_mutex);
@@ -344,8 +344,8 @@ namespace tether::bluetooth {
 
             monitor.invoke_sync([&] { advert->unexport_object(); });
             delete advert;
-            err = registration_error.empty() ? "Could not prepare the ANCS advertisement."
-                                             : "Could not advertise for ANCS: " + registration_error;
+            err = registration_error.empty() ? _("Could not prepare the ANCS advertisement.")
+                                             : tr_format(_("Could not advertise for ANCS: {}"), registration_error);
             return false;
         }
 
@@ -385,7 +385,7 @@ namespace tether::bluetooth {
 
     bool solicit_ancs(BluezMonitor& monitor, std::string& err) {
         if (!monitor.connection()) {
-            err = "Bluetooth is unavailable.";
+            err = _("Bluetooth is unavailable.");
             return false;
         }
         // Deliberately not gated on Capability::advertising: BlueZ reports zero
@@ -403,7 +403,7 @@ namespace tether::bluetooth {
         // advertising instance again as soon as LE is up.
         bool rearm_solicitation(BluezMonitor& monitor, std::string& err) {
             if (!monitor.connection()) {
-                err = "Bluetooth is unavailable.";
+                err = _("Bluetooth is unavailable.");
                 return false;
             }
             return start_advert(monitor, adapter_path(monitor), err);
@@ -556,7 +556,7 @@ namespace tether::bluetooth {
         GDBusConnection* conn = monitor.connection();
         if (!conn) {
             result.status = "error";
-            result.message = "Bluetooth is unavailable.";
+            result.message = _("Bluetooth is unavailable.");
             return result;
         }
 
@@ -568,9 +568,9 @@ namespace tether::bluetooth {
             notify(progress, "discovering", result.device_address);
             if (!discover(monitor, conn, result.device_address, device)) {
                 result.status = "not_found";
-                result.message = "Device " + result.device_address +
-                                 " is not visible to BlueZ. Unlock the iPhone and open its Bluetooth settings so it "
-                                 "is discoverable, then try again.";
+                result.message = tr_format(_("Device {} is not visible to BlueZ. Unlock the iPhone and open its "
+                                             "Bluetooth settings so it is discoverable, then try again."),
+                                           result.device_address);
                 return result;
             }
         }
@@ -637,7 +637,7 @@ namespace tether::bluetooth {
             if (!exported || !agent.register_with_bluez()) {
                 monitor.invoke_sync([&] { agent.unexport_object(); });
                 result.status = "error";
-                result.message = "Could not register a Bluetooth pairing agent.";
+                result.message = _("Could not register a Bluetooth pairing agent.");
                 return result;
             }
 
@@ -708,27 +708,29 @@ namespace tether::bluetooth {
             if (!paired) {
                 if (confirm_unavailable) {
                     result.status = "error";
-                    result.message = "The pairing code could not be shown for confirmation: this computer has no "
-                                     "display, and whatever started the pairing did not answer either. Run tether "
-                                     "--bt-pair " +
-                                     result.device_address + " from a terminal and confirm the code there.";
+                    result.message =
+                        tr_format(_("The pairing code could not be shown for confirmation: this computer has no "
+                                    "display, and whatever started the pairing did not answer either. Run tether "
+                                    "--bt-pair {} from a terminal and confirm the code there."),
+                                  result.device_address);
                 } else if (user_rejected) {
                     result.status = "rejected";
-                    result.message = "Pairing was not confirmed on this computer.";
+                    result.message = _("Pairing was not confirmed on this computer.");
                 } else if (err.find("Rejected") != std::string::npos) {
                     result.status = "rejected";
-                    result.message = "The iPhone declined the pairing request.";
+                    result.message = _("The iPhone declined the pairing request.");
                 } else if (!auth_seen) {
                     result.status = "timeout";
                     result.message =
-                        "The iPhone refused the connection before pairing started" + (err.empty() ? "" : ": " + err) +
-                        ". Delete every entry for this computer on the iPhone (Settings -> Bluetooth, there can be "
-                        "two), run tether --bt-unpair " +
-                        result.device_address + ", then try again.";
+                        tr_format(_("The iPhone refused the connection before pairing started{0}. Delete every entry "
+                                    "for this computer on the iPhone (Settings -> Bluetooth, there can be two), run "
+                                    "tether --bt-unpair {1}, then try again."),
+                                  err.empty() ? "" : ": " + err,
+                                  result.device_address);
                 } else {
                     result.status = "timeout";
-                    result.message = initiated ? "Pairing did not complete. Confirm the prompt on the iPhone."
-                                               : ("Pairing failed: " + err);
+                    result.message = initiated ? _("Pairing did not complete. Confirm the prompt on the iPhone.")
+                                               : tr_format(_("Pairing failed: {}"), err);
                 }
                 return result;
             }
@@ -736,7 +738,7 @@ namespace tether::bluetooth {
             notify(progress, "paired", display_name);
             result.success = true;
             result.status = "paired";
-            result.message = "Paired with " + display_name + ".";
+            result.message = tr_format(_("Paired with {}."), display_name);
         }
 
         // Trusting the bond lets BlueZ reconnect without asking again.
@@ -821,13 +823,13 @@ namespace tether::bluetooth {
     bool scan_devices(BluezMonitor& monitor, int seconds, const std::function<void()>& on_tick, std::string& err) {
         GDBusConnection* conn = monitor.connection();
         if (!conn) {
-            err = "Bluetooth is unavailable.";
+            err = _("Bluetooth is unavailable.");
             return false;
         }
 
         const std::string adapter = adapter_path(monitor);
         if (adapter.empty()) {
-            err = "No Bluetooth adapter is present.";
+            err = _("No Bluetooth adapter is present.");
             return false;
         }
 
@@ -836,12 +838,12 @@ namespace tether::bluetooth {
         bool owns_discovery = call_adapter(conn, adapter, "StartDiscovery", &start_err);
         if (!owns_discovery) {
             if (start_err.find("InProgress") == std::string::npos) {
-                err = start_err.empty() ? "BlueZ refused to start scanning." : start_err;
+                err = start_err.empty() ? _("BlueZ refused to start scanning.") : start_err;
                 return false;
             }
             if (!get_adapter_bool(conn, adapter, "Discovering")) {
-                err = "BlueZ is holding a discovery session that never ended, so scanning cannot start. "
-                      "Restart the Bluetooth service (sudo systemctl restart bluetooth) and try again.";
+                err = _("BlueZ is holding a discovery session that never ended, so scanning cannot start. "
+                        "Restart the Bluetooth service (sudo systemctl restart bluetooth) and try again.");
                 return false;
             }
         }
@@ -867,14 +869,14 @@ namespace tether::bluetooth {
         GDBusConnection* conn = monitor.connection();
         if (!conn) {
             result.status = "error";
-            result.message = "Bluetooth is unavailable.";
+            result.message = _("Bluetooth is unavailable.");
             return result;
         }
 
         Device device;
         if (!lookup(monitor, result.device_address, device)) {
             result.status = "not_found";
-            result.message = "Device " + result.device_address + " is not known to BlueZ.";
+            result.message = tr_format(_("Device {} is not known to BlueZ."), result.device_address);
             return result;
         }
 
@@ -893,7 +895,7 @@ namespace tether::bluetooth {
                                                       &error);
         if (!reply) {
             result.status = "error";
-            result.message = std::string("Could not remove the bond: ") + (error ? error->message : "unknown");
+            result.message = tr_format(_("Could not remove the bond: {}"), error ? error->message : _("unknown"));
             g_clear_error(&error);
             return result;
         }
@@ -901,8 +903,8 @@ namespace tether::bluetooth {
 
         result.success = true;
         result.status = "unpaired";
-        result.message = "Removed the bond. Also delete this computer from the iPhone's Bluetooth settings before "
-                         "pairing again — a stale record there will block a clean retry.";
+        result.message = _("Removed the bond. Also delete this computer from the iPhone's Bluetooth settings "
+                           "before pairing again — a stale record there will block a clean retry.");
         return result;
     }
 

@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: tether\n"
 "Report-Msgid-Bugs-To: zack@bartel.com\n"
-"POT-Creation-Date: 2026-09-10 22:16-0700\n"
+"POT-Creation-Date: 2026-09-12 10:39-0700\n"
 "PO-Revision-Date: 2026-08-23\n"
 "Last-Translator: Tether project\n"
 "Language-Team: Turkish\n"
@@ -387,7 +387,7 @@ msgstr "Kip"
 msgid "Bearer API"
 msgstr "Bearer API"
 
-#: src/cli/main.cpp
+#: src/cli/main.cpp src/core/src/bluetooth/pairing.cpp
 msgid "unknown"
 msgstr "bilinmiyor"
 
@@ -1202,6 +1202,10 @@ msgstr ""
 msgid "Connected over BR/EDR and LE."
 msgstr "BR/EDR ve LE üzerinden bağlandı."
 
+#: src/core/src/bluetooth/connection.cpp
+msgid "Nothing to send."
+msgstr "Gönderilecek bir şey yok."
+
 #: src/core/src/bluetooth/connection.cpp src/gtk/messages_view.cpp
 msgid "Messages are not connected."
 msgstr "Mesajlar bağlı değil."
@@ -1365,6 +1369,23 @@ msgstr ""
 "tanıtmadıkça iPhone Mesajlar ve Kişiler izinlerini sunmayacak."
 
 #: src/core/src/bluetooth/pairing.cpp
+msgid "No Bluetooth adapter is available."
+msgstr "Kullanılabilir Bluetooth bağdaştırıcısı yok."
+
+#: src/core/src/bluetooth/pairing.cpp
+msgid "Could not prepare the ANCS advertisement."
+msgstr "ANCS duyurusu hazırlanamadı."
+
+#: src/core/src/bluetooth/pairing.cpp
+#, c++-format
+msgid "Could not advertise for ANCS: {}"
+msgstr "ANCS için duyuru yapılamadı: {}"
+
+#: src/core/src/bluetooth/pairing.cpp src/core/src/net.cpp
+msgid "Bluetooth is unavailable."
+msgstr "Bluetooth kullanılamıyor."
+
+#: src/core/src/bluetooth/pairing.cpp
 #, c++-format
 msgid ""
 "{0} wants to pair.\n"
@@ -1390,6 +1411,101 @@ msgstr "Doğrula"
 #: src/core/src/bluetooth/pairing.cpp src/gtk/messages_view.cpp
 msgid "Cancel"
 msgstr "Vazgeç"
+
+#: src/core/src/bluetooth/pairing.cpp
+#, c++-format
+msgid ""
+"Device {} is not visible to BlueZ. Unlock the iPhone and open its Bluetooth "
+"settings so it is discoverable, then try again."
+msgstr ""
+"{} aygıtı BlueZ tarafından görülmüyor. iPhone'un kilidini açın ve "
+"keşfedilebilir olması için Bluetooth ayarlarını açın, sonra yeniden deneyin."
+
+#: src/core/src/bluetooth/pairing.cpp
+msgid "Could not register a Bluetooth pairing agent."
+msgstr "Bluetooth eşleşme aracısı kaydedilemedi."
+
+#: src/core/src/bluetooth/pairing.cpp
+#, c++-format
+msgid ""
+"The pairing code could not be shown for confirmation: this computer has no "
+"display, and whatever started the pairing did not answer either. Run tether "
+"--bt-pair {} from a terminal and confirm the code there."
+msgstr ""
+"Eşleşme kodu onay için gösterilemedi: bu bilgisayarın ekranı yok ve "
+"eşleşmeyi başlatan da yanıt vermedi. Bir uçbirimde tether --bt-pair {} "
+"çalıştırın ve kodu orada onaylayın."
+
+#: src/core/src/bluetooth/pairing.cpp
+msgid "Pairing was not confirmed on this computer."
+msgstr "Eşleşme bu bilgisayarda onaylanmadı."
+
+#: src/core/src/bluetooth/pairing.cpp
+msgid "The iPhone declined the pairing request."
+msgstr "iPhone eşleşme isteğini reddetti."
+
+#: src/core/src/bluetooth/pairing.cpp
+#, c++-format
+msgid ""
+"The iPhone refused the connection before pairing started{0}. Delete every "
+"entry for this computer on the iPhone (Settings -> Bluetooth, there can be "
+"two), run tether --bt-unpair {1}, then try again."
+msgstr ""
+"iPhone, eşleşme başlamadan önce bağlantıyı reddetti{0}. iPhone'da bu "
+"bilgisayara ait her kaydı silin (Ayarlar -> Bluetooth, iki tane olabilir), "
+"tether --bt-unpair {1} çalıştırın, sonra yeniden deneyin."
+
+#: src/core/src/bluetooth/pairing.cpp
+msgid "Pairing did not complete. Confirm the prompt on the iPhone."
+msgstr "Eşleşme tamamlanmadı. iPhone'daki istemi onaylayın."
+
+#: src/core/src/bluetooth/pairing.cpp
+#, c++-format
+msgid "Pairing failed: {}"
+msgstr "Eşleşme başarısız: {}"
+
+#: src/core/src/bluetooth/pairing.cpp
+#, c++-format
+msgid "Paired with {}."
+msgstr "{} ile eşleşildi."
+
+#: src/core/src/bluetooth/pairing.cpp
+msgid "No Bluetooth adapter is present."
+msgstr "Hiç Bluetooth bağdaştırıcısı yok."
+
+#: src/core/src/bluetooth/pairing.cpp
+msgid "BlueZ refused to start scanning."
+msgstr "BlueZ taramayı başlatmayı reddetti."
+
+#: src/core/src/bluetooth/pairing.cpp
+msgid ""
+"BlueZ is holding a discovery session that never ended, so scanning cannot "
+"start. Restart the Bluetooth service (sudo systemctl restart bluetooth) and "
+"try again."
+msgstr ""
+"BlueZ hiç bitmemiş bir keşif oturumunu tutuyor, bu yüzden tarama "
+"başlayamıyor. Bluetooth hizmetini yeniden başlatın (sudo systemctl restart "
+"bluetooth) ve yeniden deneyin."
+
+#: src/core/src/bluetooth/pairing.cpp
+#, c++-format
+msgid "Device {} is not known to BlueZ."
+msgstr "{} aygıtı BlueZ tarafından bilinmiyor."
+
+#: src/core/src/bluetooth/pairing.cpp
+#, c++-format
+msgid "Could not remove the bond: {}"
+msgstr "Bağ kaldırılamadı: {}"
+
+#: src/core/src/bluetooth/pairing.cpp
+msgid ""
+"Removed the bond. Also delete this computer from the iPhone's Bluetooth "
+"settings before pairing again — a stale record there will block a clean "
+"retry."
+msgstr ""
+"Bağ kaldırıldı. Yeniden eşleşmeden önce bu bilgisayarı iPhone'un Bluetooth "
+"ayarlarından da silin — oradaki eski kayıt temiz bir yeniden denemeyi "
+"engeller."
 
 #. TRANSLATORS: the feature name Tether shows for this profile.
 #: src/core/src/bluetooth/profile_supervisor.cpp src/daemon/main.cpp
@@ -1521,6 +1637,18 @@ msgstr "Bilinmeyen çağrı işlemi."
 msgid "Not a DTMF sequence."
 msgstr "DTMF dizisi değil."
 
+#: src/core/src/net.cpp
+msgid "A Bluetooth scan is already running."
+msgstr "Bir Bluetooth taraması zaten çalışıyor."
+
+#: src/core/src/net.cpp
+msgid "Bluetooth scan finished."
+msgstr "Bluetooth taraması bitti."
+
+#: src/core/src/net.cpp
+msgid "Another pairing attempt is already in progress."
+msgstr "Başka bir eşleşme denemesi zaten sürüyor."
+
 #: src/core/src/net.cpp src/gtk/devices_view.cpp
 msgid "Bluetooth is unavailable on this machine."
 msgstr "Bu makinede Bluetooth kullanılamıyor."
@@ -1556,8 +1684,18 @@ msgstr ""
 "etkin görünse bile izin yeniden verilmesi gerekebilir."
 
 #: src/core/src/net.cpp
-msgid "Bluetooth is unavailable."
-msgstr "Bluetooth kullanılamıyor."
+#, c++-format
+msgid "Sent {}"
+msgstr "{} gönderildi"
+
+#: src/core/src/net.cpp
+#, c++-format
+msgid "Send failed: {}"
+msgstr "Gönderme başarısız: {}"
+
+#: src/core/src/net.cpp
+msgid "unknown error"
+msgstr "bilinmeyen hata"
 
 #. TRANSLATORS: {0} is the device name, {1} is a shortened key fingerprint.
 #: src/core/src/net.cpp
@@ -1922,6 +2060,14 @@ msgstr "Arka plan hizmeti kullanılamıyor."
 #: src/gtk/devices_view.cpp
 msgid "Send File"
 msgstr "Dosya gönder"
+
+#: src/gtk/devices_view.cpp
+msgid "_Cancel"
+msgstr "_Vazgeç"
+
+#: src/gtk/devices_view.cpp
+msgid "_Send"
+msgstr "_Gönder"
 
 #: src/gtk/devices_view.cpp
 msgid "Folders can't be sent — drop files instead."

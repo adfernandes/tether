@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: tether\n"
 "Report-Msgid-Bugs-To: zack@bartel.com\n"
-"POT-Creation-Date: 2026-09-10 22:16-0700\n"
+"POT-Creation-Date: 2026-09-12 10:39-0700\n"
 "PO-Revision-Date: 2026-08-22\n"
 "Last-Translator: Tether project\n"
 "Language-Team: French\n"
@@ -396,7 +396,7 @@ msgstr "Mode"
 msgid "Bearer API"
 msgstr "API bearer"
 
-#: src/cli/main.cpp
+#: src/cli/main.cpp src/core/src/bluetooth/pairing.cpp
 msgid "unknown"
 msgstr "inconnu"
 
@@ -1217,6 +1217,10 @@ msgstr ""
 msgid "Connected over BR/EDR and LE."
 msgstr "Connecté en BR/EDR et LE."
 
+#: src/core/src/bluetooth/connection.cpp
+msgid "Nothing to send."
+msgstr "Rien à envoyer."
+
 #: src/core/src/bluetooth/connection.cpp src/gtk/messages_view.cpp
 msgid "Messages are not connected."
 msgstr "Les messages ne sont pas connectés."
@@ -1392,6 +1396,23 @@ msgstr ""
 "adaptateur se présentera comme mains libres A/V (majeur 4, mineur 8)."
 
 #: src/core/src/bluetooth/pairing.cpp
+msgid "No Bluetooth adapter is available."
+msgstr "Aucun adaptateur Bluetooth n'est disponible."
+
+#: src/core/src/bluetooth/pairing.cpp
+msgid "Could not prepare the ANCS advertisement."
+msgstr "Impossible de préparer l'annonce ANCS."
+
+#: src/core/src/bluetooth/pairing.cpp
+#, c++-format
+msgid "Could not advertise for ANCS: {}"
+msgstr "Impossible d'annoncer pour ANCS : {}"
+
+#: src/core/src/bluetooth/pairing.cpp src/core/src/net.cpp
+msgid "Bluetooth is unavailable."
+msgstr "Bluetooth est indisponible."
+
+#: src/core/src/bluetooth/pairing.cpp
 #, c++-format
 msgid ""
 "{0} wants to pair.\n"
@@ -1417,6 +1438,102 @@ msgstr "Confirmer"
 #: src/core/src/bluetooth/pairing.cpp src/gtk/messages_view.cpp
 msgid "Cancel"
 msgstr "Annuler"
+
+#: src/core/src/bluetooth/pairing.cpp
+#, c++-format
+msgid ""
+"Device {} is not visible to BlueZ. Unlock the iPhone and open its Bluetooth "
+"settings so it is discoverable, then try again."
+msgstr ""
+"L'appareil {} n'est pas visible par BlueZ. Déverrouillez l'iPhone et ouvrez "
+"ses réglages Bluetooth pour qu'il soit détectable, puis réessayez."
+
+#: src/core/src/bluetooth/pairing.cpp
+msgid "Could not register a Bluetooth pairing agent."
+msgstr "Impossible d'enregistrer un agent d'appairage Bluetooth."
+
+#: src/core/src/bluetooth/pairing.cpp
+#, c++-format
+msgid ""
+"The pairing code could not be shown for confirmation: this computer has no "
+"display, and whatever started the pairing did not answer either. Run tether "
+"--bt-pair {} from a terminal and confirm the code there."
+msgstr ""
+"Le code d'appairage n'a pas pu être affiché pour confirmation : cet "
+"ordinateur n'a pas d'écran, et ce qui a lancé l'appairage n'a pas répondu "
+"non plus. Lancez tether --bt-pair {} dans un terminal et confirmez le code "
+"là."
+
+#: src/core/src/bluetooth/pairing.cpp
+msgid "Pairing was not confirmed on this computer."
+msgstr "L'appairage n'a pas été confirmé sur cet ordinateur."
+
+#: src/core/src/bluetooth/pairing.cpp
+msgid "The iPhone declined the pairing request."
+msgstr "L'iPhone a refusé la demande d'appairage."
+
+#: src/core/src/bluetooth/pairing.cpp
+#, c++-format
+msgid ""
+"The iPhone refused the connection before pairing started{0}. Delete every "
+"entry for this computer on the iPhone (Settings -> Bluetooth, there can be "
+"two), run tether --bt-unpair {1}, then try again."
+msgstr ""
+"L'iPhone a refusé la connexion avant le début de l'appairage{0}. Supprimez "
+"toutes les entrées de cet ordinateur sur l'iPhone (Réglages -> Bluetooth, il "
+"peut y en avoir deux), lancez tether --bt-unpair {1}, puis réessayez."
+
+#: src/core/src/bluetooth/pairing.cpp
+msgid "Pairing did not complete. Confirm the prompt on the iPhone."
+msgstr "L'appairage ne s'est pas terminé. Confirmez l'invite sur l'iPhone."
+
+#: src/core/src/bluetooth/pairing.cpp
+#, c++-format
+msgid "Pairing failed: {}"
+msgstr "Échec de l'appairage : {}"
+
+#: src/core/src/bluetooth/pairing.cpp
+#, c++-format
+msgid "Paired with {}."
+msgstr "Appairé avec {}."
+
+#: src/core/src/bluetooth/pairing.cpp
+msgid "No Bluetooth adapter is present."
+msgstr "Aucun adaptateur Bluetooth n'est présent."
+
+#: src/core/src/bluetooth/pairing.cpp
+msgid "BlueZ refused to start scanning."
+msgstr "BlueZ a refusé de démarrer la recherche."
+
+#: src/core/src/bluetooth/pairing.cpp
+msgid ""
+"BlueZ is holding a discovery session that never ended, so scanning cannot "
+"start. Restart the Bluetooth service (sudo systemctl restart bluetooth) and "
+"try again."
+msgstr ""
+"BlueZ conserve une session de découverte qui ne s'est jamais terminée, la "
+"recherche ne peut donc pas démarrer. Redémarrez le service Bluetooth (sudo "
+"systemctl restart bluetooth) et réessayez."
+
+#: src/core/src/bluetooth/pairing.cpp
+#, c++-format
+msgid "Device {} is not known to BlueZ."
+msgstr "L'appareil {} est inconnu de BlueZ."
+
+#: src/core/src/bluetooth/pairing.cpp
+#, c++-format
+msgid "Could not remove the bond: {}"
+msgstr "Impossible de supprimer le lien : {}"
+
+#: src/core/src/bluetooth/pairing.cpp
+msgid ""
+"Removed the bond. Also delete this computer from the iPhone's Bluetooth "
+"settings before pairing again — a stale record there will block a clean "
+"retry."
+msgstr ""
+"Lien supprimé. Supprimez aussi cet ordinateur des réglages Bluetooth de "
+"l'iPhone avant de réappairer — une entrée obsolète y bloquera une nouvelle "
+"tentative propre."
 
 #. TRANSLATORS: the feature name Tether shows for this profile.
 #: src/core/src/bluetooth/profile_supervisor.cpp src/daemon/main.cpp
@@ -1551,6 +1668,18 @@ msgstr "Action inconnue."
 msgid "Not a DTMF sequence."
 msgstr "Séquence DTMF invalide."
 
+#: src/core/src/net.cpp
+msgid "A Bluetooth scan is already running."
+msgstr "Une recherche Bluetooth est déjà en cours."
+
+#: src/core/src/net.cpp
+msgid "Bluetooth scan finished."
+msgstr "Recherche Bluetooth terminée."
+
+#: src/core/src/net.cpp
+msgid "Another pairing attempt is already in progress."
+msgstr "Une autre tentative d'appairage est déjà en cours."
+
 #: src/core/src/net.cpp src/gtk/devices_view.cpp
 msgid "Bluetooth is unavailable on this machine."
 msgstr "Bluetooth est indisponible sur cette machine."
@@ -1587,8 +1716,18 @@ msgstr ""
 "être redonnée même lorsqu'elle semble déjà activée."
 
 #: src/core/src/net.cpp
-msgid "Bluetooth is unavailable."
-msgstr "Bluetooth est indisponible."
+#, c++-format
+msgid "Sent {}"
+msgstr "{} envoyé"
+
+#: src/core/src/net.cpp
+#, c++-format
+msgid "Send failed: {}"
+msgstr "Échec de l'envoi : {}"
+
+#: src/core/src/net.cpp
+msgid "unknown error"
+msgstr "erreur inconnue"
 
 #. TRANSLATORS: {0} is the device name, {1} is a shortened key fingerprint.
 #: src/core/src/net.cpp
@@ -1959,6 +2098,14 @@ msgstr "Démon indisponible."
 #: src/gtk/devices_view.cpp
 msgid "Send File"
 msgstr "Envoyer un fichier"
+
+#: src/gtk/devices_view.cpp
+msgid "_Cancel"
+msgstr "_Annuler"
+
+#: src/gtk/devices_view.cpp
+msgid "_Send"
+msgstr "_Envoyer"
 
 #: src/gtk/devices_view.cpp
 msgid "Folders can't be sent — drop files instead."

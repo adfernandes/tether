@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: tether\n"
 "Report-Msgid-Bugs-To: zack@bartel.com\n"
-"POT-Creation-Date: 2026-09-10 22:16-0700\n"
+"POT-Creation-Date: 2026-09-12 10:39-0700\n"
 "PO-Revision-Date: 2026-08-23\n"
 "Last-Translator: Tether project\n"
 "Language-Team: Japanese\n"
@@ -385,7 +385,7 @@ msgstr "モード"
 msgid "Bearer API"
 msgstr "Bearer API"
 
-#: src/cli/main.cpp
+#: src/cli/main.cpp src/core/src/bluetooth/pairing.cpp
 msgid "unknown"
 msgstr "不明"
 
@@ -1191,6 +1191,10 @@ msgstr ""
 msgid "Connected over BR/EDR and LE."
 msgstr "BR/EDR と LE で接続しました。"
 
+#: src/core/src/bluetooth/connection.cpp
+msgid "Nothing to send."
+msgstr "送信するものがありません。"
+
 #: src/core/src/bluetooth/connection.cpp src/gtk/messages_view.cpp
 msgid "Messages are not connected."
 msgstr "メッセージは接続されていません。"
@@ -1356,6 +1360,23 @@ msgstr ""
 "iPhone はメッセージと連絡先の許可を提示しません。"
 
 #: src/core/src/bluetooth/pairing.cpp
+msgid "No Bluetooth adapter is available."
+msgstr "利用できる Bluetooth アダプタがありません。"
+
+#: src/core/src/bluetooth/pairing.cpp
+msgid "Could not prepare the ANCS advertisement."
+msgstr "ANCS のアドバタイズを準備できませんでした。"
+
+#: src/core/src/bluetooth/pairing.cpp
+#, c++-format
+msgid "Could not advertise for ANCS: {}"
+msgstr "ANCS のアドバタイズを開始できませんでした: {}"
+
+#: src/core/src/bluetooth/pairing.cpp src/core/src/net.cpp
+msgid "Bluetooth is unavailable."
+msgstr "Bluetooth を利用できません。"
+
+#: src/core/src/bluetooth/pairing.cpp
 #, c++-format
 msgid ""
 "{0} wants to pair.\n"
@@ -1381,6 +1402,101 @@ msgstr "確認"
 #: src/core/src/bluetooth/pairing.cpp src/gtk/messages_view.cpp
 msgid "Cancel"
 msgstr "キャンセル"
+
+#: src/core/src/bluetooth/pairing.cpp
+#, c++-format
+msgid ""
+"Device {} is not visible to BlueZ. Unlock the iPhone and open its Bluetooth "
+"settings so it is discoverable, then try again."
+msgstr ""
+"デバイス {} は BlueZ から見えません。iPhone のロックを解除し、Bluetooth 設定"
+"を開いて検出可能にしてから、もう一度お試しください。"
+
+#: src/core/src/bluetooth/pairing.cpp
+msgid "Could not register a Bluetooth pairing agent."
+msgstr "Bluetooth ペアリングエージェントを登録できませんでした。"
+
+#: src/core/src/bluetooth/pairing.cpp
+#, c++-format
+msgid ""
+"The pairing code could not be shown for confirmation: this computer has no "
+"display, and whatever started the pairing did not answer either. Run tether "
+"--bt-pair {} from a terminal and confirm the code there."
+msgstr ""
+"確認のためのペアリングコードを表示できませんでした: このコンピュータにはディ"
+"スプレイがなく、ペアリングを開始したものも応答しませんでした。端末で tether "
+"--bt-pair {} を実行し、そこでコードを確認してください。"
+
+#: src/core/src/bluetooth/pairing.cpp
+msgid "Pairing was not confirmed on this computer."
+msgstr "このコンピュータでペアリングが確認されませんでした。"
+
+#: src/core/src/bluetooth/pairing.cpp
+msgid "The iPhone declined the pairing request."
+msgstr "iPhone がペアリング要求を拒否しました。"
+
+#: src/core/src/bluetooth/pairing.cpp
+#, c++-format
+msgid ""
+"The iPhone refused the connection before pairing started{0}. Delete every "
+"entry for this computer on the iPhone (Settings -> Bluetooth, there can be "
+"two), run tether --bt-unpair {1}, then try again."
+msgstr ""
+"ペアリングが始まる前に iPhone が接続を拒否しました{0}。iPhone 上のこのコン"
+"ピュータの項目をすべて削除し (設定 -> Bluetooth、2 つある場合があります)、"
+"tether --bt-unpair {1} を実行してから、もう一度お試しください。"
+
+#: src/core/src/bluetooth/pairing.cpp
+msgid "Pairing did not complete. Confirm the prompt on the iPhone."
+msgstr "ペアリングが完了しませんでした。iPhone の確認画面で承認してください。"
+
+#: src/core/src/bluetooth/pairing.cpp
+#, c++-format
+msgid "Pairing failed: {}"
+msgstr "ペアリングに失敗しました: {}"
+
+#: src/core/src/bluetooth/pairing.cpp
+#, c++-format
+msgid "Paired with {}."
+msgstr "{} とペアリングしました。"
+
+#: src/core/src/bluetooth/pairing.cpp
+msgid "No Bluetooth adapter is present."
+msgstr "Bluetooth アダプタがありません。"
+
+#: src/core/src/bluetooth/pairing.cpp
+msgid "BlueZ refused to start scanning."
+msgstr "BlueZ がスキャンの開始を拒否しました。"
+
+#: src/core/src/bluetooth/pairing.cpp
+msgid ""
+"BlueZ is holding a discovery session that never ended, so scanning cannot "
+"start. Restart the Bluetooth service (sudo systemctl restart bluetooth) and "
+"try again."
+msgstr ""
+"終了しなかった検出セッションを BlueZ が保持しているため、スキャンを開始できま"
+"せん。Bluetooth サービスを再起動し (sudo systemctl restart bluetooth)、もう一"
+"度お試しください。"
+
+#: src/core/src/bluetooth/pairing.cpp
+#, c++-format
+msgid "Device {} is not known to BlueZ."
+msgstr "デバイス {} は BlueZ に認識されていません。"
+
+#: src/core/src/bluetooth/pairing.cpp
+#, c++-format
+msgid "Could not remove the bond: {}"
+msgstr "ボンドを削除できませんでした: {}"
+
+#: src/core/src/bluetooth/pairing.cpp
+msgid ""
+"Removed the bond. Also delete this computer from the iPhone's Bluetooth "
+"settings before pairing again — a stale record there will block a clean "
+"retry."
+msgstr ""
+"ボンドを削除しました。もう一度ペアリングする前に、iPhone の Bluetooth 設定か"
+"らもこのコンピュータを削除してください — 古い記録が残っていると、やり直しがう"
+"まくいきません。"
 
 #. TRANSLATORS: the feature name Tether shows for this profile.
 #: src/core/src/bluetooth/profile_supervisor.cpp src/daemon/main.cpp
@@ -1515,6 +1631,18 @@ msgstr "不明な通話操作です。"
 msgid "Not a DTMF sequence."
 msgstr "DTMF シーケンスではありません。"
 
+#: src/core/src/net.cpp
+msgid "A Bluetooth scan is already running."
+msgstr "Bluetooth スキャンはすでに実行中です。"
+
+#: src/core/src/net.cpp
+msgid "Bluetooth scan finished."
+msgstr "Bluetooth スキャンが完了しました。"
+
+#: src/core/src/net.cpp
+msgid "Another pairing attempt is already in progress."
+msgstr "別のペアリングがすでに進行中です。"
+
 #: src/core/src/net.cpp src/gtk/devices_view.cpp
 msgid "Bluetooth is unavailable on this machine."
 msgstr "このマシンでは Bluetooth を利用できません。"
@@ -1550,8 +1678,18 @@ msgstr ""
 "があります。"
 
 #: src/core/src/net.cpp
-msgid "Bluetooth is unavailable."
-msgstr "Bluetooth を利用できません。"
+#, c++-format
+msgid "Sent {}"
+msgstr "{} を送信しました"
+
+#: src/core/src/net.cpp
+#, c++-format
+msgid "Send failed: {}"
+msgstr "送信に失敗しました: {}"
+
+#: src/core/src/net.cpp
+msgid "unknown error"
+msgstr "不明なエラー"
 
 #. TRANSLATORS: {0} is the device name, {1} is a shortened key fingerprint.
 #: src/core/src/net.cpp
@@ -1920,6 +2058,14 @@ msgstr "デーモンを利用できません。"
 #: src/gtk/devices_view.cpp
 msgid "Send File"
 msgstr "ファイルを送信"
+
+#: src/gtk/devices_view.cpp
+msgid "_Cancel"
+msgstr "キャンセル(_C)"
+
+#: src/gtk/devices_view.cpp
+msgid "_Send"
+msgstr "送信(_S)"
 
 #: src/gtk/devices_view.cpp
 msgid "Folders can't be sent — drop files instead."

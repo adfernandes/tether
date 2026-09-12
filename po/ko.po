@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: tether\n"
 "Report-Msgid-Bugs-To: zack@bartel.com\n"
-"POT-Creation-Date: 2026-09-10 22:16-0700\n"
+"POT-Creation-Date: 2026-09-12 10:39-0700\n"
 "PO-Revision-Date: 2026-08-23\n"
 "Last-Translator: Tether project\n"
 "Language-Team: Korean\n"
@@ -379,7 +379,7 @@ msgstr "모드"
 msgid "Bearer API"
 msgstr "Bearer API"
 
-#: src/cli/main.cpp
+#: src/cli/main.cpp src/core/src/bluetooth/pairing.cpp
 msgid "unknown"
 msgstr "알 수 없음"
 
@@ -1177,6 +1177,10 @@ msgstr ""
 msgid "Connected over BR/EDR and LE."
 msgstr "BR/EDR과 LE로 연결되었습니다."
 
+#: src/core/src/bluetooth/connection.cpp
+msgid "Nothing to send."
+msgstr "보낼 것이 없습니다."
+
 #: src/core/src/bluetooth/connection.cpp src/gtk/messages_view.cpp
 msgid "Messages are not connected."
 msgstr "메시지가 연결되지 않았습니다."
@@ -1338,6 +1342,23 @@ msgstr ""
 "지와 연락처 권한을 제공하지 않습니다."
 
 #: src/core/src/bluetooth/pairing.cpp
+msgid "No Bluetooth adapter is available."
+msgstr "사용할 수 있는 Bluetooth 어댑터가 없습니다."
+
+#: src/core/src/bluetooth/pairing.cpp
+msgid "Could not prepare the ANCS advertisement."
+msgstr "ANCS 광고를 준비하지 못했습니다."
+
+#: src/core/src/bluetooth/pairing.cpp
+#, c++-format
+msgid "Could not advertise for ANCS: {}"
+msgstr "ANCS 광고를 시작하지 못했습니다: {}"
+
+#: src/core/src/bluetooth/pairing.cpp src/core/src/net.cpp
+msgid "Bluetooth is unavailable."
+msgstr "Bluetooth를 사용할 수 없습니다."
+
+#: src/core/src/bluetooth/pairing.cpp
 #, c++-format
 msgid ""
 "{0} wants to pair.\n"
@@ -1363,6 +1384,100 @@ msgstr "확인"
 #: src/core/src/bluetooth/pairing.cpp src/gtk/messages_view.cpp
 msgid "Cancel"
 msgstr "취소"
+
+#: src/core/src/bluetooth/pairing.cpp
+#, c++-format
+msgid ""
+"Device {} is not visible to BlueZ. Unlock the iPhone and open its Bluetooth "
+"settings so it is discoverable, then try again."
+msgstr ""
+"BlueZ가 {} 장치를 볼 수 없습니다. iPhone의 잠금을 해제하고 Bluetooth 설정을 "
+"열어 검색 가능하게 한 다음 다시 시도하십시오."
+
+#: src/core/src/bluetooth/pairing.cpp
+msgid "Could not register a Bluetooth pairing agent."
+msgstr "Bluetooth 페어링 에이전트를 등록하지 못했습니다."
+
+#: src/core/src/bluetooth/pairing.cpp
+#, c++-format
+msgid ""
+"The pairing code could not be shown for confirmation: this computer has no "
+"display, and whatever started the pairing did not answer either. Run tether "
+"--bt-pair {} from a terminal and confirm the code there."
+msgstr ""
+"확인용 페어링 코드를 표시하지 못했습니다: 이 컴퓨터에는 디스플레이가 없고, 페"
+"어링을 시작한 쪽도 응답하지 않았습니다. 터미널에서 tether --bt-pair {} 를 실"
+"행하고 거기서 코드를 확인하십시오."
+
+#: src/core/src/bluetooth/pairing.cpp
+msgid "Pairing was not confirmed on this computer."
+msgstr "이 컴퓨터에서 페어링이 확인되지 않았습니다."
+
+#: src/core/src/bluetooth/pairing.cpp
+msgid "The iPhone declined the pairing request."
+msgstr "iPhone이 페어링 요청을 거부했습니다."
+
+#: src/core/src/bluetooth/pairing.cpp
+#, c++-format
+msgid ""
+"The iPhone refused the connection before pairing started{0}. Delete every "
+"entry for this computer on the iPhone (Settings -> Bluetooth, there can be "
+"two), run tether --bt-unpair {1}, then try again."
+msgstr ""
+"페어링이 시작되기 전에 iPhone이 연결을 거부했습니다{0}. iPhone에서 이 컴퓨터"
+"의 모든 항목을 삭제하고 (설정 -> Bluetooth, 두 개일 수 있음), tether --bt-"
+"unpair {1} 을 실행한 다음 다시 시도하십시오."
+
+#: src/core/src/bluetooth/pairing.cpp
+msgid "Pairing did not complete. Confirm the prompt on the iPhone."
+msgstr "페어링이 완료되지 않았습니다. iPhone의 확인 창에서 승인하십시오."
+
+#: src/core/src/bluetooth/pairing.cpp
+#, c++-format
+msgid "Pairing failed: {}"
+msgstr "페어링 실패: {}"
+
+#: src/core/src/bluetooth/pairing.cpp
+#, c++-format
+msgid "Paired with {}."
+msgstr "{}와(과) 페어링했습니다."
+
+#: src/core/src/bluetooth/pairing.cpp
+msgid "No Bluetooth adapter is present."
+msgstr "Bluetooth 어댑터가 없습니다."
+
+#: src/core/src/bluetooth/pairing.cpp
+msgid "BlueZ refused to start scanning."
+msgstr "BlueZ가 검색 시작을 거부했습니다."
+
+#: src/core/src/bluetooth/pairing.cpp
+msgid ""
+"BlueZ is holding a discovery session that never ended, so scanning cannot "
+"start. Restart the Bluetooth service (sudo systemctl restart bluetooth) and "
+"try again."
+msgstr ""
+"BlueZ가 끝나지 않은 검색 세션을 붙들고 있어 검색을 시작할 수 없습니다. "
+"Bluetooth 서비스를 다시 시작하고 (sudo systemctl restart bluetooth) 다시 시도"
+"하십시오."
+
+#: src/core/src/bluetooth/pairing.cpp
+#, c++-format
+msgid "Device {} is not known to BlueZ."
+msgstr "BlueZ가 {} 장치를 알지 못합니다."
+
+#: src/core/src/bluetooth/pairing.cpp
+#, c++-format
+msgid "Could not remove the bond: {}"
+msgstr "본드를 제거하지 못했습니다: {}"
+
+#: src/core/src/bluetooth/pairing.cpp
+msgid ""
+"Removed the bond. Also delete this computer from the iPhone's Bluetooth "
+"settings before pairing again — a stale record there will block a clean "
+"retry."
+msgstr ""
+"본드를 제거했습니다. 다시 페어링하기 전에 iPhone의 Bluetooth 설정에서도 이 컴"
+"퓨터를 삭제하십시오 — 오래된 기록이 남으면 깨끗한 재시도가 막힙니다."
 
 #. TRANSLATORS: the feature name Tether shows for this profile.
 #: src/core/src/bluetooth/profile_supervisor.cpp src/daemon/main.cpp
@@ -1495,6 +1610,18 @@ msgstr "알 수 없는 통화 동작입니다."
 msgid "Not a DTMF sequence."
 msgstr "DTMF 시퀀스가 아닙니다."
 
+#: src/core/src/net.cpp
+msgid "A Bluetooth scan is already running."
+msgstr "Bluetooth 검색이 이미 실행 중입니다."
+
+#: src/core/src/net.cpp
+msgid "Bluetooth scan finished."
+msgstr "Bluetooth 검색이 끝났습니다."
+
+#: src/core/src/net.cpp
+msgid "Another pairing attempt is already in progress."
+msgstr "다른 페어링 시도가 이미 진행 중입니다."
+
 #: src/core/src/net.cpp src/gtk/devices_view.cpp
 msgid "Bluetooth is unavailable on this machine."
 msgstr "이 컴퓨터에서는 Bluetooth를 사용할 수 없습니다."
@@ -1530,8 +1657,18 @@ msgstr ""
 "수 있습니다."
 
 #: src/core/src/net.cpp
-msgid "Bluetooth is unavailable."
-msgstr "Bluetooth를 사용할 수 없습니다."
+#, c++-format
+msgid "Sent {}"
+msgstr "{} 보냄"
+
+#: src/core/src/net.cpp
+#, c++-format
+msgid "Send failed: {}"
+msgstr "보내기 실패: {}"
+
+#: src/core/src/net.cpp
+msgid "unknown error"
+msgstr "알 수 없는 오류"
 
 #. TRANSLATORS: {0} is the device name, {1} is a shortened key fingerprint.
 #: src/core/src/net.cpp
@@ -1896,6 +2033,14 @@ msgstr "데몬을 사용할 수 없습니다."
 #: src/gtk/devices_view.cpp
 msgid "Send File"
 msgstr "파일 보내기"
+
+#: src/gtk/devices_view.cpp
+msgid "_Cancel"
+msgstr "취소(_C)"
+
+#: src/gtk/devices_view.cpp
+msgid "_Send"
+msgstr "보내기(_S)"
 
 #: src/gtk/devices_view.cpp
 msgid "Folders can't be sent — drop files instead."
