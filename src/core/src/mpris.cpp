@@ -2,8 +2,10 @@
 
 #include <tether/log.hpp>
 
+#include <algorithm>
 #include <gio/gio.h>
 #include <mutex>
+#include <thread>
 
 namespace tether {
 
@@ -74,6 +76,46 @@ namespace tether {
     struct MediaControl::Impl {
         mutable std::mutex mutex;
         std::vector<std::string> paused;
+        // what the last toggle paused
+        std::vector<std::string> toggled;
+
+        std::function<void(const std::string&, bool)> on_change;
+        GMainContext* context = nullptr;
+        GMainLoop* loop = nullptr;
+        std::thread watcher;
+
+        ~Impl() {
+            if (watcher.joinable()) {
+                g_main_context_invoke(
+                    context,
+                    [](gpointer data) {
+                        g_main_loop_quit(static_cast<GMainLoop*>(data));
+                        return G_SOURCE_REMOVE;
+                    },
+                    loop);
+                watcher.join();
+            }
+            if (loop)
+                g_main_loop_unref(loop);
+            if (context)
+                g_main_context_unref(context);
+        }
+
+        static void on_properties_changed(GDBusConnection*,
+                                          const char* sender,
+                                          const char*,
+                                          const char*,
+                                          const char*,
+                                          GVariant* parameters,
+                                          gpointer data) {
+            const char* iface = nullptr;
+            GVariant* changed = nullptr;
+            g_variant_get(parameters, "(&s@a{sv}@as)", &iface, &changed, nullptr);
+            const char* status = nullptr;
+            if (g_strcmp0(iface, PLAYER_IFACE) == 0 && g_variant_lookup(changed, "PlaybackStatus", "&s", &status))
+                static_cast<Impl*>(data)->on_change(sender, g_strcmp0(status, "Playing") == 0);
+            g_variant_unref(changed);
+        }
 
         // Resolved on first use: the daemon starts before the session bus is necessarily interesting.
         GDBusConnection* bus() const {
@@ -181,6 +223,75 @@ namespace tether {
                 ++resumed;
         }
         return resumed;
+    }
+
+    size_t MediaControl::toggle() {
+        GDBusConnection* bus = impl_->bus();
+        if (!bus)
+            return 0;
+
+        const auto now = playing();
+        if (!now.empty()) {
+            std::vector<std::string> held;
+            for (const auto& name : now)
+                if (call_player(bus, name, "Pause"))
+                    held.push_back(name);
+            std::lock_guard<std::mutex> lock(impl_->mutex);
+            impl_->toggled = held;
+            return held.size();
+        }
+        if (holding())
+            return resume();
+
+        std::vector<std::string> targets;
+        {
+            std::lock_guard<std::mutex> lock(impl_->mutex);
+            targets.swap(impl_->toggled);
+        }
+        const auto players = impl_->players();
+        std::erase_if(targets, [&](const std::string& name) {
+            return std::find(players.begin(), players.end(), name) == players.end();
+        });
+        if (targets.empty()) {
+            for (const auto& name : players) {
+                if (playback_status(bus, name) == "Paused") {
+                    targets.push_back(name);
+                    break;
+                }
+            }
+        }
+
+        size_t played = 0;
+        for (const auto& name : targets)
+            if (call_player(bus, name, "Play"))
+                ++played;
+        return played;
+    }
+
+    void MediaControl::watch(std::function<void(const std::string& player, bool playing)> on_change) {
+        GDBusConnection* bus = impl_->bus();
+        if (!bus || impl_->watcher.joinable())
+            return;
+        impl_->on_change = std::move(on_change);
+        impl_->context = g_main_context_new();
+        impl_->loop = g_main_loop_new(impl_->context, FALSE);
+        impl_->watcher = std::thread([impl = impl_.get(), bus] {
+            // Signals are delivered on the context that is thread-default where they were subscribed.
+            g_main_context_push_thread_default(impl->context);
+            const guint id = g_dbus_connection_signal_subscribe(bus,
+                                                                nullptr,
+                                                                "org.freedesktop.DBus.Properties",
+                                                                "PropertiesChanged",
+                                                                MPRIS_PATH,
+                                                                PLAYER_IFACE,
+                                                                G_DBUS_SIGNAL_FLAGS_NONE,
+                                                                &Impl::on_properties_changed,
+                                                                impl,
+                                                                nullptr);
+            g_main_loop_run(impl->loop);
+            g_dbus_connection_signal_unsubscribe(bus, id);
+            g_main_context_pop_thread_default(impl->context);
+        });
     }
 
     bool MediaControl::holding() const {

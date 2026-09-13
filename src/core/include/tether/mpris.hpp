@@ -1,5 +1,6 @@
 #pragma once
 
+#include <functional>
 #include <memory>
 #include <string>
 #include <vector>
@@ -23,6 +24,11 @@ namespace tether {
         // Plays what this object paused, then forgets them.
         size_t resume();
 
+        // Play/pause for a button press: pauses what is playing, otherwise plays what this object
+        // paused, otherwise the players the last toggle paused, otherwise the first paused player.
+        // Returns how many players it touched.
+        size_t toggle();
+
         // Whether anything is currently paused by this object.
         bool holding() const;
 
@@ -31,6 +37,11 @@ namespace tether {
 
         // Bus names of every MPRIS player currently reporting Playing.
         std::vector<std::string> playing() const;
+
+        // Calls `on_change` on a thread of its own each time a player reports a new PlaybackStatus,
+        // with the player's unique bus name. Players that leave PlaybackStatus empty are not seen.
+        // Call once.
+        void watch(std::function<void(const std::string& player, bool playing)> on_change);
 
     private:
         struct Impl;

@@ -16,6 +16,7 @@
 #include <sys/socket.h>
 #include <thread>
 #include <unistd.h>
+#include <variant>
 
 // The kernel's L2CAP ABI, declared here rather than pulled in from bluez-libs.
 // glibc already defines some of them.
@@ -74,9 +75,14 @@ namespace tether::bluetooth {
         // The firmware's own ownership verdict arrives on the same shape.
         constexpr uint8_t OWNS_CONNECTION_PREFIX[] = {0x04, 0x00, 0x04, 0x00, 0x09, 0x00, 0x06};
 
-        // Claims are answered slowly and the firmware saturates on a burst of them. Three seconds
-        // is what the AirPods Center reference settled on after seek storms disconnected the buds.
-        constexpr int CLAIM_COOLDOWN_MS = 3000;
+        // Stem config: the host takes single press, and the buds send it a stem-press notification
+        // instead of running their own play/pause, which moves the audio to another host. The other
+        // press types keep their firmware actions. Reset by the firmware on every handoff.
+        constexpr uint8_t STEM_CONFIG[] = {0x04, 0x00, 0x04, 0x00, 0x09, 0x00, 0x39, 0x01, 0x00, 0x00, 0x00};
+        constexpr uint8_t STEM_PRESS_PREFIX[] = {0x04, 0x00, 0x04, 0x00, 0x19, 0x00};
+        constexpr size_t STEM_PRESS_PACKET_BYTES = 8;
+        // Smart-routing messages another host relays through the buds.
+        constexpr uint8_t SMART_ROUTING_RESPONSE_PREFIX[] = {0x04, 0x00, 0x04, 0x00, 0x11, 0x00};
 
         constexpr uint8_t HANDSHAKE_ACK[] = {0x01, 0x00, 0x04, 0x00};
         constexpr uint8_t FEATURES_ACK[] = {0x04, 0x00, 0x04, 0x00, 0x2b, 0x00};
@@ -108,15 +114,15 @@ namespace tether::bluetooth {
         // Sent anyway when the buds do not acknowledge; some models never do.
         constexpr int FEATURES_FALLBACK_MS = 500;
         constexpr int NOTIFICATIONS_AT_MS = 600;
-        // How long a claim waits after the channel opens or this machine starts playing.
+        // The stem config is dropped silently until the state broadcast the notification request
+        // starts has finished; AirPods Center measured this on Pro 2 and Pro 3.
+        constexpr int STEM_CONFIG_AT_MS = 1500;
+        // How long the session claim waits after the channel opens.
         // A claim sent while the audio link is still being set up makes the buds drop
         // the link; the AirPods Center reference puts audio setup safe from 5s.
         constexpr int CLAIM_SETTLE_MS = 5000;
         // After that claim, how long this machine has to start playing before ownership goes back.
         constexpr int IDLE_RELEASE_MS = 3000;
-        // How long the buds must stop reporting a peer's audio before it counts as over:
-        // some models report no audio source every twenty seconds or so during a call.
-        constexpr int PEER_AUDIO_SETTLE_MS = 3000;
         // After a claim, before the session's notification request goes out again. The
         // firmware discards anything sent while it is still broadcasting its own state.
         constexpr int CONFIG_RESEND_MS = 500;
@@ -204,6 +210,15 @@ namespace tether::bluetooth {
             return out;
         }
 
+        // Non-printable bytes as '.'.
+        std::string printable(const uint8_t* data, size_t len) {
+            std::string out(data, data + len);
+            for (auto& c : out)
+                if (c < 0x20 || c > 0x7e)
+                    c = '.';
+            return out;
+        }
+
     } // namespace
 
     const char* to_string(AirPodsStatus status) {
@@ -235,6 +250,7 @@ namespace tether::bluetooth {
             {"peer_taking_over", s.peer_taking_over},
             {"peer_active", s.peer_active},
             {"peer_audio", s.peer_audio},
+            {"peer_call", s.peer_call},
             {"status", to_string(s.status)},
             {"reason", s.reason},
         };
@@ -297,6 +313,25 @@ namespace tether::bluetooth {
             }
         };
         return EarState{decode(data[6]), decode(data[7])};
+    }
+
+    std::optional<StemPress> parse_stem_press(const uint8_t* data, size_t len) {
+        if (data == nullptr || len != STEM_PRESS_PACKET_BYTES)
+            return std::nullopt;
+        if (std::memcmp(data, STEM_PRESS_PREFIX, sizeof(STEM_PRESS_PREFIX)) != 0)
+            return std::nullopt;
+        switch (data[6]) {
+        case 0x05:
+            return StemPress::Single;
+        case 0x06:
+            return StemPress::Double;
+        case 0x07:
+            return StemPress::Triple;
+        case 0x08:
+            return StemPress::Long;
+        default:
+            return std::nullopt;
+        }
     }
 
     std::optional<AncMode> parse_anc(const uint8_t* data, size_t len) {
@@ -419,12 +454,8 @@ namespace tether::bluetooth {
         return HandoffAction::None;
     }
 
-    bool claims_for_playback(const AudioSourceEvent& event,
-                             const std::string& local,
-                             std::optional<bool> owns,
-                             bool peer_audio) {
-        return !local.empty() && event.address == local && event.source != AudioSource::None && owns == false &&
-               !peer_audio;
+    bool takes_over_for_play(std::optional<bool> owns, bool peer_call, bool busy) {
+        return owns != true && !peer_call && !busy;
     }
 
     bool releases_when_idle(bool local_audio, bool peer_present, bool yielded) {
@@ -433,48 +464,166 @@ namespace tether::bluetooth {
 
     namespace {
 
-        // Both TiPi packets are opcode 0x10 (smart routing) and look alike. The target's
-        // address least-significant byte first, then a body of length-tagged ASCII keys.
-        std::vector<uint8_t> tipi_packet(const std::string& self,
-                                         const std::string& target,
-                                         const char* head,
-                                         size_t head_len,
-                                         const char* tail,
-                                         size_t tail_len) {
+        // Apple's OPACK, the subset smart routing uses: one dictionary of strings, integers and booleans.
+        using OpackValue = std::variant<bool, int64_t, std::string>;
+        using OpackEntries = std::vector<std::pair<std::string, OpackValue>>;
+
+        void opack_append(std::vector<uint8_t>& out, const OpackValue& value) {
+            if (const auto* flag = std::get_if<bool>(&value)) {
+                out.push_back(*flag ? 0x01 : 0x02);
+            } else if (const auto* number = std::get_if<int64_t>(&value)) {
+                const auto n = static_cast<uint64_t>(*number);
+                if (*number >= 0 && *number <= 0x27) {
+                    out.push_back(static_cast<uint8_t>(0x08 + n));
+                } else {
+                    const int size = *number >= 0 && n <= 0xff ? 1 : *number >= 0 && n <= 0xffff ? 2 : 4;
+                    out.push_back(static_cast<uint8_t>(0x30 + (size == 1 ? 0 : size == 2 ? 1 : 2)));
+                    for (int i = 0; i < size; ++i)
+                        out.push_back(static_cast<uint8_t>(n >> (8 * i)));
+                }
+            } else {
+                const auto& text = std::get<std::string>(value);
+                if (text.size() <= 0x20) {
+                    out.push_back(static_cast<uint8_t>(0x40 + text.size()));
+                } else {
+                    out.push_back(0x61);
+                    out.push_back(static_cast<uint8_t>(text.size()));
+                }
+                out.insert(out.end(), text.begin(), text.end());
+            }
+        }
+
+        // A smart-routing packet: opcode, the target least-significant byte first, the body length,
+        // then 01 and the dictionary.
+        std::vector<uint8_t> smart_routing_packet(const std::string& target, const OpackEntries& entries) {
             uint8_t addr[6] = {};
-            if (self.size() != 17 || !parse_address(target, addr))
+            if (!parse_address(target, addr) || entries.size() >= 15)
                 return {};
+            std::vector<uint8_t> body = {0x01, static_cast<uint8_t>(0xe0 + entries.size())};
+            for (const auto& [key, value] : entries) {
+                opack_append(body, key);
+                opack_append(body, value);
+            }
             static constexpr uint8_t PREFIX[] = {0x04, 0x00, 0x04, 0x00, 0x10, 0x00};
             std::vector<uint8_t> packet(std::begin(PREFIX), std::end(PREFIX));
             packet.insert(packet.end(), std::begin(addr), std::end(addr));
-            packet.insert(packet.end(), head, head + head_len);
-            packet.insert(packet.end(), self.begin(), self.end());
-            packet.insert(packet.end(), tail, tail + tail_len);
+            packet.push_back(static_cast<uint8_t>(body.size()));
+            packet.push_back(static_cast<uint8_t>(body.size() >> 8));
+            packet.insert(packet.end(), body.begin(), body.end());
             return packet;
         }
 
-        constexpr char TIPI_ADD_HEAD[] = "\x52\x00\x01\xe5\x48idleTime\x08\x47newTipi\x01\x49"
-                                         "btAddress\x51";
-        constexpr char TIPI_ADD_TAIL[] = "\x46"
-                                         "btName\x47"
-                                         "Android\x50nearbyAudioScore\x0e";
-        constexpr char TIPI_MEDIA_HEAD[] = "\x6c\x00\x01\xe5\x4a"
-                                           "playingApp\x42NA\x52hostStreamingState\x42NO\x49"
-                                           "btAddress\x51";
-        constexpr char TIPI_MEDIA_TAIL[] = "\x46"
-                                           "btName\x47"
-                                           "Android\x58otherDeviceAudioCategory\x30\x64";
+        // Decodes one value. `seen` is OPACK's back-reference table: every string and wide integer,
+        // once each, which 0xA0 + index refers to.
+        std::optional<OpackValue>
+            opack_read(const uint8_t* data, size_t len, size_t& at, std::vector<OpackValue>& seen) {
+            if (at >= len)
+                return std::nullopt;
+            const uint8_t tag = data[at++];
+            const auto remember = [&](OpackValue value) {
+                if (std::find(seen.begin(), seen.end(), value) == seen.end())
+                    seen.push_back(value);
+                return std::optional<OpackValue>(std::move(value));
+            };
+            const auto little_endian = [&](size_t size) -> std::optional<uint64_t> {
+                if (len - at < size)
+                    return std::nullopt;
+                uint64_t n = 0;
+                for (size_t i = 0; i < size; ++i)
+                    n |= static_cast<uint64_t>(data[at + i]) << (8 * i);
+                at += size;
+                return n;
+            };
+            if (tag == 0x01 || tag == 0x02)
+                return OpackValue(tag == 0x01);
+            if (tag >= 0x08 && tag <= 0x2f)
+                return OpackValue(static_cast<int64_t>(tag - 0x08));
+            if (tag >= 0x30 && tag <= 0x33) {
+                const auto n = little_endian(size_t{1} << (tag - 0x30));
+                return n ? remember(static_cast<int64_t>(*n)) : std::nullopt;
+            }
+            if ((tag >= 0x40 && tag <= 0x60) || (tag >= 0x61 && tag <= 0x64)) {
+                std::optional<uint64_t> size =
+                    tag <= 0x60 ? std::optional<uint64_t>(tag - 0x40) : little_endian(size_t{1} << (tag - 0x61));
+                if (!size || len - at < *size)
+                    return std::nullopt;
+                std::string text(data + at, data + at + *size);
+                at += *size;
+                return remember(std::move(text));
+            }
+            if (tag >= 0xa0 && tag <= 0xc0 && static_cast<size_t>(tag - 0xa0) < seen.size())
+                return seen[tag - 0xa0];
+            return std::nullopt;
+        }
 
     } // namespace
 
-    std::vector<uint8_t> tipi_add_device(const std::string& self, const std::string& target) {
-        return tipi_packet(
-            self, target, TIPI_ADD_HEAD, sizeof(TIPI_ADD_HEAD) - 1, TIPI_ADD_TAIL, sizeof(TIPI_ADD_TAIL) - 1);
+    std::optional<SmartRoutingMessage> parse_smart_routing(const uint8_t* data, size_t len) {
+        constexpr size_t BODY_AT = 14;
+        if (data == nullptr || len < BODY_AT + 2 ||
+            !starts_with(data, len, SMART_ROUTING_RESPONSE_PREFIX, sizeof(SMART_ROUTING_RESPONSE_PREFIX)))
+            return std::nullopt;
+        const size_t body_len = data[12] | (data[13] << 8);
+        if (body_len < 2 || BODY_AT + body_len > len || data[BODY_AT] != 0x01)
+            return std::nullopt;
+        const uint8_t dict = data[BODY_AT + 1];
+        if (dict < 0xe0 || dict >= 0xef)
+            return std::nullopt;
+
+        SmartRoutingMessage message;
+        message.sender = format_address(data + 6, true);
+        const size_t end = BODY_AT + body_len;
+        size_t at = BODY_AT + 2;
+        std::vector<OpackValue> seen;
+        for (int i = 0; i < dict - 0xe0; ++i) {
+            const auto key = opack_read(data, end, at, seen);
+            const auto value = key ? opack_read(data, end, at, seen) : std::nullopt;
+            if (!value || !std::holds_alternative<std::string>(*key))
+                return std::nullopt;
+            const auto& name = std::get<std::string>(*key);
+            if (name == "playingApp" && std::holds_alternative<std::string>(*value))
+                message.app = std::get<std::string>(*value);
+            else if (name == "hostStreamingState" && std::holds_alternative<std::string>(*value))
+                message.streaming = std::get<std::string>(*value) == "YES";
+            else if (name == "otherDeviceAudioCategory" && std::holds_alternative<int64_t>(*value))
+                message.category = static_cast<int>(std::get<int64_t>(*value));
+            else if (name == "audioRoutingSetOwnershipToFalse" && std::holds_alternative<bool>(*value))
+                message.set_ownership_to_false = std::get<bool>(*value);
+        }
+        return message;
     }
 
-    std::vector<uint8_t> tipi_media_info(const std::string& self, const std::string& target) {
-        return tipi_packet(
-            self, target, TIPI_MEDIA_HEAD, sizeof(TIPI_MEDIA_HEAD) - 1, TIPI_MEDIA_TAIL, sizeof(TIPI_MEDIA_TAIL) - 1);
+    std::vector<uint8_t> tipi_add_device(const std::string& self, const std::string& target) {
+        if (self.size() != 17)
+            return {};
+        return smart_routing_packet(target,
+                                    {{"idleTime", int64_t{0}},
+                                     {"newTipi", true},
+                                     {"btAddress", self},
+                                     {"btName", std::string("Android")},
+                                     {"nearbyAudioScore", int64_t{6}}});
+    }
+
+    // The keys and their order are the iPhone's own report.
+    std::vector<uint8_t> smart_routing_media_info(const std::string& self, const std::string& target, bool streaming) {
+        if (self.size() != 17)
+            return {};
+        return smart_routing_packet(
+            target,
+            {{"playingApp", std::string(streaming ? "Unknown" : "NA")},
+             {"hostStreamingState", std::string(streaming ? "YES" : "NO")},
+             {"btAddress", self},
+             {"btName", std::string("Android")},
+             {"otherDeviceAudioCategory", int64_t{streaming ? AUDIO_CATEGORY_MEDIA : AUDIO_CATEGORY_NONE}}});
+    }
+
+    std::vector<uint8_t> smart_routing_hijack(const std::string& target) {
+        return smart_routing_packet(target,
+                                    {{"localscore", int64_t{100}},
+                                     {"reason", std::string("Hijackv2")},
+                                     {"audioRoutingScore", int64_t{301}},
+                                     {"audioRoutingSetOwnershipToFalse", true},
+                                     {"remotescore", int64_t{301}}});
     }
 
     PeerSummary summarize_peers(const std::vector<AapPeer>& peers, const std::string& local) {
@@ -533,9 +682,10 @@ namespace tether::bluetooth {
         explicit Impl(std::function<void(const AirPodsState&)> cb) : on_change(std::move(cb)) {}
 
         // Session setup, paced by the buds' own acknowledgements.
-        enum class Stage { Handshake, Features, Notifications, Ready };
+        enum class Stage { Handshake, Features, Notifications, StemConfig, Ready };
 
         std::function<void(const AirPodsState&)> on_change;
+        std::function<void(StemPress)> on_stem_press;
 
         mutable std::mutex mutex;
         AirPodsState state;
@@ -548,12 +698,16 @@ namespace tether::bluetooth {
         // the one race worth not having.
         std::optional<AncMode> pending_anc;
         std::optional<bool> pending_ownership;
+        bool pending_take_over = false;
+        // Whether something plays here, as reported to the other hosts. `streaming_sent` is what the
+        // current session last told them.
+        bool streaming = false;
+        std::optional<bool> streaming_sent;
         // This machine gave the buds up: no claim of the watcher's own goes out until it takes them back.
         bool yielded = false;
         // A claim has just gone out, so the session's notification request is due again: the
         // firmware resets its AAP state on every handoff and silently drops what was set before.
         bool config_resend_due = false;
-        std::chrono::steady_clock::time_point last_claim{};
         bool stopping = false;
         bool enabled = true;
 
@@ -650,9 +804,11 @@ namespace tether::bluetooth {
         // one it evicts when the pods move while another host is engaged.
         bool register_hosts(int fd, const std::vector<AapPeer>& peers, std::vector<std::string>& sent) {
             std::string local;
+            bool playing = false;
             {
                 std::lock_guard<std::mutex> lock(mutex);
                 local = local_address;
+                playing = streaming;
             }
             if (local.empty())
                 return true;
@@ -661,7 +817,7 @@ namespace tether::bluetooth {
                     continue;
                 sent.push_back(peer.address);
                 for (const auto& packet :
-                     {tipi_media_info(local, peer.address), tipi_add_device(local, peer.address)}) {
+                     {smart_routing_media_info(local, peer.address, playing), tipi_add_device(local, peer.address)}) {
                     if (packet.empty())
                         continue;
                     if (!write_all(fd, packet.data(), packet.size())) {
@@ -688,20 +844,12 @@ namespace tether::bluetooth {
                 return false;
             }
 
-            const auto now = std::chrono::steady_clock::now();
             {
                 std::lock_guard<std::mutex> lock(mutex);
                 if (state.peer_taking_over) {
                     debug::log(DEBUG, "airpods: not claiming, a peer is taking the buds");
                     return true;
                 }
-                // ponytail: a flat cooldown. Claims come from call transitions here, not
-                // from every play event; measure the pause length if that ever changes.
-                if (now - last_claim < std::chrono::milliseconds(CLAIM_COOLDOWN_MS)) {
-                    debug::log(DEBUG, "airpods: not claiming, a claim went out under {}ms ago", CLAIM_COOLDOWN_MS);
-                    return true;
-                }
-                last_claim = now;
             }
             if (write_all(fd, CLAIM, sizeof(CLAIM))) {
                 debug::log(DEBUG, "airpods: claim sent");
@@ -715,16 +863,54 @@ namespace tether::bluetooth {
 
         // Sends whatever the caller queued, on the worker thread. False means the
         // write failed and the session is over.
-        bool send_pending(int fd) {
+        bool send_pending(int fd, const std::vector<AapPeer>& hosts) {
             std::optional<AncMode> mode;
             std::optional<bool> ownership;
+            bool take_over = false;
+            bool playing = false;
+            std::optional<bool> told;
+            std::string local;
             {
                 std::lock_guard<std::mutex> lock(mutex);
                 std::swap(mode, pending_anc);
                 std::swap(ownership, pending_ownership);
+                std::swap(take_over, pending_take_over);
+                playing = streaming;
+                told = streaming_sent;
+                local = local_address;
             }
             if (ownership && !send_ownership(fd, *ownership))
                 return false;
+
+            // Every other host hears this one's playback state, and on a take-over is asked to let go.
+            const auto to_hosts = [&](const std::function<std::vector<uint8_t>(const std::string&)>& build) {
+                for (const auto& host : hosts) {
+                    if (host.address == local)
+                        continue;
+                    const auto packet = build(host.address);
+                    if (!packet.empty() && !write_all(fd, packet.data(), packet.size())) {
+                        debug::log(DEBUG, "airpods: smart routing write failed: {}", std::strerror(errno));
+                        return false;
+                    }
+                }
+                return true;
+            };
+            if (take_over && !send_ownership(fd, true))
+                return false;
+            // A take-over is for playback, whether or not the player has resumed yet.
+            const bool report = take_over || playing;
+            if (!local.empty() && told != report) {
+                if (!to_hosts([&](const std::string& host) { return smart_routing_media_info(local, host, report); }))
+                    return false;
+                debug::log(DEBUG, "airpods: told the other hosts {} is playing here", report ? "something" : "nothing");
+                std::lock_guard<std::mutex> lock(mutex);
+                streaming_sent = report;
+            }
+            if (take_over) {
+                if (!to_hosts([](const std::string& host) { return smart_routing_hijack(host); }))
+                    return false;
+                debug::log(DEBUG, "airpods: took the buds over from the other hosts");
+            }
             if (!mode)
                 return true;
             const uint8_t packet[] = {
@@ -812,6 +998,13 @@ namespace tether::bluetooth {
                 case Stage::Notifications:
                     if (!write_all(fd, REQUEST_NOTIFICATIONS, sizeof(REQUEST_NOTIFICATIONS)))
                         return false;
+                    stage = Stage::StemConfig;
+                    due = std::max(opened + std::chrono::milliseconds(STEM_CONFIG_AT_MS), now);
+                    return true;
+                case Stage::StemConfig:
+                    if (!write_all(fd, STEM_CONFIG, sizeof(STEM_CONFIG)))
+                        return false;
+                    debug::log(DEBUG, "airpods: stem config sent");
                     stage = Stage::Ready;
                     return true;
                 case Stage::Ready:
@@ -856,21 +1049,19 @@ namespace tether::bluetooth {
             std::optional<clock::time_point> config_at;
             bool warned_unlisted = false;
             std::optional<bool> owns;
-            bool peer_audio = false;
             // Another host is attached to the buds, this machine is playing through them.
             bool peer_present = false;
             bool local_audio = false;
-            std::optional<AudioSourceEvent> latest_source;
-            std::optional<clock::time_point> peer_audio_ends_at;
-            // Published so local playback can step aside while the phone plays through the buds.
-            const auto set_peer_audio = [&](bool on) {
-                peer_audio = on;
-                {
-                    std::lock_guard<std::mutex> lock(mutex);
-                    state.peer_audio = on;
-                }
-                publish(delivered ? AirPodsStatus::Live : AirPodsStatus::Connecting, "");
-            };
+            // The buds' host list, and each host's latest media report.
+            std::vector<AapPeer> hosts;
+            std::map<std::string, SmartRoutingMessage> reports;
+            // Both buds out moves the stem and volume target to another host; this machine owned
+            // them when they came out, so it claims again when one goes back in.
+            bool owned_when_removed = false;
+            {
+                std::lock_guard<std::mutex> lock(mutex);
+                streaming_sent.reset();
+            }
             std::array<uint8_t, 1024> buffer{};
             while (!retargeted(address)) {
                 const auto now = clock::now();
@@ -895,14 +1086,12 @@ namespace tether::bluetooth {
                     timeout = std::min(timeout, until(*claim_at));
                 if (idle_release_at)
                     timeout = std::min(timeout, until(*idle_release_at));
-                if (peer_audio_ends_at)
-                    timeout = std::min(timeout, until(*peer_audio_ends_at));
                 if (config_at)
                     timeout = std::min(timeout, until(*config_at));
                 const int ready = wait_for(fd, wake_fd, POLLIN, std::max(timeout, 0));
                 if (ready == 0) {
                     drain_wake();
-                    if (!send_pending(fd))
+                    if (!send_pending(fd, hosts))
                         break;
                     continue;
                 }
@@ -915,18 +1104,14 @@ namespace tether::bluetooth {
                             break;
                         continue;
                     }
-                    if (peer_audio_ends_at && fired >= *peer_audio_ends_at) {
-                        peer_audio_ends_at.reset();
-                        set_peer_audio(false);
-                        continue;
-                    }
                     // The firmware drops what a session set up before a handoff, so the
-                    // notification request goes out again after taking the buds back.
+                    // notification request and stem config go out again after taking the buds back.
                     if (config_at && fired >= *config_at) {
                         config_at.reset();
-                        if (!write_all(fd, REQUEST_NOTIFICATIONS, sizeof(REQUEST_NOTIFICATIONS)))
+                        if (!write_all(fd, REQUEST_NOTIFICATIONS, sizeof(REQUEST_NOTIFICATIONS)) ||
+                            !write_all(fd, STEM_CONFIG, sizeof(STEM_CONFIG)))
                             break;
-                        debug::log(DEBUG, "airpods: notification request re-sent after claiming");
+                        debug::log(DEBUG, "airpods: notification request and stem config re-sent after claiming");
                         continue;
                     }
                     if (idle_release_at && fired >= *idle_release_at) {
@@ -946,24 +1131,8 @@ namespace tether::bluetooth {
                     }
                     if (claim_at && fired >= *claim_at) {
                         claim_at.reset();
-                        std::string local;
-                        bool yielding = false;
-                        {
-                            std::lock_guard<std::mutex> lock(mutex);
-                            local = local_address;
-                            yielding = yielded;
-                        }
-                        // Decided on the state at firing time: a call or a new owner since
-                        // the claim was armed cancels it.
-                        if (!claim_sent) {
-                            if (!claim())
-                                break;
-                        } else if (!yielding && latest_source &&
-                                   claims_for_playback(*latest_source, local, owns, peer_audio)) {
-                            debug::log(DEBUG, "airpods: claiming for playback here");
-                            if (!send_ownership(fd, true))
-                                break;
-                        }
+                        if (!claim_sent && !claim())
+                            break;
                         continue;
                     }
                     if (fired - quiet_since >= std::chrono::milliseconds(quiet_timeout)) {
@@ -1010,6 +1179,7 @@ namespace tether::bluetooth {
                 if (auto peers = parse_connected_devices(buffer.data(), size)) {
                     delivered = true;
                     peer_present = note_peers(*peers, peer_states, warned_unlisted, delivered).present;
+                    hosts = *peers;
                     if (!register_hosts(fd, *peers, tipi_sent))
                         break;
                     // The host list proves the channel is ours; the claim waits for the audio link.
@@ -1031,7 +1201,6 @@ namespace tether::bluetooth {
                         std::lock_guard<std::mutex> lock(mutex);
                         local = local_address;
                     }
-                    latest_source = *source;
                     if (!local.empty() && source->address == local &&
                         local_audio != (source->source != AudioSource::None)) {
                         local_audio = source->source != AudioSource::None;
@@ -1041,20 +1210,51 @@ namespace tether::bluetooth {
                         }
                         publish(delivered ? AirPodsStatus::Live : AirPodsStatus::Connecting, "");
                     }
-                    // Re-armed on every stream start, so the claim waits for the newest one to settle.
-                    if (claims_for_playback(*source, local, owns, peer_audio)) {
-                        claim_at = last_packet + std::chrono::milliseconds(CLAIM_SETTLE_MS);
-                        debug::log(
-                            DEBUG, "airpods: playing here without owning the buds; claiming in {}ms", CLAIM_SETTLE_MS);
+                    continue;
+                }
+
+                if (auto message = parse_smart_routing(buffer.data(), size)) {
+                    delivered = true;
+                    debug::log(DEBUG,
+                               "airpods: smart routing from {}: app {}, streaming {}, category {}{}",
+                               message->sender,
+                               message->app.empty() ? "-" : message->app,
+                               message->streaming ? (*message->streaming ? "yes" : "no") : "-",
+                               message->category ? std::to_string(*message->category) : "-",
+                               message->set_ownership_to_false ? ", set ownership to false" : "");
+                    if (message->streaming)
+                        reports[message->sender] = *message;
+
+                    std::string local;
+                    {
+                        std::lock_guard<std::mutex> lock(mutex);
+                        local = local_address;
                     }
-                    // Media counts too: iOS reports MEDIA for real calls, and music on the phone takes the buds.
-                    if (source->source != AudioSource::None && source->address != local) {
-                        peer_audio_ends_at.reset();
-                        if (!peer_audio)
-                            set_peer_audio(true);
-                    } else if (peer_audio && !peer_audio_ends_at) {
-                        peer_audio_ends_at = last_packet + std::chrono::milliseconds(PEER_AUDIO_SETTLE_MS);
+                    bool audio = false;
+                    bool call = false;
+                    for (const auto& [host, report] : reports) {
+                        if (host == local)
+                            continue;
+                        audio = audio || report.playing();
+                        call = call || report.call();
                     }
+                    {
+                        std::lock_guard<std::mutex> lock(mutex);
+                        state.peer_audio = audio;
+                        state.peer_call = call;
+                    }
+
+                    // The other host has taken the buds and says so; this one lets go without waiting
+                    // for the buds' own verdict.
+                    if (message->set_ownership_to_false && message->sender != local) {
+                        if (!send_ownership(fd, false))
+                            break;
+                        owns = false;
+                        std::lock_guard<std::mutex> lock(mutex);
+                        state.owns = false;
+                        yielded = true;
+                    }
+                    publish(delivered ? AirPodsStatus::Live : AirPodsStatus::Connecting, "");
                     continue;
                 }
 
@@ -1070,17 +1270,43 @@ namespace tether::bluetooth {
 
                 if (auto ear = parse_ear(buffer.data(), size)) {
                     delivered = true;
+                    bool reclaim = false;
                     {
                         std::lock_guard<std::mutex> lock(mutex);
+                        if (state.ear.in_ear() > 0 && ear->in_ear() == 0) {
+                            owned_when_removed = state.owns.value_or(false);
+                        } else if (state.ear.in_ear() == 0 && ear->in_ear() > 0 && owned_when_removed) {
+                            owned_when_removed = false;
+                            reclaim = !yielded;
+                        }
                         state.ear = *ear;
+                    }
+                    if (reclaim) {
+                        debug::log(DEBUG, "airpods: a bud went back in after both were out; claiming again");
+                        if (!send_ownership(fd, true))
+                            break;
                     }
                     publish(delivered ? AirPodsStatus::Live : AirPodsStatus::Connecting, "");
                     continue;
                 }
 
-                auto update = parse_battery(buffer.data(), size);
-                if (!update)
+                if (auto press = parse_stem_press(buffer.data(), size)) {
+                    delivered = true;
+                    debug::log(DEBUG, "airpods: stem press {:#04x}", buffer[6]);
+                    if (on_stem_press)
+                        on_stem_press(*press);
                     continue;
+                }
+
+                auto update = parse_battery(buffer.data(), size);
+                if (!update) {
+                    // A smart-routing message that did not decode is shown as text: its keys are ASCII.
+                    if (starts_with(
+                            buffer.data(), size, SMART_ROUTING_RESPONSE_PREFIX, sizeof(SMART_ROUTING_RESPONSE_PREFIX)))
+                        debug::log(DEBUG, "airpods: smart routing not decoded: {}", printable(buffer.data(), size));
+                    debug::log(DEBUG, "airpods: rx unhandled {}", hex(buffer.data(), size));
+                    continue;
+                }
 
                 delivered = true;
                 {
@@ -1095,7 +1321,9 @@ namespace tether::bluetooth {
                 std::lock_guard<std::mutex> lock(mutex);
                 pending_anc.reset();
                 pending_ownership.reset();
+                pending_take_over = false;
                 state.peer_audio = false;
+                state.peer_call = false;
             }
             ::close(fd);
         }
@@ -1126,6 +1354,7 @@ namespace tether::bluetooth {
                         state.peer_taking_over = false;
                         state.peer_active = false;
                         state.peer_audio = false;
+                        state.peer_call = false;
                         state.local_audio = false;
                         state.owns.reset();
                     }
@@ -1147,6 +1376,7 @@ namespace tether::bluetooth {
                         state.peer_taking_over = false;
                         state.peer_active = false;
                         state.peer_audio = false;
+                        state.peer_call = false;
                         state.local_audio = false;
                         state.owns.reset();
                     }
@@ -1175,8 +1405,10 @@ namespace tether::bluetooth {
         }
     };
 
-    AirPodsWatcher::AirPodsWatcher(std::function<void(const AirPodsState&)> on_change)
+    AirPodsWatcher::AirPodsWatcher(std::function<void(const AirPodsState&)> on_change,
+                                   std::function<void(StemPress)> on_stem_press)
         : impl_(std::make_unique<Impl>(std::move(on_change))) {
+        impl_->on_stem_press = std::move(on_stem_press);
         impl_->wake_fd = ::eventfd(0, EFD_CLOEXEC | EFD_NONBLOCK);
         if (impl_->wake_fd < 0) {
             debug::log(WARN, "airpods: eventfd failed: {}", std::strerror(errno));
@@ -1225,6 +1457,25 @@ namespace tether::bluetooth {
             std::lock_guard<std::mutex> lock(impl_->mutex);
             impl_->pending_ownership = own;
             impl_->yielded = !own;
+        }
+        impl_->wake();
+    }
+
+    void AirPodsWatcher::take_over() {
+        {
+            std::lock_guard<std::mutex> lock(impl_->mutex);
+            impl_->pending_take_over = true;
+            impl_->yielded = false;
+        }
+        impl_->wake();
+    }
+
+    void AirPodsWatcher::set_streaming(bool streaming) {
+        {
+            std::lock_guard<std::mutex> lock(impl_->mutex);
+            if (impl_->streaming == streaming)
+                return;
+            impl_->streaming = streaming;
         }
         impl_->wake();
     }
