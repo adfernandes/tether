@@ -57,6 +57,8 @@ Connections run over TLS 1.2 and both sides present a self-signed X.509 certific
 Place, answer and end calls on the iPhone from the desktop, complete with caller ID and the phone's carrier and signal. 
 The call audio stays on the iPhone. If you've used Linux long enough you know why (it sounds like "FalsePotty-o"). PulsAlsaWire is too hard to support across all deployment targets.
 
+Stock PipeWire makes the computer a speaker for the phone, which takes call control away and moves the iPhone's music and sounds to the desktop. The recommended audio setting is in [Keeping the phone's audio on the phone](docs/BLUETOOTH.md#keeping-the-phones-audio-on-the-phone).
+
 ### OTP Handling
 Streamline two-factor authentication across your devices:
 - iOS Share Extension: Send OTP codes from your iPhone to your Linux clipboard.

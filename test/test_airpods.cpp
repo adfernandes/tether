@@ -145,6 +145,21 @@ TEST(AirPods, RejectsMalformedEarDetection) {
     EXPECT_FALSE(parse_ear(nullptr, 0).has_value());
 }
 
+TEST(AirPods, ParsesStemPresses) {
+    const auto press = [](std::initializer_list<uint8_t> bytes) {
+        std::vector<uint8_t> v(bytes);
+        return parse_stem_press(v.data(), v.size());
+    };
+    EXPECT_EQ(press({0x04, 0x00, 0x04, 0x00, 0x19, 0x00, 0x05, 0x01}), StemPress::Single);
+    EXPECT_EQ(press({0x04, 0x00, 0x04, 0x00, 0x19, 0x00, 0x06, 0x02}), StemPress::Double);
+    EXPECT_EQ(press({0x04, 0x00, 0x04, 0x00, 0x19, 0x00, 0x08, 0x01}), StemPress::Long);
+    EXPECT_FALSE(press({0x04, 0x00, 0x04, 0x00, 0x19, 0x00, 0x09, 0x01}).has_value());
+    EXPECT_FALSE(press({0x04, 0x00, 0x04, 0x00, 0x19, 0x00, 0x05}).has_value());
+    // Ear detection is the same length.
+    EXPECT_FALSE(press({0x04, 0x00, 0x04, 0x00, 0x06, 0x00, 0x05, 0x01}).has_value());
+    EXPECT_FALSE(parse_stem_press(nullptr, 0).has_value());
+}
+
 TEST(AirPods, PauseModeNeverDoesNothing) {
     EXPECT_EQ(ear_media_action(WORN, BOTH_OUT, PauseMode::Never, false), MediaAction::None);
     EXPECT_EQ(ear_media_action(BOTH_OUT, WORN, PauseMode::Never, true), MediaAction::None);
@@ -195,9 +210,8 @@ TEST(AirPods, TreatsTheBatteryStatusAsABitmask) {
 TEST(AirPods, ParsesTheConnectedDeviceList) {
     // Two hosts: this machine, then an iPhone sitting idle. The count is at offset 8
     // and addresses are in display order.
-    const std::vector<uint8_t> packet = {0x04, 0x00, 0x04, 0x00, 0x2e, 0x00, 0x00, 0x00, 0x02,
-                                         0x02, 0x00, 0x00, 0x00, 0x00, 0x02, 0x00, 0x03,
-                                         0x02, 0x00, 0x00, 0x00, 0x00, 0x01, 0x01, 0x15};
+    const std::vector<uint8_t> packet = {0x04, 0x00, 0x04, 0x00, 0x2e, 0x00, 0x00, 0x00, 0x02, 0x02, 0x00, 0x00, 0x00,
+                                         0x00, 0x02, 0x00, 0x03, 0x02, 0x00, 0x00, 0x00, 0x00, 0x01, 0x01, 0x15};
     auto peers = parse_connected_devices(packet.data(), packet.size());
     ASSERT_TRUE(peers.has_value());
     ASSERT_EQ(peers->size(), 2u);
@@ -264,37 +278,151 @@ TEST(AirPods, ReadsOwnershipFromTheOwnerBit) {
 }
 
 // The registration packets the buds expect for every other host, ported from a working
-// implementation. The layout is fixed: opcode, the target address least-significant byte first,
-// then ASCII keys with this machine's address in the middle.
+// implementation: opcode, the target address least-significant byte first, the body length, then
+// an OPACK dictionary with this machine's address in it.
 TEST(AirPods, BuildsTheHostRegistrationPackets) {
     const std::string self = "02:00:00:00:00:02";
     const auto add = tipi_add_device(self, "02:00:00:00:00:01");
-    ASSERT_EQ(add.size(), 96u);
-    EXPECT_EQ(std::vector<uint8_t>(add.begin(), add.begin() + 6),
-              (std::vector<uint8_t>{0x04, 0x00, 0x04, 0x00, 0x10, 0x00}));
-    EXPECT_EQ(std::vector<uint8_t>(add.begin() + 6, add.begin() + 12),
-              (std::vector<uint8_t>{0x01, 0x00, 0x00, 0x00, 0x00, 0x02}));
-    // Body offsets counted from the end of the prefix.
-    EXPECT_EQ(std::string(add.begin() + 6 + 11, add.begin() + 6 + 19), "idleTime");
-    EXPECT_EQ(std::string(add.begin() + 6 + 40, add.begin() + 6 + 57), self);
-    EXPECT_EQ(std::string(add.begin() + 6 + 65, add.begin() + 6 + 72), "Android");
-    EXPECT_EQ(add.back(), 0x0e);
+    static constexpr char ADD_HEAD[] = "\x04\x00\x04\x00\x10\x00\x01\x00\x00\x00\x00\x02"
+                                       "\x52\x00\x01\xe5\x48idleTime\x08\x47newTipi\x01\x49"
+                                       "btAddress\x51";
+    std::string expected_add(ADD_HEAD, sizeof(ADD_HEAD) - 1);
+    expected_add += self + "\x46"
+                           "btName\x47"
+                           "Android\x50nearbyAudioScore\x0e";
+    EXPECT_EQ(std::string(add.begin(), add.end()), expected_add);
 
-    const auto media = tipi_media_info(self, "02:00:00:00:00:01");
-    ASSERT_EQ(media.size(), 122u);
-    EXPECT_EQ(std::string(media.begin() + 6 + 11, media.begin() + 6 + 21), "playingApp");
-    EXPECT_EQ(std::string(media.begin() + 6 + 25, media.begin() + 6 + 43), "hostStreamingState");
-    EXPECT_EQ(std::string(media.begin() + 6 + 57, media.begin() + 6 + 74), self);
-    EXPECT_EQ(media.back(), 0x64);
+    const auto media = smart_routing_media_info(self, "02:00:00:00:00:01", false);
+    static constexpr char MEDIA_HEAD[] = "\x04\x00\x04\x00\x10\x00\x01\x00\x00\x00\x00\x02"
+                                         "\x6c\x00\x01\xe5\x4a"
+                                         "playingApp\x42NA\x52hostStreamingState\x42NO\x49"
+                                         "btAddress\x51";
+    std::string expected_media(MEDIA_HEAD, sizeof(MEDIA_HEAD) - 1);
+    expected_media += self + "\x46"
+                             "btName\x47"
+                             "Android\x58otherDeviceAudioCategory\x30\x64";
+    EXPECT_EQ(std::string(media.begin(), media.end()), expected_media);
 
     // An address that will not parse is no packet at all.
     EXPECT_TRUE(tipi_add_device(self, "nonsense").empty());
-    EXPECT_TRUE(tipi_media_info("", "02:00:00:00:00:01").empty());
+    EXPECT_TRUE(smart_routing_media_info("", "02:00:00:00:00:01", true).empty());
 }
 
-// Handoff yields to a phone that owns the buds and is playing through them. Ownership alone is a
-// phone that finished its call and kept the bit; audio alone is a host that owns nothing.
-TEST(AirPods, YieldsOnlyToAnOwnerWithAudio) {
+namespace {
+    std::optional<SmartRoutingMessage> routing(const std::vector<uint8_t>& bytes) {
+        return parse_smart_routing(bytes.data(), bytes.size());
+    }
+
+    // What this machine sends, read back as if another host had sent it.
+    std::optional<SmartRoutingMessage> echo(std::vector<uint8_t> sent) {
+        sent[4] = 0x11;
+        return routing(sent);
+    }
+
+    // Captured 2026-09-13 from an iPhone through AirPods Pro 3: a call starting, then over.
+    const std::vector<uint8_t> IPHONE_CALL = {
+        0x04, 0x00, 0x04, 0x00, 0x11, 0x00, 0xf7, 0x6a, 0x30, 0xc8, 0x57, 0x60, 0x87, 0x00, 0x01, 0xe5, 0x4a,
+        0x70, 0x6c, 0x61, 0x79, 0x69, 0x6e, 0x67, 0x41, 0x70, 0x70, 0x5c, 0x63, 0x6f, 0x6d, 0x2e, 0x61, 0x70,
+        0x70, 0x6c, 0x65, 0x2e, 0x54, 0x65, 0x6c, 0x65, 0x70, 0x68, 0x6f, 0x6e, 0x79, 0x55, 0x74, 0x69, 0x6c,
+        0x69, 0x74, 0x69, 0x65, 0x73, 0x52, 0x68, 0x6f, 0x73, 0x74, 0x53, 0x74, 0x72, 0x65, 0x61, 0x6d, 0x69,
+        0x6e, 0x67, 0x53, 0x74, 0x61, 0x74, 0x65, 0x43, 0x59, 0x45, 0x53, 0x49, 0x62, 0x74, 0x41, 0x64, 0x64,
+        0x72, 0x65, 0x73, 0x73, 0x51, 0x36, 0x30, 0x3a, 0x35, 0x37, 0x3a, 0x43, 0x38, 0x3a, 0x33, 0x30, 0x3a,
+        0x36, 0x41, 0x3a, 0x46, 0x37, 0x46, 0x62, 0x74, 0x4e, 0x61, 0x6d, 0x65, 0x46, 0x69, 0x50, 0x68, 0x6f,
+        0x6e, 0x65, 0x58, 0x6f, 0x74, 0x68, 0x65, 0x72, 0x44, 0x65, 0x76, 0x69, 0x63, 0x65, 0x41, 0x75, 0x64,
+        0x69, 0x6f, 0x43, 0x61, 0x74, 0x65, 0x67, 0x6f, 0x72, 0x79, 0x31, 0xf5, 0x01};
+    const std::vector<uint8_t> IPHONE_IDLE = {
+        0x04, 0x00, 0x04, 0x00, 0x11, 0x00, 0xf7, 0x6a, 0x30, 0xc8, 0x57, 0x60, 0x70, 0x00, 0x01, 0xe5, 0x4a, 0x70,
+        0x6c, 0x61, 0x79, 0x69, 0x6e, 0x67, 0x41, 0x70, 0x70, 0x47, 0x55, 0x6e, 0x6b, 0x6e, 0x6f, 0x77, 0x6e, 0x52,
+        0x68, 0x6f, 0x73, 0x74, 0x53, 0x74, 0x72, 0x65, 0x61, 0x6d, 0x69, 0x6e, 0x67, 0x53, 0x74, 0x61, 0x74, 0x65,
+        0x42, 0x4e, 0x4f, 0x49, 0x62, 0x74, 0x41, 0x64, 0x64, 0x72, 0x65, 0x73, 0x73, 0x51, 0x36, 0x30, 0x3a, 0x35,
+        0x37, 0x3a, 0x43, 0x38, 0x3a, 0x33, 0x30, 0x3a, 0x36, 0x41, 0x3a, 0x46, 0x37, 0x46, 0x62, 0x74, 0x4e, 0x61,
+        0x6d, 0x65, 0x46, 0x69, 0x50, 0x68, 0x6f, 0x6e, 0x65, 0x58, 0x6f, 0x74, 0x68, 0x65, 0x72, 0x44, 0x65, 0x76,
+        0x69, 0x63, 0x65, 0x41, 0x75, 0x64, 0x69, 0x6f, 0x43, 0x61, 0x74, 0x65, 0x67, 0x6f, 0x72, 0x79, 0x30, 0x64};
+    // The iPhone routed to the buds from Control Center.
+    const std::vector<uint8_t> IPHONE_YIELD_REQUEST = {
+        0x04, 0x00, 0x04, 0x00, 0x11, 0x00, 0xf7, 0x6a, 0x30, 0xc8, 0x57, 0x60, 0x36, 0x00, 0x01, 0xe2, 0x5f,
+        0x61, 0x75, 0x64, 0x69, 0x6f, 0x52, 0x6f, 0x75, 0x74, 0x69, 0x6e, 0x67, 0x53, 0x65, 0x74, 0x4f, 0x77,
+        0x6e, 0x65, 0x72, 0x73, 0x68, 0x69, 0x70, 0x54, 0x6f, 0x46, 0x61, 0x6c, 0x73, 0x65, 0x01, 0x46, 0x72,
+        0x65, 0x61, 0x73, 0x6f, 0x6e, 0x4b, 0x4d, 0x61, 0x6e, 0x75, 0x61, 0x6c, 0x52, 0x6f, 0x75, 0x74, 0x65};
+} // namespace
+
+TEST(AirPods, ReadsTheIPhonesSmartRoutingReports) {
+    const auto call = routing(IPHONE_CALL);
+    ASSERT_TRUE(call.has_value());
+    EXPECT_EQ(call->sender, "60:57:C8:30:6A:F7");
+    EXPECT_EQ(call->app, "com.apple.TelephonyUtilities");
+    EXPECT_EQ(call->category, AUDIO_CATEGORY_CALL);
+    EXPECT_TRUE(call->playing());
+    EXPECT_TRUE(call->call());
+
+    const auto idle = routing(IPHONE_IDLE);
+    ASSERT_TRUE(idle.has_value());
+    EXPECT_EQ(idle->streaming, false);
+    EXPECT_EQ(idle->category, AUDIO_CATEGORY_NONE);
+    EXPECT_FALSE(idle->playing());
+
+    const auto yield = routing(IPHONE_YIELD_REQUEST);
+    ASSERT_TRUE(yield.has_value());
+    EXPECT_TRUE(yield->set_ownership_to_false);
+    EXPECT_FALSE(yield->streaming.has_value());
+
+    // A route with nothing on it says YES with category 100.
+    SmartRoutingMessage route;
+    route.streaming = true;
+    route.category = AUDIO_CATEGORY_NONE;
+    EXPECT_FALSE(route.playing());
+
+    auto truncated = IPHONE_YIELD_REQUEST;
+    truncated.pop_back();
+    EXPECT_FALSE(routing(truncated).has_value());
+    // A dictionary of one entry with nothing in it.
+    EXPECT_FALSE(
+        routing({0x04, 0x00, 0x04, 0x00, 0x11, 0x00, 0xf7, 0x6a, 0x30, 0xc8, 0x57, 0x60, 0x02, 0x00, 0x01, 0xe1})
+            .has_value());
+    EXPECT_FALSE(parse_smart_routing(nullptr, 0).has_value());
+}
+
+TEST(AirPods, BuildsTheTakeOverMessages) {
+    const std::string self = "02:00:00:00:00:02";
+    const auto playing = echo(smart_routing_media_info(self, "02:00:00:00:00:01", true));
+    ASSERT_TRUE(playing.has_value());
+    EXPECT_EQ(playing->sender, "02:00:00:00:00:01");
+    EXPECT_TRUE(playing->playing());
+    EXPECT_EQ(playing->category, AUDIO_CATEGORY_MEDIA);
+
+    const auto hijack = echo(smart_routing_hijack("02:00:00:00:00:01"));
+    ASSERT_TRUE(hijack.has_value());
+    EXPECT_TRUE(hijack->set_ownership_to_false);
+
+    // LibrePods' capture of the same request refers back to 301 for remotescore (0xA5).
+    static constexpr char BODY[] = "\x01\xe5\x4alocalscore\x30\x64\x46reason\x48Hijackv2\x51"
+                                   "audioRoutingScore\x31\x2d\x01\x5f"
+                                   "audioRoutingSetOwnershipToFalse\x01\x4bremotescore\xa5";
+    const std::string body(BODY, sizeof(BODY) - 1);
+    std::vector<uint8_t> referenced = {0x04,
+                                       0x00,
+                                       0x04,
+                                       0x00,
+                                       0x11,
+                                       0x00,
+                                       0x01,
+                                       0x00,
+                                       0x00,
+                                       0x00,
+                                       0x00,
+                                       0x02,
+                                       static_cast<uint8_t>(body.size()),
+                                       0x00};
+    referenced.insert(referenced.end(), body.begin(), body.end());
+    const auto decoded = routing(referenced);
+    ASSERT_TRUE(decoded.has_value());
+    EXPECT_TRUE(decoded->set_ownership_to_false);
+}
+
+// Handoff yields to a phone that owns the buds and is playing through them, or to a call, which
+// always takes them. Ownership alone is a phone that finished and kept the bit; media alone is a
+// phone playing on its own speaker.
+TEST(AirPods, YieldsToAnOwnerWithAudioOrACall) {
     AirPodsState state;
     state.peer_active = true;
     EXPECT_FALSE(state.peer_busy());
@@ -302,6 +430,8 @@ TEST(AirPods, YieldsOnlyToAnOwnerWithAudio) {
     EXPECT_TRUE(state.peer_busy());
     state.peer_active = false;
     EXPECT_FALSE(state.peer_busy());
+    state.peer_call = true;
+    EXPECT_TRUE(state.peer_busy());
 }
 
 // This machine's own entry rises with its own ownership and is never a peer.
@@ -334,22 +464,6 @@ TEST(AirPods, ParsesTheAudioSource) {
     EXPECT_FALSE(parse_audio_source(packet.data(), packet.size() - 1).has_value());
 }
 
-// Measured on AirPods Pro 3: the buds route this machine's stream while the phone still owns
-// them, then hand the route back to the phone within seconds.
-TEST(AirPods, ClaimsWhenPlayingHereWithoutOwningTheBuds) {
-    const std::string local = "02:00:00:00:00:02";
-    const AudioSourceEvent here{local, AudioSource::Media};
-    EXPECT_TRUE(claims_for_playback(here, local, false, false));
-    EXPECT_FALSE(claims_for_playback(here, local, true, false));
-    // No verdict yet: the opening claim covers a new session.
-    EXPECT_FALSE(claims_for_playback(here, local, std::nullopt, false));
-    // Taking the buds off a phone call is the one thing this must never do.
-    EXPECT_FALSE(claims_for_playback(here, local, false, true));
-    EXPECT_FALSE(claims_for_playback({"02:00:00:00:00:01", AudioSource::Media}, local, false, false));
-    EXPECT_FALSE(claims_for_playback({local, AudioSource::None}, local, false, false));
-    EXPECT_FALSE(claims_for_playback(here, "", false, false));
-}
-
 // The opening claim validates this host; keeping the buds it took is what stops the phone
 // from routing to them at all. Reported on 0.2.30, issue #85.
 TEST(AirPods, GivesOwnershipBackWhenNothingIsPlayingHere) {
@@ -373,6 +487,15 @@ TEST(AirPods, OwnershipFollowsThePeerTakingTheBuds) {
 TEST(AirPods, OwnershipIsOffUnlessEnabledButStillGivesTheBudsBack) {
     EXPECT_EQ(ownership_action(true, false, false), HandoffAction::None);
     EXPECT_EQ(ownership_action(false, true, false), HandoffAction::Reclaim);
+}
+
+TEST(AirPods, PlayingHereTakesTheBudsUnlessOnACall) {
+    EXPECT_TRUE(takes_over_for_play(false, false, false));
+    // No verdict yet counts as not owning.
+    EXPECT_TRUE(takes_over_for_play(std::nullopt, false, false));
+    EXPECT_FALSE(takes_over_for_play(true, false, false));
+    EXPECT_FALSE(takes_over_for_play(false, true, false));
+    EXPECT_FALSE(takes_over_for_play(false, false, true));
 }
 
 TEST(AirPods, HandoffIsOffUnlessEnabled) { EXPECT_EQ(handoff_action(true, true, false, false), HandoffAction::None); }

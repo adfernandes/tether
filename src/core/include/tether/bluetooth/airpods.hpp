@@ -125,8 +125,9 @@ namespace tether::bluetooth {
         std::string name;
         bool peer_taking_over = false;
         bool peer_active = false;
-        // A peer has a call or media on the buds, held until they have stopped reporting it for a few seconds.
+        // Another host reports a call or media playing, from its own smart-routing reports.
         bool peer_audio = false;
+        bool peer_call = false;
         bool local_audio = false;
         std::optional<bool> owns;
         AirPodsBattery battery;
@@ -137,9 +138,10 @@ namespace tether::bluetooth {
         // Written for display, shown verbatim.
         std::string reason;
 
-        // A peer owns the buds and is playing through them: what handoff yields to. Ownership
-        // alone is not enough, because the phone keeps it until another host claims.
-        bool peer_busy() const { return peer_active && peer_audio; }
+        // What handoff yields to: a peer on a call, which always takes the buds, or a peer that owns
+        // them and is playing through them. Ownership alone is not enough, because the phone keeps
+        // it until another host claims.
+        bool peer_busy() const { return peer_call || (peer_active && peer_audio); }
 
         bool operator==(const AirPodsState&) const = default;
     };
@@ -166,22 +168,41 @@ namespace tether::bluetooth {
     // Decodes an audio-source notification, 13 bytes: prefix, MAC, then the type.
     std::optional<AudioSourceEvent> parse_audio_source(const uint8_t* data, size_t len);
 
-    // Whether the buds carrying this machine's audio should be answered with a claim. They
-    // route a non-owner's stream for a few seconds and then hand it back to the owner; a claim
-    // keeps it. `owns` is the last ownership verdict, unset until one arrives. Never while a
-    // peer is playing through them.
-    bool claims_for_playback(const AudioSourceEvent& event,
-                             const std::string& local,
-                             std::optional<bool> owns,
-                             bool peer_audio);
-
     // Whether a session that has claimed the buds to validate itself should hand ownership straight back.
     bool releases_when_idle(bool local_audio, bool peer_present, bool yielded);
 
-    // The two registration packets a host sends for every other host in the buds' list, which is
-    // what moves it from unvalidated to validated. Empty for an address that will not parse.
+    // `otherDeviceAudioCategory` in a host's media report, as an iPhone sends them.
+    inline constexpr int AUDIO_CATEGORY_NONE = 100;
+    inline constexpr int AUDIO_CATEGORY_MEDIA = 301;
+    inline constexpr int AUDIO_CATEGORY_CALL = 501;
+
+    // A smart-routing message another host sent this one through the buds:
+    //   04 00 04 00 11 00 [sender] * 6 [length] * 2 01 [OPACK dictionary]
+    // with the sender least-significant byte first. Hosts report what they are playing whenever it
+    // changes, and ask the others to give up ownership when they take the buds.
+    struct SmartRoutingMessage {
+        std::string sender;
+        std::string app;
+        // Unset in messages that are not media reports.
+        std::optional<bool> streaming;
+        std::optional<int> category;
+        bool set_ownership_to_false = false;
+
+        // A call or media is actually playing; a route with nothing on it reports YES with category 100.
+        bool playing() const { return streaming.value_or(false) && category.value_or(0) > AUDIO_CATEGORY_NONE; }
+        bool call() const { return streaming.value_or(false) && category == AUDIO_CATEGORY_CALL; }
+    };
+
+    // Returns no value for anything that is not one, or whose body does not decode.
+    std::optional<SmartRoutingMessage> parse_smart_routing(const uint8_t* data, size_t len);
+
+    // Smart-routing messages this host sends to `target`, opcode 0x10. Empty for an address that will
+    // not parse. The first two are what a host sends for every other host in the buds' list, which
+    // is what moves it from unvalidated to validated.
     std::vector<uint8_t> tipi_add_device(const std::string& self, const std::string& target);
-    std::vector<uint8_t> tipi_media_info(const std::string& self, const std::string& target);
+    std::vector<uint8_t> smart_routing_media_info(const std::string& self, const std::string& target, bool streaming);
+    // Tells `target` this host has taken the buds and it should give up ownership.
+    std::vector<uint8_t> smart_routing_hijack(const std::string& target);
 
     // Whether any host other than `local` is engaged with the buds, or actively
     // holding them. A machine's own entry is never a peer.
@@ -194,6 +215,12 @@ namespace tether::bluetooth {
     };
 
     PeerSummary summarize_peers(const std::vector<AapPeer>& peers, const std::string& local);
+
+    enum class StemPress { Single, Double, Triple, Long };
+
+    // Decodes a stem-press notification, `04 00 04 00 19 00 [type] [bud]`. The buds send one
+    // only for the press types the host claimed with the stem config.
+    std::optional<StemPress> parse_stem_press(const uint8_t* data, size_t len);
 
     // Decodes a listening-mode notification, 11 bytes carrying the mode at offset 7.
     // Returns no value for anything else, including an out-of-range mode.
@@ -212,6 +239,10 @@ namespace tether::bluetooth {
     // native handoff: the phone taking them is a peer going active, not a call.
     HandoffAction ownership_action(bool peer_active, bool released, bool enabled);
 
+    // Whether a player starting here takes the buds: not while this machine owns them, never from a
+    // call, and not while a handoff is already moving them.
+    bool takes_over_for_play(std::optional<bool> owns, bool peer_call, bool busy);
+
     // `released` is whether this code is what disconnected them: buds the user
     // took away by hand are never reclaimed. A reclaim outlives `enabled` going
     // false, so turning the feature off mid-call does not strand them.
@@ -227,7 +258,9 @@ namespace tether::bluetooth {
     // Keeps an AAP channel open to one set of AirPods and publishes their battery.
     class AirPodsWatcher {
     public:
-        explicit AirPodsWatcher(std::function<void(const AirPodsState&)> on_change);
+        // `on_stem_press` runs on the worker thread for each claimed press.
+        explicit AirPodsWatcher(std::function<void(const AirPodsState&)> on_change,
+                                std::function<void(StemPress)> on_stem_press = {});
         ~AirPodsWatcher();
 
         AirPodsWatcher(const AirPodsWatcher&) = delete;
@@ -251,6 +284,13 @@ namespace tether::bluetooth {
         // leaves this host contested and the firmware closes the link. Giving them up
         // also stops the watcher's own claims until they are taken back.
         void set_ownership(bool own);
+
+        // Takes the buds the way another Apple host does: a claim, then a smart-routing report that
+        // something plays here and a request that every other host give up ownership.
+        void take_over();
+
+        // Reports to the other hosts whether something plays here. Sent when it changes.
+        void set_streaming(bool streaming);
 
         AirPodsState state() const;
 

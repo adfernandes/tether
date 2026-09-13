@@ -487,7 +487,7 @@ the narrower check; it rules out the `*`/`#` supplementary-service codes deliber
 ## AirPods
 
 Battery for the buds and the case, the listening mode, and in-ear detection, in the
-Devices list and from `tether --bt-airpods`. No stem control yet.
+Devices list and from `tether --bt-airpods`. A single stem press plays and pauses here.
 
 **All of it is off until switched on** -- `tether --bt-airpods-enable on`. See "Standing
 down" below.
@@ -523,7 +523,7 @@ anything sent ahead of its own pace, silently: no error, no refusal, the packet 
 no effect. Each step also has a deadline, because some models never acknowledge and an
 unacknowledged step must not stall the session.
 
-Two more notifications are read, and they are what the ownership handoff runs on:
+Two more notifications are read for ownership:
 
 ```
 connected-devices  04 00 04 00 2E 00 [?] [?] [count] ([mac] * 6 [role] [state]) * count
@@ -572,6 +572,57 @@ case -- and it combines with the charging bits, so a pod charging in an open cas
 `0x05`. Testing for equality misses exactly the common case. Not reporting is shown as
 unknown, never as 0%. A notification carries only what changed, so anything it leaves out
 keeps its previous level.
+
+### Stem press
+
+```
+stem config  04 00 04 00 09 00 39 [mask] 00 00 00     single 01, double 02, triple 04, long 08
+stem press   04 00 04 00 19 00 [type] [bud]           type 05 single .. 08 long, bud 01 left 02 right
+```
+
+Without the stem config a single press runs the firmware's own play/pause, and **that is what moves
+the audio to the iPhone**: the Apple toggle between hosts. With mask `01` the buds send the press
+here instead and do nothing themselves, so Tether toggles MPRIS (`MediaControl::toggle()`). Double,
+triple and long keep their firmware actions. Found by AirPods Center (orychalk's fork), validated
+there on Pro 2 and Pro 3, and here on Pro 3.
+
+It is dropped silently until the state broadcast the notification request starts has finished, so
+it goes out 1.5s after the channel opens (`STEM_CONFIG_AT_MS`), and again with the notification
+request after every claim, because the firmware resets both on each handoff.
+
+### Smart routing
+
+Hosts sharing the buds talk to each other through them. A host sends opcode `0x10` addressed to
+another host; the buds deliver it as `0x11` carrying the sender:
+
+```
+04 00 04 00 10 00 [target] * 6 [length] * 2 01 [OPACK dictionary]     sent
+04 00 04 00 11 00 [sender] * 6 [length] * 2 01 [OPACK dictionary]     received
+```
+
+Addresses least significant byte first; `length` little-endian, counting from the `01`. The body is
+Apple's OPACK: `E0+n` a dictionary of n entries, `40+len` a short string, `08+v` a small integer,
+`30`/`31`/`32` an 8/16/32-bit little-endian integer, `01`/`02` true/false, `A0+i` a back-reference
+to the i-th distinct string or wide integer so far. `parse_smart_routing()` decodes that subset and
+`smart_routing_packet()` encodes it. LibrePods builds these packets by hand and gets several wrong
+(`42 "YES"`, a missing tag before `btName`), so nothing here is copied byte for byte.
+
+What an iPhone sends, measured 2026-09-13:
+
+| message | keys |
+|---|---|
+| media report, on every change | `playingApp`, `hostStreamingState` `YES`/`NO`, `btAddress`, `btName`, `otherDeviceAudioCategory` |
+| idle heartbeat | `idleTime`, `btAddress`, `btName`, `nearbyAudioScore`, and `newTipi` on first contact |
+| yield request | `audioRoutingSetOwnershipToFalse` true, `reason` (`ManualRoute`) |
+
+`otherDeviceAudioCategory` is `100` for nothing, `301` for media (`com.apple.Music`) and `501` for a
+call (`com.apple.TelephonyUtilities`). `YES` with `100` is a route with nothing on it -- Control
+Center, or the moment a call hangs up -- so playing is `YES` with a category above 100.
+
+This machine sends the same media report, `tipi_add_device()` when it first sees a host, and on a
+take-over `smart_routing_hijack()`: `localscore`, `reason` `Hijackv2`, `audioRoutingScore`,
+`audioRoutingSetOwnershipToFalse` and `remotescore`, LibrePods' values with its references resolved.
+`btName` is `Android`, as both references send.
 
 ### Listening mode
 
@@ -647,59 +698,51 @@ Apple's own. The buds keep both hosts connected and hand *ownership* between the
 link to this machine is never dropped, the AAP channel is never given up, and the volume
 the stem sets is the volume of whoever owns them.
 
-**The trigger is the iPhone's call list when call control is on**, and the buds' own
-notifications otherwise. On AirPods Pro 3 the buds cannot say when a call ends: the phone
-keeps the owner bit for minutes after it, and the audio source reads none a few seconds into
-one. The call list is exact, so a ringing, dialling or connected call gives the buds up and
-its end takes them back. Without call control, a peer that owns the buds *and* has a call or
-media on them (`AirPodsState::peer_busy()`) stands in, and can take the buds back mid-call.
-Music on the phone reaches this path only through the buds.
+**It runs on what the other hosts report through the buds**, the smart-routing media reports
+above. No timer decides anything, and it does not need call control.
 
-While the buds are given up the watcher sends no claim of its own -- not the one a session
-sends when it opens, and not one for local playback. Only the reclaim claims.
+- **A call on the phone gives the buds up** the moment the phone reports category `501`, before it
+  takes them. **Media on the phone gives them up** once the phone both reports it playing and owns
+  the buds (`AirPodsState::peer_busy()`): an iPhone playing on its own speaker does not take them
+  from a Mac, and does not take them from here.
+- **The phone reporting `NO` takes them back**, and resumes what the release paused.
+- **A player starting here takes them**, wherever they are, unless the phone is on a call. MPRIS
+  `PropertiesChanged` drives it (`MediaControl::watch()`). With the card down the player is paused
+  on the signal, the card comes back, and it resumes -- the pause is what keeps it off the
+  speakers. The claim goes with a media report saying something plays here and a hijack request,
+  which the iPhone answers with `NO`. Players that leave `PlaybackStatus` empty (Chromium without
+  Plasma Browser Integration) are not seen.
+- **A yield request from another host** releases at once, without waiting for the verdict.
+- **Losing the owner bit pauses local playback** on the spot, whoever took it.
+- Every change in whether something plays here goes to the other hosts (`set_streaming()`).
 
-**Every other host in the buds' list is registered, once per session.** Two `0x10` smart-routing
-packets, `tipi_add_device()` and `tipi_media_info()`, carry the target's address and this
-machine's. Android sends them, and so does the AC fork, which holds that they are what
-moves a host from unvalidated to validated. That rationale rests on a B-field reading this
-hardware contradicts, so treat the packets as unproven here until a capture shows them changing
-something. **The session's notification request goes out again 500ms after every claim**: the
-firmware resets its AAP state on each handoff and silently drops what a session set up before it.
+With `a2dp_sink` in `bluez5.roles` the iPhone falls back to this computer as a speaker when it loses
+the AirPods here, instead of staying on the buds; see "Keeping the phone's audio on the phone".
 
-**The call has to arrive before the phone moves the audio.** When the phone takes A2DP the
-Bluetooth sink fails and WirePlumber moves any stream still playing to the laptop speakers, so
-a pause that lands after that is heard as a burst of music from the speakers. The supervisor
-publishes the call list once a second; on this path every BlueZ object change republishes it
-straight away (`ConnectionManager::refresh_calls()`).
+Releasing pauses first, then waits for the sink to go quiet, sends the release and switches the
+card off; see "The AirPods sink jammed after a call" for why the card, not the default sink.
 
-`ownership_action()` is pure and tested, and is the same shape as `handoff_action()`: give
-them up when a peer goes active, take them back when it lets go, never twice, and buds
-already given up come back even if the setting was switched off while they were away.
+**Both buds out moves the stem and volume target to another host.** A session that owned the
+buds when the last one came out claims again when one goes back in (reported by orychalk).
 
-Two guards carry the weight, both learned from a working implementation rather than from
-review:
+`ownership_action()` and `takes_over_for_play()` are pure and tested. Buds already given up come
+back even if the setting was switched off while they were away.
+
+Kept from before, because they are firmware facts rather than guesses:
 
 - **Never claim while a peer is taking the buds.** A claim sent then leaves this host
   contested, and the firmware closes the link about twenty seconds later at the next
-  physical event. The peer states from the last connected-devices notification gate every
-  claim -- but an idle peer at `0x15` is not one of them, per the wire protocol above.
-- **A peer that goes quiet has not necessarily finished.** The firmware reports no audio
-  source every twenty seconds or so *during* a call. So a reclaim waits three seconds and
-  checks the peer again, up to three times, and stays yielded if the phone re-asserts.
-
-The claim sent when the session comes up is deliberate: AirPods Pro 2 validates a host by
-itself, Pro 3 never does, and an unvalidated host is dropped at the first pod movement.
-
-**That claim validates the host, it does not entitle it to keep the buds.** Three seconds
-later (`IDLE_RELEASE_MS`) the session hands ownership straight back, unless the buds have
-reported an audio source for *this* machine in the meantime. `releases_when_idle()` is pure
-and tested: give them back when another host is in the list, nothing is playing here and
-the buds were not already yielded for a call. Buds held by a machine that is not using them
-do not appear as an output route on the phone at all, which is what "Linux stole my AirPods
-at boot" is. The way back is the existing claim for local playback: the card profile is
-deliberately left alone here, because tearing the sink down means the next thing the user
-plays goes to the speakers, the buds never report a local audio source, and nothing ever
-claims again.
+  physical event. An idle peer at `0x15` and an owner are not taking them, per the wire protocol.
+- **The session claims once when it opens**, five seconds in (`CLAIM_SETTLE_MS`): AirPods Pro 2
+  validates a host by itself, Pro 3 never does, and an unvalidated host is dropped at the first pod
+  movement. Three seconds later (`IDLE_RELEASE_MS`, `releases_when_idle()`) ownership goes back
+  unless the buds have reported audio for this machine, so a machine that is not using the buds
+  does not hide them from the phone. A watcher that has given the buds up sends no claim of its
+  own.
+- **Every other host in the buds' list is registered, once per session**, with a media report
+  and `tipi_add_device()`.
+- **The notification request and stem config go out again 500ms after every claim**: the firmware
+  resets its AAP state on each handoff and silently drops what a session set up before it.
 
 #### Disconnect handoff
 
@@ -900,6 +943,7 @@ checks the daemon does not make.
 | Pairing bonds but the LE half never derives, on a machine with a USB dongle plugged in | Tether used the first powered controller, which is the dongle, not the built-in one | `tether --bt-status` marks the controller in use; `tether --bt-adapter <hciN>` picks another -- see 2026-09-01 |
 | The link reads down forever with `br-connection-unknown`, while messages, contacts and notifications all work | This computer offers the iPhone no BR/EDR profile to connect to, and BlueZ only reports a link up while some local profile is connected | Nothing. Tether no longer waits on that link -- see 2026-08-23 below. Call support does not change this: BlueZ's hands-free profile is not one of the local profiles BlueZ counts |
 | The iPhone's audio moves to the computer when Tether connects | The machine advertises itself as a Bluetooth speaker/headset, and iOS routes to it. Not caused by Tether beyond bringing the link up | See "Keeping the phone's audio on the phone" below |
+| After this computer takes the AirPods, the iPhone plays on the computer and needs the AirPods picked in Control Center | `a2dp_sink` makes the computer a speaker for the phone, and iOS falls back to the last one it had | See "Keeping the phone's audio on the phone" below |
 | `tether --bt-calls` reports call control off | PipeWire took the profile *and* its telephony D-Bus service is off, the iPhone reconnected on its own and never opened hands-free, or `bluetoothd` is running without `--experimental` | Either give BlueZ the profile by dropping `hfp_hf` from `bluez5.roles`, or set `bluez5.telephony-dbus-service = true` and let Tether drive PipeWire's gateway -- see "Calls". The daemon cycles the BR/EDR bearer once per outage for the second cause; confirm with `busctl --system tree org.bluez \| grep telephony` and `busctl --user tree org.pipewire.Telephony` |
 | AirPods are listed but the battery stays blank, and the row says another program is using the channel | The AAP channel takes one client, and something else has it | Stop the other AirPods program (LibrePods, AC, a status-bar widget that reads battery), or hand it over with `tether --bt-airpods-enable off` |
 | Setting the AirPods listening mode to `off` does nothing, while the other three work | The buds declined it. Apple leaves Off out of the noise-control rotation by default on Pro models, and there is no refusal to report | Add Off to the rotation on the phone, under Settings > Bluetooth > (i) > Noise Control. Tether keeps showing the mode the buds are actually in |
@@ -922,49 +966,57 @@ checks the daemon does not make.
 
 ### Keeping the phone's audio on the phone
 
-Unaffected by call support: calls run over BlueZ's own profile and never make this
-machine an audio destination. This still applies exactly as written -- and the role
-list below is also what hands BlueZ the hands-free profile in the first place, since
-dropping `hfp_hf` is what keeps PipeWire from taking it.
+**Recommended for every Tether user, with or without AirPods.** Stock PipeWire makes the computer
+a Bluetooth speaker and hands-free unit for the phone, and that costs three things:
 
-Once the Classic link is up, the iPhone's calls, music, and system sounds play on the
-computer instead of the phone. PipeWire registers A2DP sink and HFP audio-gateway
-endpoints for every adapter, so the machine advertises itself as a speaker and headset,
-and iOS routes to a bonded device that offers one. Tether only brings the link up; the
-routing decision is the phone's. Every desktop with Bluetooth audio behaves this way.
+| | Stock WirePlumber | Recommended roles |
+|---|---|---|
+| iPhone calls, music and system sounds | Play on the computer | Stay on the phone |
+| Tether call control | None: PipeWire takes hands-free, BlueZ exports no `Telephony1` | Works, on BlueZ |
+| Carrier, signal, phone battery | None | Shown |
+| AirPods handed back to this machine | iPhone falls back to the computer; pick the AirPods in Control Center each time | iPhone stays on the AirPods |
+| Call audio on the computer | Offered, played only if PipeWire's call handling is set up | No: on the phone or its headset |
 
-To confirm it, with the phone connected:
+The stock default, from `man pipewire-props` (PipeWire 1.6.8):
+
+```
+bluez5.roles = [ a2dp_sink a2dp_source bap_sink bap_source bap_bcast_sink bap_bcast_source hfp_hf hfp_ag ]
+```
+
+Once the Classic link is up, iOS routes to a bonded device that offers itself as a speaker or
+headset, the way it does to a car. Tether only brings the link up; the routing decision is the
+phone's. Every desktop with Bluetooth audio behaves this way. With the phone connected,
+`pactl list cards` shows it as `bluez_card.<ADDR>`.
+
+The fix is to stop advertising the roles a phone connects to, while keeping the ones headphones
+use. On WirePlumber 0.5 and later:
 
 ```bash
-pactl list cards
-```
-
-The phone appears as `bluez_card.<ADDR>` with `Active Profile: audio-gateway`.
-
-The fix is to stop advertising the roles a phone connects to, while keeping the ones
-headphones use. On WirePlumber 0.5 and later, write
-`~/.config/wireplumber/wireplumber.conf.d/51-no-phone-audio.conf`:
-
-```
+mkdir -p ~/.config/wireplumber/wireplumber.conf.d
+cat > ~/.config/wireplumber/wireplumber.conf.d/51-no-phone-audio.conf <<'EOF'
 monitor.bluez.properties = {
-  bluez5.roles = [ a2dp_source hfp_ag bap_source ]
+  bluez5.roles = [ a2dp_source bap_source hfp_ag ]
 }
+EOF
+systemctl --user restart wireplumber
 ```
 
-Then `systemctl --user restart wireplumber` and reconnect the phone. Role names are
-from this machine's perspective, not the remote device's: `a2dp_source` and `hfp_ag`
-are the roles that drive headphones, `a2dp_sink` and `hfp_hf` are the roles that make
-the machine a destination for a phone. Dropping the second pair leaves the iPhone
-nothing to route to, so its audio stays local, while headphones keep both A2DP
-playback and the HFP microphone. `bap_source` keeps LE Audio playback; drop it too if
-nothing here uses LE Audio. On WirePlumber 0.4 the same setting goes in
+Then turn Bluetooth off and on on the iPhone. Only one file in `wireplumber.conf.d` should set
+`bluez5.roles`; remove the key from any other. On WirePlumber 0.4 the same setting goes in
 `~/.config/wireplumber/bluetooth.lua.d/51-no-phone-audio.lua` as
-`bluez_monitor.properties["bluez5.roles"]`.
+`bluez_monitor.properties["bluez5.roles"] = "[ a2dp_source bap_source hfp_ag ]"`.
 
-If you later want call audio on the desktop, be aware this setting is the thing in the
-way: `a2dp_sink` is what makes iOS willing to speak hands-free to this machine at all.
-See "Getting the call audio onto the desktop instead" -- you cannot keep the music here
-and move the calls.
+Role names are from this machine's perspective. `a2dp_source` and `hfp_ag` drive headphones:
+playback and the headset microphone. `bap_source` is LE Audio playback; drop it if nothing here
+uses LE Audio. `a2dp_sink`, `bap_sink`, `asha_sink` and `hfp_hf` make the machine a destination
+for a phone, and leaving them out leaves the iPhone nothing to route to. Leaving out `hfp_hf` is
+also what hands BlueZ the hands-free profile, which is where call control and the indicators come
+from -- see "Calls".
+
+The one thing given up is the phone using the computer as a speaker or speakerphone. If you want
+call audio on the desktop, `a2dp_sink` is mandatory for it, and with it the phone's music and
+sounds come here too, and AirPods handoff falls back to the computer; see "Getting the call audio
+onto the desktop instead".
 
 Two things that look like fixes and are not:
 
@@ -3441,3 +3493,69 @@ Both gates now log when they hold a claim back.
 
 Not settled: whether a claim into `0x17` survives a pod movement afterwards (the reference's
 contested-host drop). Unconfirmed on `0x17` hardware.
+
+### 2026-09-13 - A stem pause handed the buds to the iPhone, and nothing brought them back
+
+Pro 3, Linux playing and owning (`us 0x03`). A stem press stopped Linux and started the iPhone.
+From then on the stem drove the iPhone, and Linux had no sink until the card profile was set
+by hand.
+
+```
+01:32:41.436  us 0x03 -> 0x01, peer 0x05 -> 0x07
+01:32:41.439  paused 2 player(s), the phone took the buds
+01:32:41.896  audio source media on the iPhone
+01:32:41.976  gave the buds to the iPhone (paused 0, card a2dp-sink -> off)
+01:32:43.592  audio source media on the iPhone   <- last one; no none follows
+```
+
+The players still reported `Playing` 3 ms after the ownership change, so the buds moved it
+before any pause reached this machine. Tether did not cause the takeover.
+
+Suspected first: the `tipi_media_info()` packet each session sends, which says this host has
+`playingApp NA` and `hostStreamingState NO` even while it streams. **Ruled out the same night**:
+with the packet removed, after a restart and again after a case cycle, the press still moved the
+buds to the iPhone. The packet is back. What moves them is on the firmware or iOS side, and
+not explained.
+
+The stuck half was ours. The phone kept playing, so `peer_audio` stayed latched and no
+reclaim came; the card was off, so playing here went to the speakers, the buds reported no
+local source and nothing claimed.
+
+An MPRIS poll that reclaimed on a local play edge got the buds back, and a stem pause on the iPhone
+returned them about 6s later (`PEER_AUDIO_SETTLE_MS` plus `HANDOFF_GUARD_SECONDS`). It worked, and
+it was more timing stacked on inference. Both were replaced the same day, below.
+
+### 2026-09-13 - The stem config, and what the iPhone was saying all along
+
+AirPods Center v2.3.0, orychalk's fork, sends stem config `0x39 = 01` and handles the press itself.
+Without it the firmware's single press is Apple's host toggle. With it, from 10:44:25, ten presses
+toggled Linux and the buds never moved.
+
+Logging every packet no parser handled then showed opcode `0x11` arriving from the iPhone all
+along, in OPACK -- see "Smart routing". The capture, from 10:43 (`tetherd.log`):
+
+```
+10:45:37.445  iPhone  com.apple.Music YES 301
+10:45:42.154  us 0x03 -> 0x01, peer 0x05 -> 0x07          routed from Control Center
+10:46:01.780  playback started here, taking the buds back  card was off: speaker burst
+10:46:02.523  iPhone  Unknown NO 100                       the iPhone yields to the claim
+10:48:01.079  iPhone  com.apple.TelephonyUtilities YES 501 ring
+10:48:01.339  us 0x03 -> 0x01, peer 0x05 -> 0x07
+10:49:10.948  iPhone  Unknown NO 100                       hangup
+10:49:16.907  claim sent                                   6s of latch and guard
+10:43:44.138  iPhone  audioRoutingSetOwnershipToFalse, reason ManualRoute
+```
+
+The phone says when a call starts and ends, and when media starts and stops, exactly and ahead of
+the ownership change. Everything Tether inferred from the owner bit, the audio-source notification,
+`PEER_AUDIO_SETTLE_MS`, `HANDOFF_GUARD_SECONDS`, the call list and the one-second MPRIS poll was
+standing in for it. All of it is gone; "Ownership handoff" describes what replaced it.
+
+The iPhone did not take the buds for music on its own while Linux owned them (10:45:37 to 42): it
+waited for Control Center. That matches a Mac.
+
+Also from orychalk (#85): a B-field threshold does not port (Pro 1 keeps an active iPhone at
+`0x01`), which the reports make moot; forcing a claim into an owning `0x17` iPhone survived twenty
+pod movements on Pro 3; and both buds out moves the volume target, hence the ear-return claim.
+
+Not yet verified on hardware: the whole of the above.
