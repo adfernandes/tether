@@ -123,6 +123,13 @@ final class ShareViewController: UIViewController {
                         continuation.resume(returning: .file(data, filename: "image.jpg"))
                     } else if let url = item as? URL {
                         continuation.resume(returning: readFile(at: url, defaultFilename: "image.jpg"))
+                    } else if let data = item as? Data {
+                        // Instant Markup (screenshot editor) hands back raw encoded bytes.
+                        let ext = provider.registeredTypeIdentifiers
+                            .compactMap { UTType($0) }
+                            .first { $0.conforms(to: .image) }?
+                            .preferredFilenameExtension ?? "png"
+                        continuation.resume(returning: .file(data, filename: "image.\(ext)"))
                     } else {
                         continuation.resume(returning: nil)
                     }
@@ -151,6 +158,18 @@ final class ShareViewController: UIViewController {
             return await loadFileBackedItem(provider, typeIdentifier: UTType.data.identifier, defaultFilename: "shared_file.bin")
         }
 
+        // 9. Object-only image (e.g. "com.apple.uikit.image" from the screenshot
+        // editor), which conforms to none of the UTTypes above.
+        if provider.canLoadObject(ofClass: UIImage.self) {
+            return await withCheckedContinuation { continuation in
+                _ = provider.loadObject(ofClass: UIImage.self) { object, _ in
+                    let data = (object as? UIImage)?.pngData()
+                    continuation.resume(returning: data.map { .file($0, filename: "image.png") })
+                }
+            }
+        }
+
+        NSLog("Tether share: unhandled types %@", provider.registeredTypeIdentifiers as NSArray)
         return nil
     }
 
@@ -311,6 +330,16 @@ private struct ShareSheetView: View {
     private func singleItemActions(for item: SharedItem) -> some View {
         switch item {
         case .text(let text):
+            if let url = Self.webURL(text) {
+                ActionButton(
+                    icon: "safari",
+                    label: "Open on Desktop",
+                    subtitle: url.host() ?? "Opens in your default browser",
+                    color: .blue
+                ) {
+                    perform(.openUrl(url.absoluteString))
+                }
+            }
             ActionButton(
                 icon: "clipboard",
                 label: "Send to Clipboard",
@@ -338,6 +367,18 @@ private struct ShareSheetView: View {
                 perform(.file(data, filename: filename))
             }
         }
+    }
+
+    /// The text as an http(s) link with a host, or nil when it is anything else
+    /// (prose, a sentence containing a link, mailto:, tel:).
+    private static func webURL(_ text: String) -> URL? {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.contains(where: \.isWhitespace),
+              let url = URL(string: trimmed),
+              let scheme = url.scheme?.lowercased(), scheme == "http" || scheme == "https",
+              url.host() != nil
+        else { return nil }
+        return url
     }
 
     // MARK: Content Preview
@@ -484,6 +525,7 @@ private struct ShareSheetView: View {
     private func successMessage(for payload: SharePayload) -> String {
         switch payload {
         case .clipboard: return "Sent to clipboard ✓"
+        case .openUrl: return "Opened on desktop ✓"
         case .otp: return "OTP stored in vault ✓"
         case .file(_, let name): return "\(name) sent ✓"
         }
