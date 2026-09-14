@@ -123,6 +123,13 @@ final class ShareViewController: UIViewController {
                         continuation.resume(returning: .file(data, filename: "image.jpg"))
                     } else if let url = item as? URL {
                         continuation.resume(returning: readFile(at: url, defaultFilename: "image.jpg"))
+                    } else if let data = item as? Data {
+                        // Instant Markup (screenshot editor) hands back raw encoded bytes.
+                        let ext = provider.registeredTypeIdentifiers
+                            .compactMap { UTType($0) }
+                            .first { $0.conforms(to: .image) }?
+                            .preferredFilenameExtension ?? "png"
+                        continuation.resume(returning: .file(data, filename: "image.\(ext)"))
                     } else {
                         continuation.resume(returning: nil)
                     }
@@ -151,6 +158,18 @@ final class ShareViewController: UIViewController {
             return await loadFileBackedItem(provider, typeIdentifier: UTType.data.identifier, defaultFilename: "shared_file.bin")
         }
 
+        // 9. Object-only image (e.g. "com.apple.uikit.image" from the screenshot
+        // editor), which conforms to none of the UTTypes above.
+        if provider.canLoadObject(ofClass: UIImage.self) {
+            return await withCheckedContinuation { continuation in
+                _ = provider.loadObject(ofClass: UIImage.self) { object, _ in
+                    let data = (object as? UIImage)?.pngData()
+                    continuation.resume(returning: data.map { .file($0, filename: "image.png") })
+                }
+            }
+        }
+
+        NSLog("Tether share: unhandled types %@", provider.registeredTypeIdentifiers as NSArray)
         return nil
     }
 
