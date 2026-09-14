@@ -12,6 +12,9 @@ public enum SharePayload: Sendable {
     /// Send text to the Linux Wayland clipboard (`clipboard_set`).
     case clipboard(String)
 
+    /// Open an http(s) link in the Linux default browser (`open_url`).
+    case openUrl(String)
+
     /// Send an OTP/2FA code to the tetherd vault (`new_otp`).
     /// - Parameters:
     ///   - code: The OTP digits or secret string.

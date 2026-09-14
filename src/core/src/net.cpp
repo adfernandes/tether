@@ -112,6 +112,36 @@ namespace tether {
         return "";
     }
 
+    // Opens a link from a paired device in the default browser. Only http(s) with a
+    // host is accepted so a peer can never reach file:, custom-scheme or other handlers.
+    static void open_web_url(const std::string& url) {
+        if (url.size() > 8192) {
+            debug::log(WARN, "open_url: rejected oversized URL");
+            return;
+        }
+        GUri* uri = g_uri_parse(url.c_str(), G_URI_FLAGS_NONE, nullptr);
+        if (!uri) {
+            debug::log(WARN, "open_url: rejected unparsable URL");
+            return;
+        }
+        const char* host = g_uri_get_host(uri);
+        const char* scheme = g_uri_get_scheme(uri);
+        if (!host || !*host || (g_ascii_strcasecmp(scheme, "http") != 0 && g_ascii_strcasecmp(scheme, "https") != 0)) {
+            debug::log(WARN, "open_url: rejected non-web URL with scheme '{}'", scheme ? scheme : "");
+            g_uri_unref(uri);
+            return;
+        }
+        // Launch the re-serialized parse, not the raw input.
+        char* normalized = g_uri_to_string(uri);
+        g_uri_unref(uri);
+        GError* error = nullptr;
+        if (!g_app_info_launch_default_for_uri(normalized, nullptr, &error)) {
+            debug::log(ERR, "open_url: failed to open '{}': {}", normalized, error ? error->message : "unknown");
+            g_clear_error(&error);
+        }
+        g_free(normalized);
+    }
+
     static nlohmann::json make_otp_event(const Otp& otp) {
         nlohmann::json event;
         event["command"] = "otp_available";
@@ -2004,6 +2034,9 @@ namespace tether {
                         bc["command"] = "clipboard_updated";
                         bc["content"] = content;
                         broadcast_message(bc.dump(), client_fd);
+                    } else if (j.contains("command") && j["command"] == "open_url" && j.contains("content") &&
+                               j["content"].is_string()) {
+                        open_web_url(j["content"].get<std::string>());
                     } else if (j.contains("command") && j["command"] == "clipboard_get") {
                         if (g_wayland) {
                             nlohmann::json resp;

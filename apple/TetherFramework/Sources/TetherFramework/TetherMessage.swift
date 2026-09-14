@@ -14,6 +14,7 @@ public enum TetherCommand: String, Codable, Sendable {
     // Client → Daemon
     case clipboardSet = "clipboard_set"
     case clipboardGet = "clipboard_get"
+    case openUrl = "open_url"
     case fileStart = "file_start"
     case fileChunk = "file_chunk"
     case fileEnd = "file_end"
@@ -116,6 +117,11 @@ extension TetherMessage {
     // Create a `clipboard_set` message.
     public static func clipboardSet(_ text: String) -> TetherMessage {
         TetherMessage(command: TetherCommand.clipboardSet.rawValue, content: text)
+    }
+
+    // Create an `open_url` message; tetherd opens only http(s) links.
+    public static func openUrl(_ url: String) -> TetherMessage {
+        TetherMessage(command: TetherCommand.openUrl.rawValue, content: url)
     }
 
     // Create a `clipboard_get` request.

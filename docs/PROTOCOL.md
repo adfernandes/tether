@@ -32,6 +32,22 @@ The clipboard capabilities allow seamless copying and pasting between the Host (
 
 ---
 
+### `open_url` (Client -> Daemon)
+
+**Description**: Sent by a paired device (iPhone Share Extension) to open a web link in the Host's default browser.
+
+**Payload**:
+```json
+{
+  "command": "open_url",
+  "content": "https://example.com/article"
+}
+```
+
+**Daemon Behavior**: Accepted only over the paired mTLS connection. The URL must parse, use `http` or `https`, and have a host; anything else is logged and ignored. Valid links are opened with the default URI handler.
+
+---
+
 ### `clipboard_updated` (Daemon -> Clients)
 
 **Description**: Broadcasted from the daemon to *all connected active clients* when the Host's clipboard text natively changes (e.g., when the user highlights and presses `Ctrl-C` in a desktop app).

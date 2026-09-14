@@ -83,6 +83,11 @@ public actor ShareSender {
             try? await Task.sleep(for: .milliseconds(300))
             sendResult = .success(())
 
+        case .openUrl(let url):
+            connection.send(.openUrl(url))
+            try? await Task.sleep(for: .milliseconds(300))
+            sendResult = .success(())
+
         case .otp(let code, let source):
             connection.send(.newOtp(code, source: source))
             try? await Task.sleep(for: .milliseconds(300))

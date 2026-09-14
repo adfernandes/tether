@@ -330,6 +330,16 @@ private struct ShareSheetView: View {
     private func singleItemActions(for item: SharedItem) -> some View {
         switch item {
         case .text(let text):
+            if let url = Self.webURL(text) {
+                ActionButton(
+                    icon: "safari",
+                    label: "Open on Desktop",
+                    subtitle: url.host() ?? "Opens in your default browser",
+                    color: .blue
+                ) {
+                    perform(.openUrl(url.absoluteString))
+                }
+            }
             ActionButton(
                 icon: "clipboard",
                 label: "Send to Clipboard",
@@ -357,6 +367,18 @@ private struct ShareSheetView: View {
                 perform(.file(data, filename: filename))
             }
         }
+    }
+
+    /// The text as an http(s) link with a host, or nil when it is anything else
+    /// (prose, a sentence containing a link, mailto:, tel:).
+    private static func webURL(_ text: String) -> URL? {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.contains(where: \.isWhitespace),
+              let url = URL(string: trimmed),
+              let scheme = url.scheme?.lowercased(), scheme == "http" || scheme == "https",
+              url.host() != nil
+        else { return nil }
+        return url
     }
 
     // MARK: Content Preview
@@ -503,6 +525,7 @@ private struct ShareSheetView: View {
     private func successMessage(for payload: SharePayload) -> String {
         switch payload {
         case .clipboard: return "Sent to clipboard ✓"
+        case .openUrl: return "Opened on desktop ✓"
         case .otp: return "OTP stored in vault ✓"
         case .file(_, let name): return "\(name) sent ✓"
         }
