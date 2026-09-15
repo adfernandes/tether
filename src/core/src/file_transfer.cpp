@@ -1,5 +1,6 @@
 #include "tether/file_transfer.hpp"
 #include "tether/base64.hpp"
+#include <cstdlib>
 #include <glib.h>
 #include <tether/log.hpp>
 
@@ -18,6 +19,10 @@ namespace tether {
     }
 
     std::string FileReceiveManager::get_downloads_dir() {
+        if (const char* override_dir = std::getenv("XDG_DOWNLOAD_DIR");
+            override_dir && *override_dir && std::filesystem::path(override_dir).is_absolute()) {
+            return override_dir;
+        }
         if (const char* downloads = g_get_user_special_dir(G_USER_DIRECTORY_DOWNLOAD)) {
             return downloads;
         }

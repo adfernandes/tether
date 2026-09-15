@@ -162,6 +162,11 @@ Every node is a peer. A PC, iPhone or iPad all listen and all dial, and one cert
 
 A node must never pin a peer on local assertion alone — a UI must not report a device paired or connected until `pair_accepted` has crossed the wire and the trust record exists.
 
+Without a Wayland display, the receiver leaves the request pending for explicit local
+CLI approval rather than launching a desktop dialog. A helper that cannot run is not
+a rejection or acceptance. An explicit dialog rejection/timeout still rejects; a
+stale dialog result cannot undo acceptance already supplied through the CLI.
+
 ### Reconnecting
 
 A node dials a peer it already trusts on its own, whenever mDNS resolves one whose `fp=` is in `known_hosts.json`.

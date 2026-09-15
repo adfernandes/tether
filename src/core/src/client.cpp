@@ -12,9 +12,11 @@
 #include <fstream>
 #include <netdb.h>
 #include <nlohmann/json.hpp>
+#include <poll.h>
 #include <sys/socket.h>
 #include <sys/un.h>
 #include <sys/wait.h>
+#include <string_view>
 #include <tether/log.hpp>
 #include <unistd.h>
 
@@ -77,6 +79,9 @@ namespace tether {
     }
 
     void spawn_daemon() {
+        // A container/process supervisor owns the daemon, including while it is down.
+        if (const char* value = std::getenv("TETHER_NO_AUTOSTART"); value && std::string_view(value) == "1")
+            return;
         // Let systemd start it, and stay out of the way when it already does.
         if (systemd_owns_tetherd())
             return;
@@ -257,6 +262,14 @@ namespace tether {
         } else {
             return ::read(sock_, buf, count);
         }
+    }
+
+    bool Client::wait_readable(int timeout_ms) const {
+        // TLS can already hold a full record in userspace that poll() on the raw fd won't see.
+        if (ssl_ && SSL_pending(ssl_) > 0)
+            return true;
+        pollfd pfd{sock_, POLLIN, 0};
+        return poll(&pfd, 1, timeout_ms) > 0;
     }
 
     std::string Client::get_clipboard(std::string& err_out) {

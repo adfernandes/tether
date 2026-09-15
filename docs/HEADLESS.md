@@ -15,6 +15,13 @@ What you get, and what you do not:
 | Messages, notifications, calls | ✅ with a Bluetooth adapter the machine can see |
 | Clipboard sync | ❌ needs a Wayland session with `wlr-data-control` |
 
+## Container deployment
+
+For a non-root Docker image, Compose example and persistent mounts, see
+[CONTAINER.md](CONTAINER.md). It reuses host BlueZ/Avahi and runs its own session
+bus and OBEX daemon. It is CLI-driven, not a web UI, and Bluetooth messaging
+still requires a nearby phone.
+
 ## Run the daemon under systemd
 
 The distro packages install a `tetherd.service` user unit into
@@ -106,6 +113,19 @@ systemctl --user edit tetherd.service
 # [Service]
 # Environment=XDG_DOWNLOAD_DIR=%h/inbox
 ```
+
+## With a process supervisor
+
+Set `TETHER_NO_AUTOSTART=1` for clients when your supervisor owns `tetherd`, so a
+status check or CLI command cannot spawn another daemon during an outage.
+Set `TETHER_LOG_STDERR=1` for the daemon to keep logs on stderr instead of
+redirecting nonterminal output into its state-directory log. Only the exact value
+`1` enables either option; defaults for desktop/package installations are unchanged.
+
+An absolute, nonempty `XDG_DOWNLOAD_DIR` overrides the normal GLib/HOME download
+lookup. Received files are recorded for status/subscribers independently of desktop
+notifications. With no Wayland display, pairing waits for CLI approval; failure to
+launch a desktop dialog does not by itself reject or accept the request.
 
 ## Clipboard sync
 

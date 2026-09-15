@@ -197,6 +197,17 @@ does not start a daemon. Firewall opening is opt-in. Bluetooth experimental
 mode and adapter class changes are also opt-in. If your system uses another
 adapter or multiple adapters, change `bluetooth.adapters` accordingly.
 
+### Container (local build)
+
+A headless Linux Docker deployment is available for amd64 and arm64. It runs
+`tetherd` and its session services as non-root, using the host's BlueZ/Avahi and
+persistent state/download mounts. Pair and send messages/files through the CLI;
+there is no web UI yet. Bluetooth messaging still needs the iPhone near the host.
+
+See [docs/CONTAINER.md](docs/CONTAINER.md) for prerequisites, Compose setup,
+security considerations and the real-iPhone acceptance checklist. No registry
+image is published by this setup.
+
 ### Build from Source
 
 On Debian/Ubuntu:
@@ -292,7 +303,8 @@ tether accept 9a4f21...
 tether status                                  # devices, links, and recent transfers
 ```
 
-See [docs/HEADLESS.md](docs/HEADLESS.md).
+See [docs/HEADLESS.md](docs/HEADLESS.md), or [the container guide](docs/CONTAINER.md)
+for Docker deployment.
 
 
 
