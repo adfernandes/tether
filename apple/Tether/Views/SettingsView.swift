@@ -35,6 +35,7 @@ struct SettingsView: View {
                                 .font(.body.weight(.medium))
                                 .foregroundStyle(.white)
                         }
+                        .accessibilityHidden(true)
 
                         VStack(alignment: .leading, spacing: 2) {
                             TextField("Device Name", text: Bindable(viewModel.certificateManager).localDeviceName)
@@ -72,10 +73,11 @@ struct SettingsView: View {
                                 Image(systemName: "shield.slash")
                                     .font(.title3)
                                     .foregroundStyle(.tertiary)
+                                    .accessibilityHidden(true)
 
                                 Text("No paired devices")
                                     .font(.subheadline)
-                                    .foregroundStyle(.tertiary)
+                                    .foregroundStyle(.secondary)
                             }
                             .padding(.vertical, 20)
                             Spacer()
@@ -90,6 +92,7 @@ struct SettingsView: View {
                                     .font(.title3)
                                     .foregroundStyle(.teal)
                                     .frame(width: 32)
+                                    .accessibilityHidden(true)
 
                                 VStack(alignment: .leading, spacing: 2) {
                                     Text(name)
@@ -97,11 +100,12 @@ struct SettingsView: View {
 
                                     Text(formatFingerprint(String(fingerprint.prefix(16))) + "…")
                                         .font(.system(.caption2, design: .monospaced))
-                                        .foregroundStyle(.tertiary)
+                                        .foregroundStyle(.secondary)
                                 }
 
                                 Spacer()
                             }
+                            .accessibilityElement(children: .combine)
                             .swipeActions(edge: .trailing, allowsFullSwipe: true) {
                                 Button(role: .destructive) {
                                     fingerprintToDelete = fingerprint
@@ -128,6 +132,7 @@ struct SettingsView: View {
                                 .font(.title3)
                                 .foregroundStyle(.teal)
                                 .frame(width: 32)
+                                .accessibilityHidden(true)
                             
                             VStack(alignment: .leading, spacing: 2) {
                                 Text("Automatic Clipboard Sync")
@@ -135,7 +140,7 @@ struct SettingsView: View {
                                 
                                 Text("Write remote updates to system pasteboard")
                                     .font(.caption2)
-                                    .foregroundStyle(.tertiary)
+                                    .foregroundStyle(.secondary)
                             }
                         }
                     }

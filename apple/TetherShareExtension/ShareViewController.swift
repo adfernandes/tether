@@ -244,6 +244,7 @@ private struct ShareSheetView: View {
     @State private var resultMessage: String?
     @State private var didFail = false
     @State private var progress: (completed: Int, total: Int)?
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         NavigationStack {
@@ -277,6 +278,7 @@ private struct ShareSheetView: View {
                     HStack(spacing: 6) {
                         Image(systemName: "bolt.fill")
                             .foregroundStyle(.cyan)
+                            .accessibilityHidden(true)
                         Text("Tether")
                             .font(.headline)
                             .foregroundStyle(.white)
@@ -394,6 +396,7 @@ private struct ShareSheetView: View {
                 Image(systemName: "square.stack.3d.up.fill")
                     .font(.largeTitle)
                     .foregroundStyle(.purple)
+                    .accessibilityHidden(true)
                 Text("\(items.count) items")
                     .font(.subheadline)
                     .foregroundStyle(.white)
@@ -435,6 +438,7 @@ private struct ShareSheetView: View {
                 Image(systemName: "doc.fill")
                     .font(.largeTitle)
                     .foregroundStyle(.purple)
+                    .accessibilityHidden(true)
                 Text(filename)
                     .font(.subheadline)
                     .foregroundStyle(.white)
@@ -482,7 +486,8 @@ private struct ShareSheetView: View {
             Image(systemName: failed ? "xmark.circle.fill" : "checkmark.circle.fill")
                 .font(.system(size: 48))
                 .foregroundStyle(failed ? .red : .green)
-                .symbolEffect(.bounce)
+                .symbolEffect(.bounce, isActive: !reduceMotion)
+                .accessibilityHidden(true)
             Text(message)
                 .multilineTextAlignment(.center)
                 .foregroundStyle(.white)
@@ -494,8 +499,10 @@ private struct ShareSheetView: View {
             }
         }
         .onAppear {
+            // The sheet can close before VoiceOver would reach the message.
+            AccessibilityNotification.Announcement(message).post()
             if !failed {
-                DispatchQueue.main.asyncAfter(deadline: .now() + 1.4) {
+                DispatchQueue.main.asyncAfter(deadline: .now() + (UIAccessibility.isVoiceOverRunning ? 3 : 1.4)) {
                     onComplete()
                 }
             }
@@ -587,7 +594,7 @@ private struct ShareSheetView: View {
 
 private struct ActionButton: View {
     let icon: String
-    let label: String
+    let label: LocalizedStringKey
     let subtitle: String
     let color: Color
     let action: () -> Void
@@ -603,6 +610,7 @@ private struct ActionButton: View {
                         .font(.system(size: 20, weight: .semibold))
                         .foregroundStyle(color)
                 }
+                .accessibilityHidden(true)
                 VStack(alignment: .leading, spacing: 2) {
                     Text(label)
                         .font(.body.weight(.semibold))
@@ -616,6 +624,7 @@ private struct ActionButton: View {
                 Image(systemName: "chevron.right")
                     .font(.caption.weight(.semibold))
                     .foregroundStyle(.tertiary)
+                    .accessibilityHidden(true)
             }
             .padding(.horizontal, 14)
             .padding(.vertical, 12)

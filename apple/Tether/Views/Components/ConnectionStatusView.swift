@@ -12,12 +12,14 @@ struct ConnectionStatusView: View {
     let state: AppConnectionState
 
     @State private var isPulsing = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         HStack(spacing: 8) {
             Circle()
                 .fill(dotColor)
                 .frame(width: 10, height: 10)
+                .accessibilityHidden(true)
                 .scaleEffect(isPulsing ? 1.3 : 1.0)
                 .opacity(isPulsing ? 0.6 : 1.0)
                 .animation(
@@ -32,7 +34,10 @@ struct ConnectionStatusView: View {
                 .foregroundStyle(.secondary)
         }
         .onChange(of: state, initial: true) {
-            isPulsing = isAnimating
+            isPulsing = isAnimating && !reduceMotion
+        }
+        .onChange(of: reduceMotion) {
+            isPulsing = isAnimating && !reduceMotion
         }
     }
 
@@ -44,7 +49,7 @@ struct ConnectionStatusView: View {
         }
     }
 
-    private var statusText: String {
+    private var statusText: LocalizedStringKey {
         switch state {
         case .connected: "Connected"
         case .connecting: "Connecting…"
