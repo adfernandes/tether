@@ -55,7 +55,10 @@ namespace tether::ui {
             GtkWidget* title_label = gtk_label_new(title.c_str());
             gtk_label_set_xalign(GTK_LABEL(title_label), 0.0);
             gtk_box_pack_start(GTK_BOX(text), title_label, FALSE, FALSE, 0);
+            // Lets screen readers name the control after the row title.
+            gtk_label_set_mnemonic_widget(GTK_LABEL(title_label), control);
             if (!subtitle.empty()) {
+                atk_object_set_description(gtk_widget_get_accessible(control), subtitle.c_str());
                 GtkWidget* subtitle_label = gtk_label_new(subtitle.c_str());
                 gtk_label_set_xalign(GTK_LABEL(subtitle_label), 0.0);
                 gtk_label_set_line_wrap(GTK_LABEL(subtitle_label), TRUE);
@@ -200,6 +203,18 @@ namespace tether::ui {
             if (GtkWidget* parent = main_window())
                 gtk_window_set_transient_for(GTK_WINDOW(window), GTK_WINDOW(parent));
             g_signal_connect(window, "delete-event", G_CALLBACK(gtk_widget_hide_on_delete), nullptr);
+            // Escape and Ctrl+W close, after the focused control had its chance at the key.
+            g_signal_connect_after(window,
+                                   "key-press-event",
+                                   G_CALLBACK(+[](GtkWidget* widget, GdkEventKey* event, gpointer) -> gboolean {
+                                       const bool ctrl_w = (event->state & GDK_CONTROL_MASK) &&
+                                                           gdk_keyval_to_lower(event->keyval) == GDK_KEY_w;
+                                       if (event->keyval != GDK_KEY_Escape && !ctrl_w)
+                                           return FALSE;
+                                       gtk_widget_hide(widget);
+                                       return TRUE;
+                                   }),
+                                   nullptr);
             g_signal_connect(
                 window, "destroy", G_CALLBACK(+[](GtkWidget*, gpointer) { g_settings.window = nullptr; }), nullptr);
 

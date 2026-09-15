@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: tether\n"
 "Report-Msgid-Bugs-To: zack@bartel.com\n"
-"POT-Creation-Date: 2026-09-12 17:22-0700\n"
+"POT-Creation-Date: 2026-09-14 21:48-0700\n"
 "PO-Revision-Date: 2026-08-23\n"
 "Last-Translator: Tether project\n"
 "Language-Team: Czech\n"
@@ -1784,6 +1784,18 @@ msgstr "Ukončeno"
 msgid "No service"
 msgstr "Bez signálu"
 
+#. TRANSLATORS: Cellular signal strength read aloud, {} is 0 to 5.
+#: src/gtk/calls_view.cpp
+#, c++-format
+msgid "signal {} of 5"
+msgstr "signál {} z 5"
+
+#. TRANSLATORS: The iPhone's battery level read aloud, {} is like "80%".
+#: src/gtk/calls_view.cpp
+#, c++-format
+msgid "battery {}"
+msgstr "baterie {}"
+
 #: src/gtk/calls_view.cpp
 msgid "Unknown caller"
 msgstr "Neznámý volající"
@@ -1830,13 +1842,26 @@ msgstr "Operátor, signál a baterie iPhonu."
 msgid "Copy"
 msgstr "Kopírovat"
 
+#. TRANSLATORS: Spoken name of the copy button beside a phone number or email.
+#: src/gtk/contacts_view.cpp
+#, c++-format
+msgid "Copy {}"
+msgstr "Kopírovat {}"
+
 #: src/gtk/contacts_view.cpp
 msgid "Copied to the clipboard."
 msgstr "Zkopírováno do schránky."
 
-#: src/gtk/contacts_view.cpp
+#: src/gtk/contacts_view.cpp src/gtk/messages_view.cpp
 msgid "Message"
 msgstr "Napsat zprávu"
+
+#. TRANSLATORS: Spoken name of the message button beside a phone
+#. number or email.
+#: src/gtk/contacts_view.cpp
+#, c++-format
+msgid "Message {}"
+msgstr "Napsat zprávu {}"
 
 #: src/gtk/contacts_view.cpp
 msgid "No contacts yet. Check the Bluetooth link on the Devices page."
@@ -1859,10 +1884,20 @@ msgstr "Démon Tether neběží."
 msgid "Daemon Online"
 msgstr "Démon je online"
 
+#. TRANSLATORS: Left earbud, read aloud by screen readers before its battery level.
+#: src/gtk/devices_view.cpp
+msgid "Left earbud"
+msgstr "Levé sluchátko"
+
 #. TRANSLATORS: Left earbud, abbreviated to fit the device row. One or two letters.
 #: src/gtk/devices_view.cpp
 msgid "L"
 msgstr "L"
+
+#. TRANSLATORS: Right earbud, read aloud by screen readers before its battery level.
+#: src/gtk/devices_view.cpp
+msgid "Right earbud"
+msgstr "Pravé sluchátko"
 
 #. TRANSLATORS: Right earbud, abbreviated to fit the device row. One or two letters.
 #: src/gtk/devices_view.cpp
@@ -1874,12 +1909,12 @@ msgid "Reading battery…"
 msgstr "Načítání baterie…"
 
 #: src/gtk/devices_view.cpp
-msgid "Connected."
-msgstr "Připojeno."
-
-#: src/gtk/devices_view.cpp
 msgid "Not connected yet."
 msgstr "Zatím nepřipojeno."
+
+#: src/gtk/devices_view.cpp
+msgid "Connected."
+msgstr "Připojeno."
 
 #: src/gtk/devices_view.cpp
 msgid "Scanning for nearby devices..."
@@ -2394,6 +2429,14 @@ msgid "Quit"
 msgstr "Ukončit"
 
 #: src/gtk/main.cpp
+msgid "Main menu"
+msgstr "Hlavní nabídka"
+
+#: src/gtk/main.cpp
+msgid "Look for devices"
+msgstr "Hledat zařízení"
+
+#: src/gtk/main.cpp
 msgid "Devices"
 msgstr "Zařízení"
 
@@ -2409,13 +2452,52 @@ msgstr "Otevřít na této kartě"
 msgid "Open the messages tab on this conversation"
 msgstr "Otevřít kartu zpráv na této konverzaci"
 
+#. TRANSLATORS: strftime clock time on today's conversations, e.g. "%I:%M %p" for 12-hour.
+#: src/gtk/message_format.cpp src/gtk/messages_view.cpp
+#, no-c-format
+msgid "%H:%M"
+msgstr "%H:%M"
+
 #: src/gtk/message_format.cpp
 msgid "Yesterday"
 msgstr "Včera"
 
+#. TRANSLATORS: strftime short date for older conversations; reorder to the local
+#. convention, e.g. "%-d %b".
+#: src/gtk/message_format.cpp
+#, no-c-format
+msgid "%b %-d"
+msgstr "%-d. %b"
+
 #: src/gtk/message_format.cpp
 msgid "Today"
 msgstr "Dnes"
+
+#. TRANSLATORS: strftime date heading above older messages, e.g. "%A %-d %B".
+#: src/gtk/message_format.cpp
+#, no-c-format
+msgid "%A, %b %-d"
+msgstr "%A %-d. %b"
+
+#: src/gtk/messages_view.cpp src/gtk/tray.cpp
+#, c++-format
+msgid "{} unread message"
+msgid_plural "{} unread messages"
+msgstr[0] "{} nepřečtená zpráva"
+msgstr[1] "{} nepřečtené zprávy"
+msgstr[2] "{} nepřečtených zpráv"
+
+#. TRANSLATORS: Read aloud before a message you sent, {} is the message.
+#: src/gtk/messages_view.cpp
+#, c++-format
+msgid "Sent: {}"
+msgstr "Odesláno: {}"
+
+#. TRANSLATORS: Read aloud before a message you received, {} is the message.
+#: src/gtk/messages_view.cpp
+#, c++-format
+msgid "Received: {}"
+msgstr "Přijato: {}"
 
 #: src/gtk/messages_view.cpp
 msgid "Bluetooth connection needed to sync messages."
@@ -2480,6 +2562,12 @@ msgstr "Zkusit znovu"
 #: src/gtk/notifications_view.cpp
 msgid "Dismiss on the iPhone"
 msgstr "Zavřít na iPhonu"
+
+#. TRANSLATORS: Spoken name of the dismiss button on a notification from the named app.
+#: src/gtk/notifications_view.cpp
+#, c++-format
+msgid "Dismiss {} notification"
+msgstr "Zavřít oznámení aplikace {}"
 
 #: src/gtk/notifications_view.cpp
 msgid "New notification"
@@ -2662,14 +2750,6 @@ msgstr "{}: {}"
 #: src/gtk/tray.cpp
 msgid "Daemon: not running"
 msgstr "Démon: neběží"
-
-#: src/gtk/tray.cpp
-#, c++-format
-msgid "{} unread message"
-msgid_plural "{} unread messages"
-msgstr[0] "{} nepřečtená zpráva"
-msgstr[1] "{} nepřečtené zprávy"
-msgstr[2] "{} nepřečtených zpráv"
 
 #: src/gtk/ui_util.cpp
 msgid "Waiting for the Tether daemon."

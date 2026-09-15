@@ -57,11 +57,16 @@ namespace tether::ui {
             return value ? value : "";
         }
 
-        GtkWidget*
-            action_button(const char* icon_name, const std::string& address, const char* tooltip, GCallback on_click) {
+        // "name" is spoken, so it carries the address the row shows beside the icon.
+        GtkWidget* action_button(const char* icon_name,
+                                 const std::string& address,
+                                 const char* tooltip,
+                                 const std::string& name,
+                                 GCallback on_click) {
             GtkWidget* button = gtk_button_new_from_icon_name(icon_name, GTK_ICON_SIZE_BUTTON);
             gtk_button_set_relief(GTK_BUTTON(button), GTK_RELIEF_NONE);
             gtk_widget_set_tooltip_text(button, tooltip);
+            set_accessible_name(button, name);
             g_object_set_data_full(G_OBJECT(button), "address", g_strdup(address.c_str()), g_free);
             g_signal_connect(button, "clicked", on_click, nullptr);
             return button;
@@ -85,21 +90,30 @@ namespace tether::ui {
 
             gtk_box_pack_end(
                 GTK_BOX(box),
-                action_button(
-                    "edit-copy-symbolic", display_address(key), _("Copy"), G_CALLBACK(+[](GtkButton* button, gpointer) {
-                        gtk_clipboard_set_text(
-                            gtk_clipboard_get(GDK_SELECTION_CLIPBOARD), stashed(GTK_WIDGET(button)), -1);
-                        set_status_main(_("Copied to the clipboard."));
-                    })),
+                action_button("edit-copy-symbolic",
+                              display_address(key),
+                              _("Copy"),
+                              // TRANSLATORS: Spoken name of the copy button beside a phone number or email.
+                              tether::tr_format(_("Copy {}"), display_address(key)),
+                              G_CALLBACK(+[](GtkButton* button, gpointer) {
+                                  gtk_clipboard_set_text(
+                                      gtk_clipboard_get(GDK_SELECTION_CLIPBOARD), stashed(GTK_WIDGET(button)), -1);
+                                  set_status_main(_("Copied to the clipboard."));
+                              })),
                 FALSE,
                 FALSE,
                 0);
 
-            GtkWidget* message = action_button(
-                "mail-message-new-symbolic", key, _("Message"), G_CALLBACK(+[](GtkButton* button, gpointer) {
-                    if (g_contacts.open_thread)
-                        g_contacts.open_thread(stashed(GTK_WIDGET(button)));
-                }));
+            GtkWidget* message = action_button("mail-message-new-symbolic",
+                                               key,
+                                               _("Message"),
+                                               // TRANSLATORS: Spoken name of the message button beside a phone
+                                               // number or email.
+                                               tether::tr_format(_("Message {}"), display_address(key)),
+                                               G_CALLBACK(+[](GtkButton* button, gpointer) {
+                                                   if (g_contacts.open_thread)
+                                                       g_contacts.open_thread(stashed(GTK_WIDGET(button)));
+                                               }));
             gtk_box_pack_end(GTK_BOX(box), message, FALSE, FALSE, 0);
             return box;
         }
@@ -228,6 +242,7 @@ namespace tether::ui {
 
         g_contacts.search_entry = gtk_search_entry_new();
         gtk_entry_set_placeholder_text(GTK_ENTRY(g_contacts.search_entry), _("Search contacts"));
+        set_accessible_name(g_contacts.search_entry, _("Search contacts"));
         gtk_widget_set_margin_top(g_contacts.search_entry, 8);
         gtk_widget_set_margin_start(g_contacts.search_entry, 8);
         gtk_widget_set_margin_end(g_contacts.search_entry, 8);

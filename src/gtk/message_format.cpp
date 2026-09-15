@@ -93,12 +93,17 @@ namespace tether::ui {
 
         const int days = days_between(when_tm, today_tm);
         if (days <= 0)
-            return localized_day(when_tm, "%H:%M");
+            // TRANSLATORS: strftime clock time on today's conversations, e.g. "%I:%M %p" for 12-hour.
+            // xgettext:no-c-format
+            return localized_day(when_tm, _("%H:%M"));
         if (days == 1)
             return _("Yesterday");
         if (days < 7)
             return localized_day(when_tm, "%a");
-        return localized_day(when_tm, "%b %-d");
+        // TRANSLATORS: strftime short date for older conversations; reorder to the local
+        // convention, e.g. "%-d %b".
+        // xgettext:no-c-format
+        return localized_day(when_tm, _("%b %-d"));
     }
 
     std::string format_day_heading(int64_t epoch, int64_t now) {
@@ -119,7 +124,9 @@ namespace tether::ui {
             return _("Yesterday");
         if (days < 7)
             return localized_day(when_tm, "%A");
-        return localized_day(when_tm, "%A, %b %-d");
+        // TRANSLATORS: strftime date heading above older messages, e.g. "%A %-d %B".
+        // xgettext:no-c-format
+        return localized_day(when_tm, _("%A, %b %-d"));
     }
 
     bool same_local_day(int64_t a, int64_t b) {

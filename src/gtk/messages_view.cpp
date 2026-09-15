@@ -178,7 +178,8 @@ namespace tether::ui {
             localtime_r(&t, &tm);
 
             char buffer[64];
-            std::strftime(buffer, sizeof(buffer), "%H:%M", &tm);
+            // xgettext:no-c-format
+            std::strftime(buffer, sizeof(buffer), _("%H:%M"), &tm);
             return buffer;
         }
 
@@ -254,6 +255,8 @@ namespace tether::ui {
             if (unread > 0) {
                 GtkWidget* badge = gtk_label_new(nullptr);
                 gtk_label_set_markup(GTK_LABEL(badge), ("<b>" + std::to_string(unread) + "</b>").c_str());
+                set_accessible_name(badge,
+                                    tether::tr_format(P_("{} unread message", "{} unread messages", unread), unread));
                 gtk_widget_set_halign(badge, GTK_ALIGN_END);
                 gtk_style_context_add_class(gtk_widget_get_style_context(badge), "tether-badge");
                 gtk_box_pack_start(GTK_BOX(meta), badge, FALSE, FALSE, 0);
@@ -326,6 +329,12 @@ namespace tether::ui {
             GtkStyleContext* bubble_style = gtk_widget_get_style_context(bubble);
             gtk_style_context_add_class(bubble_style, "tether-bubble");
             gtk_style_context_add_class(bubble_style, outgoing ? "tether-bubble-out" : "tether-bubble-in");
+            // Direction is otherwise only bubble side and color.
+            set_accessible_name(bubble,
+                                // TRANSLATORS: Read aloud before a message you sent, {} is the message.
+                                outgoing ? tether::tr_format(_("Sent: {}"), body)
+                                         // TRANSLATORS: Read aloud before a message you received, {} is the message.
+                                         : tether::tr_format(_("Received: {}"), body));
             gtk_box_pack_start(GTK_BOX(box), bubble, FALSE, FALSE, 0);
 
             gtk_container_add(GTK_CONTAINER(row), box);
@@ -1082,6 +1091,7 @@ namespace tether::ui {
 
         g_messages.search_entry = gtk_search_entry_new();
         gtk_entry_set_placeholder_text(GTK_ENTRY(g_messages.search_entry), _("Search conversations"));
+        set_accessible_name(g_messages.search_entry, _("Search conversations"));
         gtk_entry_set_width_chars(GTK_ENTRY(g_messages.search_entry), 8);
         gtk_widget_set_margin_top(g_messages.search_entry, 8);
         gtk_widget_set_margin_start(g_messages.search_entry, 8);
@@ -1127,9 +1137,11 @@ namespace tether::ui {
 
         g_messages.compose_bar = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 8);
         gtk_container_set_border_width(GTK_CONTAINER(g_messages.compose_bar), 8);
-        gtk_box_pack_start(GTK_BOX(g_messages.compose_bar), gtk_label_new(_("To:")), FALSE, FALSE, 0);
+        GtkWidget* to_label = gtk_label_new(_("To:"));
+        gtk_box_pack_start(GTK_BOX(g_messages.compose_bar), to_label, FALSE, FALSE, 0);
 
         g_messages.compose_entry = gtk_entry_new();
+        gtk_label_set_mnemonic_widget(GTK_LABEL(to_label), g_messages.compose_entry);
         gtk_entry_set_placeholder_text(GTK_ENTRY(g_messages.compose_entry), _("Phone number or email"));
         // Lets the entry shrink with the pane. At its natural minimum the Cancel
         // button beside it is pushed off the edge of a narrow window.
@@ -1184,6 +1196,9 @@ namespace tether::ui {
         GtkWidget* composer_box = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 8);
         gtk_container_set_border_width(GTK_CONTAINER(composer_box), 8);
         g_messages.composer = gtk_text_view_new();
+        set_accessible_name(g_messages.composer, _("Message"));
+        // Tab moves focus on to Send instead of typing a tab.
+        gtk_text_view_set_accepts_tab(GTK_TEXT_VIEW(g_messages.composer), FALSE);
         gtk_text_view_set_wrap_mode(GTK_TEXT_VIEW(g_messages.composer), GTK_WRAP_WORD_CHAR);
         gtk_text_view_set_left_margin(GTK_TEXT_VIEW(g_messages.composer), 6);
         gtk_text_view_set_right_margin(GTK_TEXT_VIEW(g_messages.composer), 6);

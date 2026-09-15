@@ -84,6 +84,8 @@ namespace tether::ui {
                 GtkWidget* dismiss = gtk_button_new_from_icon_name("window-close-symbolic", GTK_ICON_SIZE_BUTTON);
                 gtk_button_set_relief(GTK_BUTTON(dismiss), GTK_RELIEF_NONE);
                 gtk_widget_set_tooltip_text(dismiss, _("Dismiss on the iPhone"));
+                // TRANSLATORS: Spoken name of the dismiss button on a notification from the named app.
+                set_accessible_name(dismiss, tether::tr_format(_("Dismiss {} notification"), app));
                 g_object_set_data(
                     G_OBJECT(dismiss), "uid", GUINT_TO_POINTER(notification.value("uid", static_cast<uint32_t>(0))));
                 g_signal_connect(dismiss, "clicked", G_CALLBACK(on_dismiss_clicked), nullptr);

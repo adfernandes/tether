@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: tether\n"
 "Report-Msgid-Bugs-To: zack@bartel.com\n"
-"POT-Creation-Date: 2026-09-12 17:22-0700\n"
+"POT-Creation-Date: 2026-09-14 21:48-0700\n"
 "PO-Revision-Date: 2026-08-23\n"
 "Last-Translator: Tether project\n"
 "Language-Team: Turkish\n"
@@ -1784,6 +1784,18 @@ msgstr "Sonlandı"
 msgid "No service"
 msgstr "Şebeke yok"
 
+#. TRANSLATORS: Cellular signal strength read aloud, {} is 0 to 5.
+#: src/gtk/calls_view.cpp
+#, c++-format
+msgid "signal {} of 5"
+msgstr "sinyal {}/5"
+
+#. TRANSLATORS: The iPhone's battery level read aloud, {} is like "80%".
+#: src/gtk/calls_view.cpp
+#, c++-format
+msgid "battery {}"
+msgstr "pil {}"
+
 #: src/gtk/calls_view.cpp
 msgid "Unknown caller"
 msgstr "Bilinmeyen arayan"
@@ -1828,13 +1840,26 @@ msgstr "iPhone’un operatörü, sinyali ve pili."
 msgid "Copy"
 msgstr "Kopyala"
 
+#. TRANSLATORS: Spoken name of the copy button beside a phone number or email.
+#: src/gtk/contacts_view.cpp
+#, c++-format
+msgid "Copy {}"
+msgstr "{} kopyala"
+
 #: src/gtk/contacts_view.cpp
 msgid "Copied to the clipboard."
 msgstr "Panoya kopyalandı."
 
-#: src/gtk/contacts_view.cpp
+#: src/gtk/contacts_view.cpp src/gtk/messages_view.cpp
 msgid "Message"
 msgstr "Mesaj gönder"
+
+#. TRANSLATORS: Spoken name of the message button beside a phone
+#. number or email.
+#: src/gtk/contacts_view.cpp
+#, c++-format
+msgid "Message {}"
+msgstr "{} adresine mesaj gönder"
 
 #: src/gtk/contacts_view.cpp
 msgid "No contacts yet. Check the Bluetooth link on the Devices page."
@@ -1857,10 +1882,20 @@ msgstr "Tether arka plan hizmeti çalışmıyor."
 msgid "Daemon Online"
 msgstr "Arka plan hizmeti çevrimiçi"
 
+#. TRANSLATORS: Left earbud, read aloud by screen readers before its battery level.
+#: src/gtk/devices_view.cpp
+msgid "Left earbud"
+msgstr "Sol kulaklık"
+
 #. TRANSLATORS: Left earbud, abbreviated to fit the device row. One or two letters.
 #: src/gtk/devices_view.cpp
 msgid "L"
 msgstr "L"
+
+#. TRANSLATORS: Right earbud, read aloud by screen readers before its battery level.
+#: src/gtk/devices_view.cpp
+msgid "Right earbud"
+msgstr "Sağ kulaklık"
 
 #. TRANSLATORS: Right earbud, abbreviated to fit the device row. One or two letters.
 #: src/gtk/devices_view.cpp
@@ -1872,12 +1907,12 @@ msgid "Reading battery…"
 msgstr "Pil durumu okunuyor…"
 
 #: src/gtk/devices_view.cpp
-msgid "Connected."
-msgstr "Bağlandı."
-
-#: src/gtk/devices_view.cpp
 msgid "Not connected yet."
 msgstr "Henüz bağlanmadı."
+
+#: src/gtk/devices_view.cpp
+msgid "Connected."
+msgstr "Bağlandı."
 
 #: src/gtk/devices_view.cpp
 msgid "Scanning for nearby devices..."
@@ -2391,6 +2426,14 @@ msgid "Quit"
 msgstr "Çık"
 
 #: src/gtk/main.cpp
+msgid "Main menu"
+msgstr "Ana menü"
+
+#: src/gtk/main.cpp
+msgid "Look for devices"
+msgstr "Cihaz ara"
+
+#: src/gtk/main.cpp
 msgid "Devices"
 msgstr "Aygıtlar"
 
@@ -2406,13 +2449,51 @@ msgstr "Bu sekmede aç"
 msgid "Open the messages tab on this conversation"
 msgstr "Mesajlar sekmesini bu konuşmada aç"
 
+#. TRANSLATORS: strftime clock time on today's conversations, e.g. "%I:%M %p" for 12-hour.
+#: src/gtk/message_format.cpp src/gtk/messages_view.cpp
+#, no-c-format
+msgid "%H:%M"
+msgstr "%H:%M"
+
 #: src/gtk/message_format.cpp
 msgid "Yesterday"
 msgstr "Dün"
 
+#. TRANSLATORS: strftime short date for older conversations; reorder to the local
+#. convention, e.g. "%-d %b".
+#: src/gtk/message_format.cpp
+#, no-c-format
+msgid "%b %-d"
+msgstr "%-d %b"
+
 #: src/gtk/message_format.cpp
 msgid "Today"
 msgstr "Bugün"
+
+#. TRANSLATORS: strftime date heading above older messages, e.g. "%A %-d %B".
+#: src/gtk/message_format.cpp
+#, no-c-format
+msgid "%A, %b %-d"
+msgstr "%-d %b %A"
+
+#: src/gtk/messages_view.cpp src/gtk/tray.cpp
+#, c++-format
+msgid "{} unread message"
+msgid_plural "{} unread messages"
+msgstr[0] "{} okunmamış mesaj"
+msgstr[1] "{} okunmamış mesaj"
+
+#. TRANSLATORS: Read aloud before a message you sent, {} is the message.
+#: src/gtk/messages_view.cpp
+#, c++-format
+msgid "Sent: {}"
+msgstr "Gönderildi: {}"
+
+#. TRANSLATORS: Read aloud before a message you received, {} is the message.
+#: src/gtk/messages_view.cpp
+#, c++-format
+msgid "Received: {}"
+msgstr "Alındı: {}"
 
 #: src/gtk/messages_view.cpp
 msgid "Bluetooth connection needed to sync messages."
@@ -2477,6 +2558,12 @@ msgstr "Yeniden dene"
 #: src/gtk/notifications_view.cpp
 msgid "Dismiss on the iPhone"
 msgstr "iPhone'da kapat"
+
+#. TRANSLATORS: Spoken name of the dismiss button on a notification from the named app.
+#: src/gtk/notifications_view.cpp
+#, c++-format
+msgid "Dismiss {} notification"
+msgstr "{} bildirimini kapat"
 
 #: src/gtk/notifications_view.cpp
 msgid "New notification"
@@ -2665,13 +2752,6 @@ msgstr "{}: {}"
 #: src/gtk/tray.cpp
 msgid "Daemon: not running"
 msgstr "Arka plan hizmeti: çalışmıyor"
-
-#: src/gtk/tray.cpp
-#, c++-format
-msgid "{} unread message"
-msgid_plural "{} unread messages"
-msgstr[0] "{} okunmamış mesaj"
-msgstr[1] "{} okunmamış mesaj"
 
 #: src/gtk/ui_util.cpp
 msgid "Waiting for the Tether daemon."

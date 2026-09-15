@@ -29,12 +29,8 @@ static gboolean on_timeout(gpointer) {
     return FALSE;
 }
 
+// Enter is left to the focused button, so it never accepts while Reject has focus.
 static gboolean on_key_press(GtkWidget*, GdkEventKey* event, gpointer has_reject) {
-    if (event->keyval == GDK_KEY_Return || event->keyval == GDK_KEY_KP_Enter) {
-        exit_code = 0;
-        gtk_main_quit();
-        return TRUE;
-    }
     if (event->keyval == GDK_KEY_Escape && GPOINTER_TO_INT(has_reject)) {
         exit_code = 1;
         gtk_main_quit();
@@ -85,7 +81,7 @@ static const char* CSS = R"(
         min-width: 90px;
     }
     .btn-accept:hover {
-        background: linear-gradient(135deg, #818cf8, #a5b4fc);
+        background: linear-gradient(135deg, #4f46e5, #6366f1);
     }
     .btn-reject {
         background-color: rgba(255, 255, 255, 0.06);
@@ -145,6 +141,8 @@ int main(int argc, char** argv) {
 
     // Create window
     GtkWidget* window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
+    // Undecorated, but screen readers still announce the title.
+    gtk_window_set_title(GTK_WINDOW(window), title.c_str());
     gtk_window_set_default_size(GTK_WINDOW(window), 380, -1);
     gtk_window_set_decorated(GTK_WINDOW(window), FALSE);
 
@@ -188,9 +186,10 @@ int main(int argc, char** argv) {
     gtk_box_pack_start(GTK_BOX(frame), btn_row, FALSE, FALSE, 0);
 
     bool has_reject = !reject_label.empty();
+    GtkWidget* btn_reject = nullptr;
 
     if (has_reject) {
-        GtkWidget* btn_reject = gtk_button_new_with_label(reject_label.c_str());
+        btn_reject = gtk_button_new_with_label(reject_label.c_str());
         gtk_style_context_add_class(gtk_widget_get_style_context(btn_reject), "btn-reject");
         g_signal_connect(btn_reject, "clicked", G_CALLBACK(on_reject), NULL);
         gtk_box_pack_start(GTK_BOX(btn_row), btn_reject, FALSE, FALSE, 0);
@@ -200,6 +199,14 @@ int main(int argc, char** argv) {
     gtk_style_context_add_class(gtk_widget_get_style_context(btn_accept), "btn-accept");
     g_signal_connect(btn_accept, "clicked", G_CALLBACK(on_accept), NULL);
     gtk_box_pack_start(GTK_BOX(btn_row), btn_accept, FALSE, FALSE, 0);
+
+    // The window grabs the keyboard when it appears, so a stray Enter typed for
+    // another app must land on the safe choice.
+    gtk_widget_grab_focus(btn_reject ? btn_reject : btn_accept);
+
+    AtkObject* window_a11y = gtk_widget_get_accessible(window);
+    atk_object_set_role(window_a11y, ATK_ROLE_ALERT);
+    atk_object_add_relationship(window_a11y, ATK_RELATION_DESCRIBED_BY, gtk_widget_get_accessible(lbl_body));
 
     // Keyboard shortcuts
     g_signal_connect(window, "key-press-event", G_CALLBACK(on_key_press), GINT_TO_POINTER(has_reject));

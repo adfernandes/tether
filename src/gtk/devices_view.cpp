@@ -30,6 +30,8 @@ namespace tether::ui {
             // false when the compositor withholds data-control (flatpak)
             bool clipboard_ok = true;
             bool firewall_active = false;
+            // Why Wi-Fi is or is not connected, including the command that fixes it.
+            std::string wifi_detail;
 
             // The Bluetooth route
             std::vector<nlohmann::json> bt_devices;
@@ -143,19 +145,24 @@ namespace tether::ui {
         // "L 82%  R 79%  Case 45%", omitting whatever is not reporting, or the reason
         // there are no levels at all. Empty while the channel is still opening, which
         // is the one state not worth reporting anywhere.
-        std::string airpods_status_text(const nlohmann::json& airpods) {
+        // "spoken" spells the earbuds out for screen readers instead of "L"/"R".
+        std::string airpods_status_text(const nlohmann::json& airpods, bool spoken = false) {
             std::string text;
             const auto append = [&](const char* label, int level) {
                 if (level < 0)
                     return;
                 if (!text.empty())
-                    text += "   ";
+                    text += spoken ? ", " : "   ";
                 text += label + (" " + std::to_string(level) + "%");
             };
+            // TRANSLATORS: Left earbud, read aloud by screen readers before its battery level.
+            const char* left_spoken = _("Left earbud");
             // TRANSLATORS: Left earbud, abbreviated to fit the device row. One or two letters.
-            append(_("L"), airpods.value("left", -1));
+            append(spoken ? left_spoken : _("L"), airpods.value("left", -1));
+            // TRANSLATORS: Right earbud, read aloud by screen readers before its battery level.
+            const char* right_spoken = _("Right earbud");
             // TRANSLATORS: Right earbud, abbreviated to fit the device row. One or two letters.
-            append(_("R"), airpods.value("right", -1));
+            append(spoken ? right_spoken : _("R"), airpods.value("right", -1));
             // TRANSLATORS: The AirPods charging case, on the device row beside the two earbuds.
             append(_("Case"), airpods.value("case", -1));
             if (!text.empty())
@@ -171,6 +178,12 @@ namespace tether::ui {
         std::string airpods_row_text(const nlohmann::json& airpods) {
             const std::string text = airpods_status_text(airpods);
             return text.empty() ? _("Reading battery\u2026") : text;
+        }
+
+        void set_battery_label(GtkWidget* label, const nlohmann::json& airpods, const std::string& text) {
+            set_text(label, text);
+            const std::string spoken = text.empty() ? "" : airpods_status_text(airpods, true);
+            set_accessible_name(label, spoken.empty() ? text : spoken);
         }
 
         // The daemon supervises one iPhone at a time, so the live profile status
@@ -200,8 +213,10 @@ namespace tether::ui {
         }
 
         void update_welcome_pane() {
-            const bool wifi_ok = !g_devices.connected_fps.empty();
-            set_text(g_devices.lbl_welcome_wifi, wifi_ok ? _("Connected.") : _("Not connected yet."));
+            // The route bar keeps the reason in a hover tooltip; here it is readable
+            // by keyboard and screen reader, and the fix command can be copied.
+            set_text(g_devices.lbl_welcome_wifi,
+                     g_devices.wifi_detail.empty() ? _("Not connected yet.") : g_devices.wifi_detail);
 
             const bool bt_ok =
                 g_devices.bt_connection.value("map_open", false) || g_devices.bt_connection.value("ancs_ready", false);
@@ -296,10 +311,11 @@ namespace tether::ui {
                        "<b>" + escape_markup(json_string(airpods, "name", g_devices.selected_bt_name)) + "</b>");
 
             const std::string levels = airpods_status_text(airpods);
-            set_text(g_devices.lbl_airpods_battery,
-                     !managed         ? ""
-                     : levels.empty() ? _("Reading battery\u2026")
-                                      : levels);
+            set_battery_label(g_devices.lbl_airpods_battery,
+                              airpods,
+                              !managed         ? ""
+                              : levels.empty() ? _("Reading battery\u2026")
+                                               : levels);
 
             // bluez link action, so it works whether or not tether manages the buds
             const nlohmann::json* device = find_bt_device(g_devices.selected_bt_address);
@@ -797,34 +813,22 @@ namespace tether::ui {
 
         void update_wifi_indicator() {
             const bool connected = !g_devices.connected_fps.empty();
-            if (connected) {
-                set_route_status(Route::WiFi,
-                                 true,
-                                 g_devices.clipboard_ok
-                                     ? _("Clipboard, files, and OTP are connected.")
-                                     : _("Files and OTP are connected. This compositor does not give Tether "
-                                         "clipboard access, so clipboard sync is off."));
-                return;
-            }
-
-            if (!g_devices.mdns_ok) {
-                set_route_status(Route::WiFi,
-                                 false,
-                                 _("avahi-daemon isn't running, so other devices can't find this PC. Start it "
-                                   "with: sudo systemctl enable --now avahi-daemon"));
-                return;
-            }
-
-            if (g_devices.firewall_active && !g_devices.discovered_devices.empty()) {
-                set_route_status(Route::WiFi,
-                                 false,
-                                 _("A device is on the network but cannot reach this PC. A firewall is "
-                                   "running; Tether needs inbound TCP 5134. Allow it with: sudo ufw allow "
-                                   "5134/tcp"));
-                return;
-            }
-            set_route_status(
-                Route::WiFi, false, _("No paired device is connected. Switch it on and join the same network."));
+            if (connected)
+                g_devices.wifi_detail = g_devices.clipboard_ok
+                                            ? _("Clipboard, files, and OTP are connected.")
+                                            : _("Files and OTP are connected. This compositor does not give Tether "
+                                                "clipboard access, so clipboard sync is off.");
+            else if (!g_devices.mdns_ok)
+                g_devices.wifi_detail = _("avahi-daemon isn't running, so other devices can't find this PC. Start it "
+                                          "with: sudo systemctl enable --now avahi-daemon");
+            else if (g_devices.firewall_active && !g_devices.discovered_devices.empty())
+                g_devices.wifi_detail = _("A device is on the network but cannot reach this PC. A firewall is "
+                                          "running; Tether needs inbound TCP 5134. Allow it with: sudo ufw allow "
+                                          "5134/tcp");
+            else
+                g_devices.wifi_detail = _("No paired device is connected. Switch it on and join the same network.");
+            set_route_status(Route::WiFi, connected, g_devices.wifi_detail);
+            update_welcome_pane();
         }
 
         void apply_state_snapshot(const nlohmann::json& j) {
@@ -984,7 +988,7 @@ namespace tether::ui {
                 gtk_label_set_xalign(GTK_LABEL(battery), 0.0);
                 gtk_style_context_add_class(gtk_widget_get_style_context(battery), "muted");
                 if (g_devices.bt_airpods.value("address", "") == address)
-                    gtk_label_set_text(GTK_LABEL(battery), airpods_row_text(g_devices.bt_airpods).c_str());
+                    set_battery_label(battery, g_devices.bt_airpods, airpods_row_text(g_devices.bt_airpods));
                 g_object_set_data(G_OBJECT(row), "bt_battery", battery);
                 gtk_box_pack_start(GTK_BOX(labels), battery, FALSE, FALSE, 0);
             }
@@ -997,12 +1001,16 @@ namespace tether::ui {
         auto create_header_row = [](const std::string& title_text) {
             GtkWidget* row = gtk_list_box_row_new();
             gtk_list_box_row_set_selectable(GTK_LIST_BOX_ROW(row), FALSE);
+            // A heading, not a device: keyboard focus skips it.
+            gtk_list_box_row_set_activatable(GTK_LIST_BOX_ROW(row), FALSE);
+            gtk_widget_set_can_focus(row, FALSE);
+            atk_object_set_role(gtk_widget_get_accessible(row), ATK_ROLE_HEADING);
             GtkWidget* box = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 0);
             gtk_container_set_border_width(GTK_CONTAINER(box), 8);
             GtkWidget* lbl = gtk_label_new(nullptr);
-            gtk_label_set_markup(
-                GTK_LABEL(lbl),
-                ("<b><span size='small' color='gray'>" + escape_markup(title_text) + "</span></b>").c_str());
+            gtk_style_context_add_class(gtk_widget_get_style_context(lbl), "muted");
+            gtk_label_set_markup(GTK_LABEL(lbl),
+                                 ("<b><span size='small'>" + escape_markup(title_text) + "</span></b>").c_str());
             gtk_label_set_xalign(GTK_LABEL(lbl), 0.0);
             gtk_box_pack_start(GTK_BOX(box), lbl, TRUE, TRUE, 0);
             gtk_container_add(GTK_CONTAINER(row), box);
@@ -1323,7 +1331,7 @@ namespace tether::ui {
                 auto* battery = GTK_WIDGET(g_object_get_data(G_OBJECT(row), "bt_battery"));
                 if (!battery || !row_address || (!address.empty() && address != row_address))
                     continue;
-                gtk_label_set_text(GTK_LABEL(battery), text.c_str());
+                set_battery_label(battery, event, text);
             }
             g_list_free(rows);
             // The pane repaints from the same event, but only when it is showing.
@@ -1484,6 +1492,7 @@ namespace tether::ui {
                                               "2.  It finds this computer by itself\n"
                                               "3.  Approve on both ends"),
                                             &g_devices.lbl_welcome_wifi));
+        gtk_label_set_selectable(GTK_LABEL(g_devices.lbl_welcome_wifi), TRUE);
 
         gtk_container_add(
             GTK_CONTAINER(routes),
@@ -1539,6 +1548,9 @@ namespace tether::ui {
 
         GtkWidget* modes = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 0);
         gtk_style_context_add_class(gtk_widget_get_style_context(modes), "linked");
+        AtkObject* modes_a11y = gtk_widget_get_accessible(modes);
+        atk_object_set_role(modes_a11y, ATK_ROLE_PANEL);
+        atk_object_add_relationship(modes_a11y, ATK_RELATION_LABELLED_BY, gtk_widget_get_accessible(lbl_mode_title));
         GtkWidget* group = nullptr;
         for (int i = 0; i < 4; ++i) {
             GtkWidget* button =
@@ -1570,8 +1582,10 @@ namespace tether::ui {
         gtk_box_pack_start(GTK_BOX(airpods_box), g_devices.lbl_airpods_worn, FALSE, FALSE, 0);
 
         GtkWidget* pause_row = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 8);
-        gtk_box_pack_start(GTK_BOX(pause_row), gtk_label_new(_("Pause playback when:")), FALSE, FALSE, 0);
+        GtkWidget* pause_label = gtk_label_new(_("Pause playback when:"));
+        gtk_box_pack_start(GTK_BOX(pause_row), pause_label, FALSE, FALSE, 0);
         g_devices.cmb_airpods_pause = gtk_combo_box_text_new();
+        gtk_label_set_mnemonic_widget(GTK_LABEL(pause_label), g_devices.cmb_airpods_pause);
         gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(g_devices.cmb_airpods_pause), _("Never"));
         gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(g_devices.cmb_airpods_pause), _("One bud is removed"));
         gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(g_devices.cmb_airpods_pause), _("Both buds are removed"));

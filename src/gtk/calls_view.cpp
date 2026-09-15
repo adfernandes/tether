@@ -86,26 +86,36 @@ namespace tether::ui {
             return "";
         }
 
-        // What HFP reports about the phone's cellular link.
-        std::string network_text(const nlohmann::json& calls) {
+        // What HFP reports about the phone's cellular link. "spoken" replaces the
+        // bar glyphs and bare percentage with words for screen readers.
+        std::string network_text(const nlohmann::json& calls, bool spoken = false) {
             if (!calls.is_object())
                 return {};
             if (!calls.value("indicators", true))
                 return {};
+            const std::string gap = spoken ? ", " : "  ";
             std::string out = calls.value("operator", "");
             if (!calls.value("service", false))
-                out = out.empty() ? _("No service") : out + "  -  " + _("No service");
+                out = out.empty() ? _("No service") : out + (spoken ? gap : "  -  ") + _("No service");
             const int signal = calls.value("signal", 0);
             if (calls.value("service", false)) {
                 std::string bars;
-                for (int i = 0; i < 5; ++i)
-                    bars += i < signal ? "\u2586" : "\u2581";
-                out += out.empty() ? bars : "  " + bars;
+                if (spoken) {
+                    // TRANSLATORS: Cellular signal strength read aloud, {} is 0 to 5.
+                    bars = tether::tr_format(_("signal {} of 5"), signal);
+                } else {
+                    for (int i = 0; i < 5; ++i)
+                        bars += i < signal ? "\u2586" : "\u2581";
+                }
+                out += out.empty() ? bars : gap + bars;
             }
             if (calls.value("roaming", false))
-                out += std::string("  ") + _("roaming");
-            if (const int battery = calls.value("battery", 0); battery > 0)
-                out += "  " + std::to_string(battery * 20) + "%";
+                out += gap + _("roaming");
+            if (const int battery = calls.value("battery", 0); battery > 0) {
+                const std::string level = std::to_string(battery * 20) + "%";
+                // TRANSLATORS: The iPhone's battery level read aloud, {} is like "80%".
+                out += gap + (spoken ? tether::tr_format(_("battery {}"), level) : level);
+            }
             return out;
         }
 
@@ -216,6 +226,7 @@ namespace tether::ui {
             gtk_widget_set_sensitive(g_calls.entry, g_calls.available);
             gtk_widget_set_sensitive(g_calls.dial_button, g_calls.available);
             set_text(g_calls.network_label, g_calls.available ? network_text(calls) : "");
+            set_accessible_name(g_calls.network_label, g_calls.available ? network_text(calls, true) : "");
 
             const std::string reason = calls.is_object() ? calls.value("reason", "") : "";
             const std::string audio = calls.is_object() ? calls.value("audio", "") : "";
@@ -239,6 +250,7 @@ namespace tether::ui {
         gtk_container_set_border_width(GTK_CONTAINER(dial_bar), 10);
         g_calls.entry = gtk_entry_new();
         gtk_entry_set_placeholder_text(GTK_ENTRY(g_calls.entry), _("Number to call"));
+        set_accessible_name(g_calls.entry, _("Number to call"));
         gtk_entry_set_input_purpose(GTK_ENTRY(g_calls.entry), GTK_INPUT_PURPOSE_PHONE);
         attach_contact_completion(g_calls.entry, ContactKind::Tel);
         gtk_widget_set_sensitive(g_calls.entry, FALSE);
