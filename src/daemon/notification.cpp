@@ -256,7 +256,7 @@ namespace tether {
 
             set_identity(notification, "");
             notify_notification_set_hint(notification, "resident", g_variant_new_boolean(TRUE));
-            notify_notification_set_timeout(notification, 15000);
+            notify_notification_set_timeout(notification, NOTIFY_EXPIRES_DEFAULT);
 
             auto* open_file = new NotificationActionData{file_uri};
             auto* open_folder = new NotificationActionData{folder_uri};

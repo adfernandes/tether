@@ -33,6 +33,18 @@ final class TetherUITests: XCTestCase {
         // https://developer.apple.com/documentation/xcuiautomation
     }
 
+    // Icon-only toolbar buttons are findable by their VoiceOver labels.
+    @MainActor
+    func testIconButtonsHaveAccessibilityLabels() throws {
+        let app = XCUIApplication()
+        app.launch()
+
+        XCTAssertTrue(app.buttons["Connect Manually"].waitForExistence(timeout: 5))
+
+        app.tabBars.buttons["Files"].tap()
+        XCTAssertTrue(app.buttons["Open Received Files"].waitForExistence(timeout: 5))
+    }
+
     @MainActor
     func testLaunchPerformance() throws {
         // This measures how long it takes to launch your application.

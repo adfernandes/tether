@@ -36,18 +36,21 @@ struct FilesView: View {
                             Image(systemName: "folder")
                                 .foregroundStyle(.teal)
                         }
+                        .accessibilityLabel("Open Received Files")
 
                         if viewModel.appState == .connected {
                             PhotosPicker(selection: $selectedPhotoItem, matching: .images) {
                                 Image(systemName: "photo.on.rectangle")
                                     .foregroundStyle(.teal)
                             }
+                            .accessibilityLabel("Send a Photo")
                             Button {
                                 showDocumentPicker = true
                             } label: {
                                 Image(systemName: "plus.circle.fill")
                                     .foregroundStyle(.teal)
                             }
+                            .accessibilityLabel("Send a File")
                         }
                     }
                 }
@@ -91,6 +94,7 @@ struct FilesView: View {
             Image(systemName: "arrow.up.arrow.down")
                 .font(.system(size: 48))
                 .foregroundStyle(.tertiary)
+                .accessibilityHidden(true)
 
             Text("Connect to a device to transfer files")
                 .font(.subheadline)
@@ -128,6 +132,7 @@ struct FilesView: View {
                                     .font(.title3)
                                     .foregroundStyle(.white)
                             }
+                            .accessibilityHidden(true)
 
                             VStack(alignment: .leading, spacing: 2) {
                                 Text("Send a File")
@@ -144,6 +149,7 @@ struct FilesView: View {
                             Image(systemName: "chevron.right")
                                 .font(.caption)
                                 .foregroundStyle(.tertiary)
+                                .accessibilityHidden(true)
                         }
                         .padding(16)
                         .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 16))
@@ -168,6 +174,7 @@ struct FilesView: View {
                                     .font(.title3)
                                     .foregroundStyle(.white)
                             }
+                            .accessibilityHidden(true)
 
                             VStack(alignment: .leading, spacing: 2) {
                                 Text("Send a Photo")
@@ -184,6 +191,7 @@ struct FilesView: View {
                             Image(systemName: "chevron.right")
                                 .font(.caption)
                                 .foregroundStyle(.tertiary)
+                                .accessibilityHidden(true)
                         }
                         .padding(16)
                         .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 16))
@@ -223,10 +231,11 @@ struct FilesView: View {
                         Image(systemName: "tray")
                             .font(.system(size: 32))
                             .foregroundStyle(.tertiary)
+                            .accessibilityHidden(true)
 
                         Text("No transfers yet")
                             .font(.subheadline)
-                            .foregroundStyle(.tertiary)
+                            .foregroundStyle(.secondary)
                     }
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 40)
@@ -245,13 +254,14 @@ struct FilesView: View {
                 .font(.title3)
                 .foregroundStyle(transfer.direction == .incoming ? .blue : (isActive ? .teal : .secondary))
                 .frame(width: 32)
+                .accessibilityHidden(true)
 
             VStack(alignment: .leading, spacing: 6) {
                 Text(transfer.filename)
                     .font(.subheadline.weight(.medium))
                     .lineLimit(1)
 
-                Text(transfer.direction == .incoming ? "Incoming to iPhone" : "Outgoing to desktop")
+                (transfer.direction == .incoming ? Text("Incoming to iPhone") : Text("Outgoing to desktop"))
                     .font(.caption2)
                     .foregroundStyle(.secondary)
 
@@ -261,7 +271,7 @@ struct FilesView: View {
 
                     Text(formatBytes(transfer.bytesTransferred) + " / " + formatBytes(transfer.totalSize))
                         .font(.caption2)
-                        .foregroundStyle(.tertiary)
+                        .foregroundStyle(.secondary)
                 } else if transfer.failed {
                     Text("Failed")
                         .font(.caption)
@@ -269,12 +279,13 @@ struct FilesView: View {
                 } else {
                     Text(completedText(for: transfer))
                         .font(.caption)
-                        .foregroundStyle(.tertiary)
+                        .foregroundStyle(.secondary)
                 }
             }
         }
         .padding(14)
         .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 12))
+        .accessibilityElement(children: .combine)
 
         if let savedURL = transfer.savedURL, transfer.direction == .incoming, !isActive, !transfer.failed {
             ShareLink(item: savedURL) {
@@ -318,10 +329,10 @@ struct FilesView: View {
 
     private func completedText(for transfer: FileTransfer) -> String {
         if transfer.direction == .incoming {
-            return "Tap to open • " + formatBytes(transfer.totalSize)
+            return String(localized: "Tap to open • \(formatBytes(transfer.totalSize))")
         }
 
-        return "Delivered • " + formatBytes(transfer.totalSize)
+        return String(localized: "Delivered • \(formatBytes(transfer.totalSize))")
     }
 
     private func openFilesApp() {

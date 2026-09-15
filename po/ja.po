@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: tether\n"
 "Report-Msgid-Bugs-To: zack@bartel.com\n"
-"POT-Creation-Date: 2026-09-12 17:22-0700\n"
+"POT-Creation-Date: 2026-09-14 21:59-0700\n"
 "PO-Revision-Date: 2026-08-23\n"
 "Last-Translator: Tether project\n"
 "Language-Team: Japanese\n"
@@ -1779,6 +1779,18 @@ msgstr "終了"
 msgid "No service"
 msgstr "圏外"
 
+#. TRANSLATORS: Cellular signal strength read aloud, {} is 0 to 5.
+#: src/gtk/calls_view.cpp
+#, c++-format
+msgid "signal {} of 5"
+msgstr "電波 {}/5"
+
+#. TRANSLATORS: The iPhone's battery level read aloud, {} is like "80%".
+#: src/gtk/calls_view.cpp
+#, c++-format
+msgid "battery {}"
+msgstr "バッテリー {}"
+
 #: src/gtk/calls_view.cpp
 msgid "Unknown caller"
 msgstr "不明な発信者"
@@ -1824,13 +1836,26 @@ msgstr "iPhone の通信事業者、電波、バッテリー。"
 msgid "Copy"
 msgstr "コピー"
 
+#. TRANSLATORS: Spoken name of the copy button beside a phone number or email.
+#: src/gtk/contacts_view.cpp
+#, c++-format
+msgid "Copy {}"
+msgstr "{} をコピー"
+
 #: src/gtk/contacts_view.cpp
 msgid "Copied to the clipboard."
 msgstr "クリップボードにコピーしました。"
 
-#: src/gtk/contacts_view.cpp
+#: src/gtk/contacts_view.cpp src/gtk/messages_view.cpp
 msgid "Message"
 msgstr "メッセージを送信"
+
+#. TRANSLATORS: Spoken name of the message button beside a phone
+#. number or email.
+#: src/gtk/contacts_view.cpp
+#, c++-format
+msgid "Message {}"
+msgstr "{} にメッセージ"
 
 #: src/gtk/contacts_view.cpp
 msgid "No contacts yet. Check the Bluetooth link on the Devices page."
@@ -1853,10 +1878,20 @@ msgstr "Tether デーモンが動作していません。"
 msgid "Daemon Online"
 msgstr "デーモンはオンライン"
 
+#. TRANSLATORS: Left earbud, read aloud by screen readers before its battery level.
+#: src/gtk/devices_view.cpp
+msgid "Left earbud"
+msgstr "左イヤホン"
+
 #. TRANSLATORS: Left earbud, abbreviated to fit the device row. One or two letters.
 #: src/gtk/devices_view.cpp
 msgid "L"
 msgstr "左"
+
+#. TRANSLATORS: Right earbud, read aloud by screen readers before its battery level.
+#: src/gtk/devices_view.cpp
+msgid "Right earbud"
+msgstr "右イヤホン"
 
 #. TRANSLATORS: Right earbud, abbreviated to fit the device row. One or two letters.
 #: src/gtk/devices_view.cpp
@@ -1868,12 +1903,12 @@ msgid "Reading battery…"
 msgstr "バッテリーを読み取り中…"
 
 #: src/gtk/devices_view.cpp
-msgid "Connected."
-msgstr "接続しました。"
-
-#: src/gtk/devices_view.cpp
 msgid "Not connected yet."
 msgstr "まだ接続していません。"
+
+#: src/gtk/devices_view.cpp
+msgid "Connected."
+msgstr "接続しました。"
 
 #: src/gtk/devices_view.cpp
 msgid "Scanning for nearby devices..."
@@ -2388,6 +2423,14 @@ msgid "Quit"
 msgstr "終了"
 
 #: src/gtk/main.cpp
+msgid "Main menu"
+msgstr "メインメニュー"
+
+#: src/gtk/main.cpp
+msgid "Look for devices"
+msgstr "デバイスを探す"
+
+#: src/gtk/main.cpp
 msgid "Devices"
 msgstr "デバイス"
 
@@ -2403,13 +2446,50 @@ msgstr "このタブで開く"
 msgid "Open the messages tab on this conversation"
 msgstr "この会話でメッセージタブを開く"
 
+#. TRANSLATORS: strftime clock time on today's conversations, e.g. "%I:%M %p" for 12-hour.
+#: src/gtk/message_format.cpp src/gtk/messages_view.cpp
+#, no-c-format
+msgid "%H:%M"
+msgstr "%H:%M"
+
 #: src/gtk/message_format.cpp
 msgid "Yesterday"
 msgstr "昨日"
 
+#. TRANSLATORS: strftime short date for older conversations; reorder to the local
+#. convention, e.g. "%-d %b".
+#: src/gtk/message_format.cpp
+#, no-c-format
+msgid "%b %-d"
+msgstr "%-m月%-d日"
+
 #: src/gtk/message_format.cpp
 msgid "Today"
 msgstr "今日"
+
+#. TRANSLATORS: strftime date heading above older messages, e.g. "%A %-d %B".
+#: src/gtk/message_format.cpp
+#, no-c-format
+msgid "%A, %b %-d"
+msgstr "%-m月%-d日(%a)"
+
+#: src/gtk/messages_view.cpp src/gtk/tray.cpp
+#, c++-format
+msgid "{} unread message"
+msgid_plural "{} unread messages"
+msgstr[0] "未読メッセージ {} 件"
+
+#. TRANSLATORS: Read aloud before a message you sent, {} is the message.
+#: src/gtk/messages_view.cpp
+#, c++-format
+msgid "Sent: {}"
+msgstr "送信: {}"
+
+#. TRANSLATORS: Read aloud before a message you received, {} is the message.
+#: src/gtk/messages_view.cpp
+#, c++-format
+msgid "Received: {}"
+msgstr "受信: {}"
 
 #: src/gtk/messages_view.cpp
 msgid "Bluetooth connection needed to sync messages."
@@ -2476,6 +2556,12 @@ msgstr "再試行"
 #: src/gtk/notifications_view.cpp
 msgid "Dismiss on the iPhone"
 msgstr "iPhone で消去"
+
+#. TRANSLATORS: Spoken name of the dismiss button on a notification from the named app.
+#: src/gtk/notifications_view.cpp
+#, c++-format
+msgid "Dismiss {} notification"
+msgstr "{} の通知を消去"
 
 #: src/gtk/notifications_view.cpp
 msgid "New notification"
@@ -2663,12 +2749,6 @@ msgstr "{}: {}"
 msgid "Daemon: not running"
 msgstr "デーモン: 動作していません"
 
-#: src/gtk/tray.cpp
-#, c++-format
-msgid "{} unread message"
-msgid_plural "{} unread messages"
-msgstr[0] "未読メッセージ {} 件"
-
 #: src/gtk/ui_util.cpp
 msgid "Waiting for the Tether daemon."
 msgstr "Tether デーモンを待っています。"
@@ -2680,6 +2760,10 @@ msgstr "デバイスの同期"
 #: src/gtk/tether-gtk.desktop.in
 msgid "Pair devices and synchronize clipboard across the network"
 msgstr "デバイスをペアリングし、ネットワーク越しにクリップボードを同期します"
+
+#: src/gtk/tether-gtk.desktop.in
+msgid "iPhone;iOS;SMS;Messages;Clipboard;Files;Notifications;Calls;AirPods;"
+msgstr "iPhone;iOS;SMS;メッセージ;クリップボード;ファイル;通知;通話;AirPods;"
 
 #~ msgid ""
 #~ "Where messages and contacts are stored on this computer. Encrypted keeps "

@@ -6,9 +6,9 @@
 #, fuzzy
 msgid ""
 msgstr ""
-"Project-Id-Version: tether 0.2.30\n"
+"Project-Id-Version: tether 0.2.31\n"
 "Report-Msgid-Bugs-To: zack@bartel.com\n"
-"POT-Creation-Date: 2026-09-12 17:22-0700\n"
+"POT-Creation-Date: 2026-09-14 21:59-0700\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -1608,6 +1608,18 @@ msgstr ""
 msgid "No service"
 msgstr ""
 
+#. TRANSLATORS: Cellular signal strength read aloud, {} is 0 to 5.
+#: src/gtk/calls_view.cpp
+#, c++-format
+msgid "signal {} of 5"
+msgstr ""
+
+#. TRANSLATORS: The iPhone's battery level read aloud, {} is like "80%".
+#: src/gtk/calls_view.cpp
+#, c++-format
+msgid "battery {}"
+msgstr ""
+
 #: src/gtk/calls_view.cpp
 msgid "Unknown caller"
 msgstr ""
@@ -1652,12 +1664,25 @@ msgstr ""
 msgid "Copy"
 msgstr ""
 
+#. TRANSLATORS: Spoken name of the copy button beside a phone number or email.
+#: src/gtk/contacts_view.cpp
+#, c++-format
+msgid "Copy {}"
+msgstr ""
+
 #: src/gtk/contacts_view.cpp
 msgid "Copied to the clipboard."
 msgstr ""
 
-#: src/gtk/contacts_view.cpp
+#: src/gtk/contacts_view.cpp src/gtk/messages_view.cpp
 msgid "Message"
+msgstr ""
+
+#. TRANSLATORS: Spoken name of the message button beside a phone
+#. number or email.
+#: src/gtk/contacts_view.cpp
+#, c++-format
+msgid "Message {}"
 msgstr ""
 
 #: src/gtk/contacts_view.cpp
@@ -1680,9 +1705,19 @@ msgstr ""
 msgid "Daemon Online"
 msgstr ""
 
+#. TRANSLATORS: Left earbud, read aloud by screen readers before its battery level.
+#: src/gtk/devices_view.cpp
+msgid "Left earbud"
+msgstr ""
+
 #. TRANSLATORS: Left earbud, abbreviated to fit the device row. One or two letters.
 #: src/gtk/devices_view.cpp
 msgid "L"
+msgstr ""
+
+#. TRANSLATORS: Right earbud, read aloud by screen readers before its battery level.
+#: src/gtk/devices_view.cpp
+msgid "Right earbud"
 msgstr ""
 
 #. TRANSLATORS: Right earbud, abbreviated to fit the device row. One or two letters.
@@ -1695,11 +1730,11 @@ msgid "Reading battery…"
 msgstr ""
 
 #: src/gtk/devices_view.cpp
-msgid "Connected."
+msgid "Not connected yet."
 msgstr ""
 
 #: src/gtk/devices_view.cpp
-msgid "Not connected yet."
+msgid "Connected."
 msgstr ""
 
 #: src/gtk/devices_view.cpp
@@ -2170,6 +2205,14 @@ msgid "Quit"
 msgstr ""
 
 #: src/gtk/main.cpp
+msgid "Main menu"
+msgstr ""
+
+#: src/gtk/main.cpp
+msgid "Look for devices"
+msgstr ""
+
+#: src/gtk/main.cpp
 msgid "Devices"
 msgstr ""
 
@@ -2185,12 +2228,50 @@ msgstr ""
 msgid "Open the messages tab on this conversation"
 msgstr ""
 
+#. TRANSLATORS: strftime clock time on today's conversations, e.g. "%I:%M %p" for 12-hour.
+#: src/gtk/message_format.cpp src/gtk/messages_view.cpp
+#, no-c-format
+msgid "%H:%M"
+msgstr ""
+
 #: src/gtk/message_format.cpp
 msgid "Yesterday"
 msgstr ""
 
+#. TRANSLATORS: strftime short date for older conversations; reorder to the local
+#. convention, e.g. "%-d %b".
+#: src/gtk/message_format.cpp
+#, no-c-format
+msgid "%b %-d"
+msgstr ""
+
 #: src/gtk/message_format.cpp
 msgid "Today"
+msgstr ""
+
+#. TRANSLATORS: strftime date heading above older messages, e.g. "%A %-d %B".
+#: src/gtk/message_format.cpp
+#, no-c-format
+msgid "%A, %b %-d"
+msgstr ""
+
+#: src/gtk/messages_view.cpp src/gtk/tray.cpp
+#, c++-format
+msgid "{} unread message"
+msgid_plural "{} unread messages"
+msgstr[0] ""
+msgstr[1] ""
+
+#. TRANSLATORS: Read aloud before a message you sent, {} is the message.
+#: src/gtk/messages_view.cpp
+#, c++-format
+msgid "Sent: {}"
+msgstr ""
+
+#. TRANSLATORS: Read aloud before a message you received, {} is the message.
+#: src/gtk/messages_view.cpp
+#, c++-format
+msgid "Received: {}"
 msgstr ""
 
 #: src/gtk/messages_view.cpp
@@ -2255,6 +2336,12 @@ msgstr ""
 
 #: src/gtk/notifications_view.cpp
 msgid "Dismiss on the iPhone"
+msgstr ""
+
+#. TRANSLATORS: Spoken name of the dismiss button on a notification from the named app.
+#: src/gtk/notifications_view.cpp
+#, c++-format
+msgid "Dismiss {} notification"
 msgstr ""
 
 #: src/gtk/notifications_view.cpp
@@ -2432,13 +2519,6 @@ msgstr ""
 msgid "Daemon: not running"
 msgstr ""
 
-#: src/gtk/tray.cpp
-#, c++-format
-msgid "{} unread message"
-msgid_plural "{} unread messages"
-msgstr[0] ""
-msgstr[1] ""
-
 #: src/gtk/ui_util.cpp
 msgid "Waiting for the Tether daemon."
 msgstr ""
@@ -2449,4 +2529,8 @@ msgstr ""
 
 #: src/gtk/tether-gtk.desktop.in
 msgid "Pair devices and synchronize clipboard across the network"
+msgstr ""
+
+#: src/gtk/tether-gtk.desktop.in
+msgid "iPhone;iOS;SMS;Messages;Clipboard;Files;Notifications;Calls;AirPods;"
 msgstr ""

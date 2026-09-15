@@ -12,6 +12,7 @@ struct PairingView: View {
     @Environment(TetherViewModel.self) private var viewModel
 
     @State private var rotationAngle: Double = 0
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         NavigationStack {
@@ -37,7 +38,9 @@ struct PairingView: View {
                         .font(.system(size: 36, weight: .medium))
                         .foregroundStyle(.teal)
                 }
+                .accessibilityHidden(true)
                 .onAppear {
+                    guard !reduceMotion else { return }
                     withAnimation(.linear(duration: 3).repeatForever(autoreverses: false)) {
                         rotationAngle = 360
                     }
@@ -48,9 +51,9 @@ struct PairingView: View {
                     Text("Device Pairing")
                         .font(.title2.weight(.bold))
 
-                    Text(viewModel.pairingStatus.isEmpty
-                         ? "Initiating secure pairing…"
-                         : viewModel.pairingStatus)
+                    (viewModel.pairingStatus.isEmpty
+                        ? Text("Initiating secure pairing…")
+                        : Text(viewModel.pairingStatus))
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
                         .multilineTextAlignment(.center)
@@ -62,7 +65,7 @@ struct PairingView: View {
                     VStack(spacing: 8) {
                         Text("Your Device Fingerprint")
                             .font(.caption)
-                            .foregroundStyle(.tertiary)
+                            .foregroundStyle(.secondary)
                             .textCase(.uppercase)
 
                         Text(formatFingerprint(viewModel.certificateManager.myFingerprint))

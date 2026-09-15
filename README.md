@@ -1,4 +1,4 @@
-![tether](docs/img/tether_header.png)
+![Tether: an iPhone linked to the tetherd Linux daemon over Wi-Fi and Bluetooth LE, providing file transfer, clipboard sync, messages, contacts, and notifications](docs/img/tether_header.png)
 
 # Tether
 
@@ -19,7 +19,7 @@
 [![Debian](https://github.com/zackb/tether/actions/workflows/debian.yml/badge.svg?branch=main)](https://github.com/zackb/tether/actions/workflows/debian.yml)
 [![Ubuntu](https://github.com/zackb/tether/actions/workflows/ubuntu.yml/badge.svg?branch=main)](https://github.com/zackb/tether/actions/workflows/ubuntu.yml)
 
-![tether](docs/img/messages.webp)
+![The Tether desktop app's Messages view: a conversation list on the left and an open conversation with sent and received messages on the right](docs/img/messages.webp)
 
 ## Features
 
@@ -378,6 +378,26 @@ Messages and notifications need one-time system setup. See [docs/BLUETOOTH.md](d
 ```bash
 tether bt setup
 ```
+
+## Accessibility
+
+Tether should work for everyone. The desktop app is built to work with the Orca screen reader, keyboard-only use, and the system's text scaling. The iOS app is built to work with VoiceOver and Reduce Motion.
+
+Keyboard shortcuts in the desktop app:
+
+| Shortcut | Action |
+|----------|--------|
+| Ctrl+1 … Ctrl+5 | Devices, Messages, Notifications, Contacts, Calls |
+| Ctrl+N | New message |
+| Ctrl+F | Search conversations |
+| Ctrl+, | Settings |
+| Escape | Close Settings, leave search |
+| Ctrl+W | Close window |
+| Ctrl+Q | Quit |
+
+If something can't be reached with the keyboard, is read wrongly by a screen reader, or is hard to see, please [open an issue](https://github.com/zackb/tether/issues). Those reports are bugs.
+
+The manual checks run before a release are in [docs/ACCESSIBILITY.md](docs/ACCESSIBILITY.md).
 
 ## Security
 

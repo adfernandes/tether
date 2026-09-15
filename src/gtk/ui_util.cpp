@@ -26,7 +26,7 @@ namespace tether::ui {
 
         constexpr const char* STYLE = R"CSS(
 .muted {
-    opacity: 0.62;
+    opacity: 0.75;
     font-size: 90%;
 }
 
@@ -49,7 +49,7 @@ namespace tether::ui {
 }
 
 .tether-route-off {
-    opacity: 0.5;
+    opacity: 0.75;
 }
 
 .tether-setup {
@@ -206,6 +206,12 @@ namespace tether::ui {
         }
     }
 
+    void set_accessible_name(GtkWidget* widget, const std::string& name) {
+        if (widget) {
+            atk_object_set_name(gtk_widget_get_accessible(widget), name.c_str());
+        }
+    }
+
     void set_text(GtkWidget* label, const std::string& text) {
         if (label) {
             gtk_label_set_text(GTK_LABEL(label), text.c_str());
@@ -286,6 +292,7 @@ namespace tether::ui {
         // off the strip, so it lives in the tooltip. The Devices page shows it
         // in full.
         gtk_widget_set_tooltip_text(r.box, detail.empty() ? state.c_str() : (state + "\n" + detail).c_str());
+        atk_object_set_description(gtk_widget_get_accessible(r.label), detail.c_str());
 
         tray_set_route(route, ok, detail);
     }

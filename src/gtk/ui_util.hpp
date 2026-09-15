@@ -21,6 +21,10 @@ namespace tether::ui {
     void set_text(GtkWidget* label, const std::string& text);
     void clear_list_box(GtkWidget* list_box);
 
+    // Name read by screen readers. Needed where no visible label is linked,
+    // such as icon-only buttons; a tooltip only becomes the description.
+    void set_accessible_name(GtkWidget* widget, const std::string& name);
+
     // Registered once at startup so views can reach the window and the header
     // bar without every one of them holding the whole application struct.
     void set_main_window(GtkWidget* window);

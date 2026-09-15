@@ -72,28 +72,19 @@ namespace {
     }
 
     GtkWidget* create_app_menu_button() {
-        GtkWidget* menu = gtk_menu_new();
-
-        GtkWidget* settings = gtk_menu_item_new_with_label(_("Settings"));
-        g_signal_connect(
-            settings, "activate", G_CALLBACK(+[](GtkMenuItem*, gpointer) { settings_window_show(); }), nullptr);
-        gtk_menu_shell_append(GTK_MENU_SHELL(menu), settings);
-
-        GtkWidget* quit = gtk_menu_item_new_with_label(_("Quit"));
-        g_signal_connect(quit,
-                         "activate",
-                         G_CALLBACK(+[](GtkMenuItem*, gpointer) {
-                             if (GApplication* app = g_application_get_default())
-                                 g_application_quit(app);
-                         }),
-                         nullptr);
-        gtk_menu_shell_append(GTK_MENU_SHELL(menu), quit);
-        gtk_widget_show_all(menu);
+        // Items bound to window actions show their keyboard shortcuts.
+        GMenu* menu = g_menu_new();
+        g_menu_append(menu, _("Settings"), "win.settings");
+        g_menu_append(menu, _("Quit"), "win.quit");
 
         GtkWidget* button = gtk_menu_button_new();
         gtk_button_set_image(GTK_BUTTON(button),
                              gtk_image_new_from_icon_name("open-menu-symbolic", GTK_ICON_SIZE_BUTTON));
-        gtk_menu_button_set_popup(GTK_MENU_BUTTON(button), menu);
+        gtk_menu_button_set_use_popover(GTK_MENU_BUTTON(button), FALSE);
+        gtk_menu_button_set_menu_model(GTK_MENU_BUTTON(button), G_MENU_MODEL(menu));
+        g_object_unref(menu);
+        gtk_widget_set_tooltip_text(button, _("Main menu"));
+        set_accessible_name(button, _("Main menu"));
         return button;
     }
 
@@ -158,7 +149,15 @@ namespace {
             {"messages", "<Control>2", [] { show_view("messages"); }},
             {"notifications", "<Control>3", [] { show_view("notifications"); }},
             {"contacts", "<Control>4", [] { show_view("contacts"); }},
+            // A no-op while the Calls page is hidden.
+            {"calls", "<Control>5", [] { show_view("calls"); }},
             {"settings", "<Control>comma", [] { settings_window_show(); }},
+            {"quit",
+             "<Control>q",
+             [] {
+                 if (GApplication* app = g_application_get_default())
+                     g_application_quit(app);
+             }},
             {"close",
              "<Control>w",
              [] {
@@ -215,6 +214,8 @@ namespace {
         gtk_header_bar_pack_end(GTK_HEADER_BAR(header_bar), create_app_menu_button());
 
         g_refresh_button = gtk_button_new_from_icon_name("view-refresh-symbolic", GTK_ICON_SIZE_BUTTON);
+        gtk_widget_set_tooltip_text(g_refresh_button, _("Look for devices"));
+        set_accessible_name(g_refresh_button, _("Look for devices"));
         g_signal_connect(g_refresh_button,
                          "clicked",
                          G_CALLBACK(+[](GtkWidget*, gpointer) { devices_view_trigger_discovery(); }),

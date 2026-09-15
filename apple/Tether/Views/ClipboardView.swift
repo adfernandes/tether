@@ -33,6 +33,7 @@ struct ClipboardView: View {
             Image(systemName: "clipboard")
                 .font(.system(size: 48))
                 .foregroundStyle(.tertiary)
+                .accessibilityHidden(true)
 
             Text("Connect to a device to sync clipboard")
                 .font(.subheadline)
@@ -83,10 +84,11 @@ struct ClipboardView: View {
                             Image(systemName: "clock.arrow.circlepath")
                                 .font(.system(size: 32))
                                 .foregroundStyle(.tertiary)
+                                .accessibilityHidden(true)
 
                             Text("No clipboard activity yet")
                                 .font(.subheadline)
-                                .foregroundStyle(.tertiary)
+                                .foregroundStyle(.secondary)
                         }
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 40)
@@ -107,8 +109,8 @@ struct ClipboardView: View {
     // MARK: - Components
 
     private func clipboardActionButton(
-        title: String,
-        subtitle: String,
+        title: LocalizedStringKey,
+        subtitle: LocalizedStringKey,
         icon: String,
         color: Color,
         action: @escaping () -> Void
@@ -118,6 +120,7 @@ struct ClipboardView: View {
                 Image(systemName: icon)
                     .font(.title)
                     .foregroundStyle(color)
+                    .accessibilityHidden(true)
 
                 VStack(alignment: .leading, spacing: 2) {
                     Text(title)
@@ -126,7 +129,7 @@ struct ClipboardView: View {
 
                     Text(subtitle)
                         .font(.caption2)
-                        .foregroundStyle(.tertiary)
+                        .foregroundStyle(.secondary)
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -146,6 +149,7 @@ struct ClipboardView: View {
                     .foregroundStyle(entry.source.isRemote ? .indigo : .teal)
                     .frame(width: 24)
                     .padding(.top, 2)
+                    .accessibilityHidden(true)
 
                 VStack(alignment: .leading, spacing: 4) {
                     Text(entry.content)
@@ -159,11 +163,12 @@ struct ClipboardView: View {
                             .foregroundStyle(entry.source.isRemote ? .indigo : .teal)
 
                         Text("·")
-                            .foregroundStyle(.quaternary)
+                            .foregroundStyle(.secondary)
+                            .accessibilityHidden(true)
 
                         Text(entry.timestamp, style: .relative)
                             .font(.caption2)
-                            .foregroundStyle(.quaternary)
+                            .foregroundStyle(.secondary)
                     }
                 }
 
@@ -172,11 +177,13 @@ struct ClipboardView: View {
                 Image(systemName: "doc.on.doc")
                     .font(.caption)
                     .foregroundStyle(.tertiary)
+                    .accessibilityHidden(true)
             }
             .padding(14)
             .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 12))
         }
         .buttonStyle(.plain)
+        .accessibilityHint("Copies to this iPhone's clipboard")
     }
 }
 

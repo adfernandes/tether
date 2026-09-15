@@ -45,6 +45,7 @@ struct DashboardView: View {
                             Image(systemName: "xmark.circle.fill")
                                 .foregroundStyle(.secondary)
                         }
+                        .accessibilityLabel("Disconnect")
                     } else {
                         Button {
                             showManualConnect.toggle()
@@ -52,6 +53,7 @@ struct DashboardView: View {
                             Image(systemName: "network")
                                 .foregroundStyle(.teal)
                         }
+                        .accessibilityLabel("Connect Manually")
                     }
                 }
             }
@@ -77,6 +79,7 @@ struct DashboardView: View {
                     .foregroundStyle(.white)
             }
             .shadow(color: statusAccentColor.opacity(0.4), radius: 12, y: 4)
+            .accessibilityHidden(true)
 
             VStack(spacing: 6) {
                 if let deviceName = viewModel.connectedDeviceName,
@@ -99,7 +102,7 @@ struct DashboardView: View {
                 VStack(spacing: 4) {
                     Text("Your Fingerprint")
                         .font(.caption2)
-                        .foregroundStyle(.tertiary)
+                        .foregroundStyle(.secondary)
                         .textCase(.uppercase)
 
                     Text(formatFingerprint(viewModel.certificateManager.myFingerprint))
@@ -170,7 +173,7 @@ struct DashboardView: View {
     }
 
     private func actionButton(
-        title: String,
+        title: LocalizedStringKey,
         icon: String,
         color: Color,
         action: @escaping () -> Void
@@ -180,6 +183,7 @@ struct DashboardView: View {
                 Image(systemName: icon)
                     .font(.title2)
                     .foregroundStyle(color)
+                    .accessibilityHidden(true)
 
                 Text(title)
                     .font(.caption.weight(.medium))
@@ -214,15 +218,16 @@ struct DashboardView: View {
                     Image(systemName: "radar")
                         .font(.system(size: 36))
                         .foregroundStyle(.tertiary)
+                        .accessibilityHidden(true)
 
                     Text("Searching for tetherd on your network…")
                         .font(.subheadline)
-                        .foregroundStyle(.tertiary)
+                        .foregroundStyle(.secondary)
                         .multilineTextAlignment(.center)
 
                     Text("Make sure tetherd is running on your Linux machine.")
                         .font(.caption)
-                        .foregroundStyle(.quaternary)
+                        .foregroundStyle(.secondary)
                         .multilineTextAlignment(.center)
                 }
                 .frame(maxWidth: .infinity)
@@ -237,6 +242,7 @@ struct DashboardView: View {
                                 .font(.title3)
                                 .foregroundStyle(.teal)
                                 .frame(width: 36)
+                                .accessibilityHidden(true)
 
                             VStack(alignment: .leading, spacing: 2) {
                                 Text(host.name)
@@ -246,7 +252,7 @@ struct DashboardView: View {
                                 if !host.fingerprint.isEmpty {
                                     Text(formatFingerprint(String(host.fingerprint.prefix(16))) + "…")
                                         .font(.system(.caption2, design: .monospaced))
-                                        .foregroundStyle(.tertiary)
+                                        .foregroundStyle(.secondary)
                                 }
                             }
 
@@ -256,11 +262,13 @@ struct DashboardView: View {
                                 Image(systemName: "checkmark.shield.fill")
                                     .foregroundStyle(.green)
                                     .font(.subheadline)
+                                    .accessibilityLabel("Paired")
                             }
 
                             Image(systemName: "chevron.right")
                                 .font(.caption)
                                 .foregroundStyle(.tertiary)
+                                .accessibilityHidden(true)
                         }
                         .padding(14)
                         .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 14))
