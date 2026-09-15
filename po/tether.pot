@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: tether 0.2.31\n"
 "Report-Msgid-Bugs-To: zack@bartel.com\n"
-"POT-Creation-Date: 2026-09-14 21:48-0700\n"
+"POT-Creation-Date: 2026-09-14 21:59-0700\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -2529,4 +2529,8 @@ msgstr ""
 
 #: src/gtk/tether-gtk.desktop.in
 msgid "Pair devices and synchronize clipboard across the network"
+msgstr ""
+
+#: src/gtk/tether-gtk.desktop.in
+msgid "iPhone;iOS;SMS;Messages;Clipboard;Files;Notifications;Calls;AirPods;"
 msgstr ""

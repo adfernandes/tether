@@ -107,6 +107,14 @@ function fireInputEvents(el) {
   el.dispatchEvent(new Ev('change', { bubbles: true }));
 }
 
+// Put focus on the filled field so screen readers announce the code and Enter
+// submits it. Focus is never pulled away from a field the user is typing in.
+function focusFilled(doc, target, fields) {
+  const active = doc.activeElement;
+  if (active && active !== doc.body && !fields.includes(active)) return;
+  target.focus?.();
+}
+
 // A field is only eligible for filling if it is actually rendered. This stops a
 // malicious page from planting a hidden "OTP" input to siphon a real code.
 export function isFieldVisible(el) {
@@ -159,6 +167,7 @@ export function handleFillOtp(doc, msg, io = {}) {
       // dispatch events so react/vue/angular crap pick up the change
       fireInputEvents(splitFields[i]);
     }
+    focusFilled(doc, splitFields[Math.min(otp.length, splitFields.length) - 1], splitFields);
     if (id) filledOtpIds.add(id);
     io.onFilled?.(id);
     return { filled: true };
@@ -169,6 +178,7 @@ export function handleFillOtp(doc, msg, io = {}) {
   if (regularFields.length > 0 && regularFields[0].value !== otp) {
     setNativeValue(regularFields[0], otp);
     fireInputEvents(regularFields[0]);
+    focusFilled(doc, regularFields[0], regularFields);
     if (id) filledOtpIds.add(id);
     io.onFilled?.(id);
     return { filled: true };

@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: tether\n"
 "Report-Msgid-Bugs-To: zack@bartel.com\n"
-"POT-Creation-Date: 2026-09-14 21:48-0700\n"
+"POT-Creation-Date: 2026-09-14 21:59-0700\n"
 "PO-Revision-Date: 2026-08-23\n"
 "Last-Translator: Tether project\n"
 "Language-Team: Czech\n"
@@ -2762,6 +2762,10 @@ msgstr "Synchronizace zařízení"
 #: src/gtk/tether-gtk.desktop.in
 msgid "Pair devices and synchronize clipboard across the network"
 msgstr "Spárujte zařízení a synchronizujte schránku po síti"
+
+#: src/gtk/tether-gtk.desktop.in
+msgid "iPhone;iOS;SMS;Messages;Clipboard;Files;Notifications;Calls;AirPods;"
+msgstr "iPhone;iOS;SMS;Zprávy;Schránka;Soubory;Oznámení;Hovory;AirPods;"
 
 #~ msgid ""
 #~ "Where messages and contacts are stored on this computer. Encrypted keeps "

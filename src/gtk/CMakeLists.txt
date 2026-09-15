@@ -52,6 +52,10 @@ endif()
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/tether-gtk.desktop
         DESTINATION ${CMAKE_INSTALL_DATADIR}/applications)
 
+# Software centers (GNOME Software, Discover, Flathub) read this listing.
+install(FILES com.tether.desktop.metainfo.xml
+        DESTINATION ${CMAKE_INSTALL_DATADIR}/metainfo)
+
 foreach(SIZE 16 32 48 64 128 256 512 1024)
     install(FILES icons/${SIZE}x${SIZE}/tether.png
                   icons/${SIZE}x${SIZE}/tether-offline.png

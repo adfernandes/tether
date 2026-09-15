@@ -199,6 +199,22 @@ describe('handleFillOtp', () => {
     expect(inputs.slice(0, 6).map((i) => i.value).join('')).toBe('123456');
   });
 
+  it('focuses the filled field so screen readers announce it', () => {
+    const doc = loadFixture('std-autocomplete.html');
+    handleFillOtp(doc, { otp: '123456', otp_id: 1 });
+    expect(doc.activeElement).toBe(doc.querySelector('input'));
+  });
+
+  it('does not pull focus from a field the user is typing in', () => {
+    const doc = new JSDOM(
+      '<input name="note"><input autocomplete="one-time-code">'
+    ).window.document;
+    const note = doc.querySelector('input[name="note"]');
+    note.focus();
+    expect(handleFillOtp(doc, { otp: '123456', otp_id: 1 }).filled).toBe(true);
+    expect(doc.activeElement).toBe(note);
+  });
+
   it('refuses to fill the same otp_id twice', () => {
     const doc = loadFixture('std-autocomplete.html');
     expect(handleFillOtp(doc, { otp: '123456', otp_id: 5 }).filled).toBe(true);

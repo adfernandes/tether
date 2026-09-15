@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: tether\n"
 "Report-Msgid-Bugs-To: zack@bartel.com\n"
-"POT-Creation-Date: 2026-09-14 21:48-0700\n"
+"POT-Creation-Date: 2026-09-14 21:59-0700\n"
 "PO-Revision-Date: 2026-08-23\n"
 "Last-Translator: Tether project\n"
 "Language-Team: Korean\n"
@@ -2727,6 +2727,10 @@ msgstr "기기 동기화"
 #: src/gtk/tether-gtk.desktop.in
 msgid "Pair devices and synchronize clipboard across the network"
 msgstr "기기를 페어링하고 네트워크를 통해 클립보드를 동기화합니다"
+
+#: src/gtk/tether-gtk.desktop.in
+msgid "iPhone;iOS;SMS;Messages;Clipboard;Files;Notifications;Calls;AirPods;"
+msgstr "iPhone;iOS;SMS;메시지;클립보드;파일;알림;통화;AirPods;"
 
 #~ msgid ""
 #~ "Where messages and contacts are stored on this computer. Encrypted keeps "
