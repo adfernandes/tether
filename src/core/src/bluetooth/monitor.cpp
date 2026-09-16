@@ -8,12 +8,14 @@
 #include <chrono>
 #include <condition_variable>
 #include <csignal>
+#include <cstdlib>
 #include <fcntl.h>
 #include <gio/gio.h>
 #include <map>
 #include <mutex>
 #include <optional>
 #include <poll.h>
+#include <string_view>
 #include <sys/eventfd.h>
 #include <sys/wait.h>
 #include <thread>
@@ -168,9 +170,28 @@ namespace tether::bluetooth {
         g_source_unref(source);
     }
 
+    namespace {
+        std::optional<bool> environment_flag(const char* name) {
+            const char* raw = std::getenv(name);
+            if (!raw)
+                return std::nullopt;
+
+            const std::string_view value(raw);
+            if (value == "1" || value == "true" || value == "yes" || value == "on")
+                return true;
+            if (value == "0" || value == "false" || value == "no" || value == "off")
+                return false;
+
+            debug::log(WARN, "bluetooth: ignoring invalid {}={}", name, value);
+            return std::nullopt;
+        }
+    } // namespace
+
     std::optional<bool> probe_secure_connections(const std::string& adapter_id, std::chrono::milliseconds timeout) {
         if (adapter_id.empty())
             return std::nullopt;
+        if (const auto configured = environment_flag("TETHER_BLUEZ_SECURE_CONNECTIONS"))
+            return configured;
 
         std::array<gchar*, 5> argv = {
             const_cast<gchar*>("btmgmt"),

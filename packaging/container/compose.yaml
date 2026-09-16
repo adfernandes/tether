@@ -15,6 +15,8 @@ services:
     security_opt: ["no-new-privileges:true"]
     restart: unless-stopped
     stop_grace_period: 15s
+    environment:
+      TETHER_BLUEZ_SECURE_CONNECTIONS: ${TETHER_BLUEZ_SECURE_CONNECTIONS:?Confirm host Secure Connections is enabled}
     volumes:
       - type: bind
         source: ${TETHER_DATA_DIR:?Set an absolute private host data directory}

@@ -145,6 +145,11 @@ TEST(BluetoothConfig, SurvivesCorruptFile) {
 // Connect-first induces authentication only as a side effect of a profile
 // connect. A phone that refuses that profile never starts pairing at all, so the
 // transaction is retried as an explicit Device1.Pair() -- see issue #49.
+TEST(PairingBearer, ConnectFirstPinsTheClassicTransport) {
+    EXPECT_STREQ(preferred_bearer_for(AuthStrategy::ConnectFirst), "bredr");
+    EXPECT_EQ(preferred_bearer_for(AuthStrategy::ExplicitPair), nullptr);
+}
+
 TEST(FallbackPolicy, RetriesARefusedConnectFirst) {
     EXPECT_TRUE(should_fall_back(AuthStrategy::ConnectFirst, /*paired=*/false, /*user_rejected=*/false));
 }
