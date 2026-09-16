@@ -50,6 +50,7 @@ namespace tether::bluetooth {
         BluezObjects objects;
         Capability cap;
         std::map<std::string, std::string> disconnect_reasons;
+        std::map<std::string, uint64_t> le_drops;
         std::string preferred_adapter_id;
         std::string secure_adapter;
         std::optional<bool> secure_connections;
@@ -129,6 +130,9 @@ namespace tether::bluetooth {
             {
                 std::lock_guard<std::mutex> lock(impl->mutex);
                 impl->disconnect_reasons[object_path] = reason;
+                if (g_strcmp0(interface_name, "org.bluez.Bearer.LE1") == 0 ||
+                    g_strcmp0(interface_name, "org.bluez.Device1") == 0)
+                    ++impl->le_drops[object_path];
             }
             debug::log(INFO,
                        "bluetooth: {} disconnected from {}: {} ({})",
@@ -588,6 +592,12 @@ namespace tether::bluetooth {
             return it == impl_->disconnect_reasons.end() ? std::string{} : it->second;
         }
         return {};
+    }
+
+    uint64_t BluezMonitor::le_drop_count(const std::string& device_path) const {
+        std::lock_guard<std::mutex> lock(impl_->mutex);
+        auto it = impl_->le_drops.find(device_path);
+        return it == impl_->le_drops.end() ? 0 : it->second;
     }
 
     void BluezMonitor::clear_disconnect_reason(const std::string& address) {

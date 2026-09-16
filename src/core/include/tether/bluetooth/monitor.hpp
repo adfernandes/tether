@@ -42,6 +42,10 @@ namespace tether::bluetooth {
         // Clears the last disconnect reason for the device, so that the next disconnect will be reported.
         void clear_disconnect_reason(const std::string& address);
 
+        // Disconnected signals seen on the device's LE bearer or the whole device.
+        // Only its change matters. Each one ends any GATT session on the link.
+        uint64_t le_drop_count(const std::string& device_path) const;
+
         // Which controller to use: "hciN" or an address, empty for the first powered one.
         void set_preferred_adapter(std::string id);
         std::string preferred_adapter_id() const;

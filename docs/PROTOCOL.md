@@ -481,6 +481,13 @@ Broadcast once per newly observed message, incoming or locally sent.
 `app_id`, `app_name`, `title`, `subtitle`, `body`, `category`, `timestamp`, and which
 actions the notification offers.
 
+There is no destination URL or deep link. ANCS
+[`GetNotificationAttributes`](https://developer.apple.com/library/archive/documentation/CoreBluetooth/Reference/AppleNotificationCenterServiceSpecification/Specification/Specification.html)
+defines only app identifier, title, subtitle, message, message size, date, and
+positive/negative action labels, and actions run only on the iPhone. A client can open the
+app by `app_id`, but not a specific conversation or post. A URL is usable only if it
+appears in full in `title`, `subtitle` or `body`, and iOS may truncate those.
+
 `app_name` is the app's display name, resolved over ANCS `GetAppAttributes` and cached
 per bundle id for the session. The first notification from an app carries a name derived
 from its bundle id (`com.burbn.instagram` -> `Instagram`) and is corrected in place once
