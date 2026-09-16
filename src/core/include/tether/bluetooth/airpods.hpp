@@ -128,6 +128,7 @@ namespace tether::bluetooth {
         // Another host reports a call or media playing, from its own smart-routing reports.
         bool peer_audio = false;
         bool peer_call = false;
+        bool peer_holds_audio = false;
         bool local_audio = false;
         std::optional<bool> owns;
         AirPodsBattery battery;
@@ -138,10 +139,8 @@ namespace tether::bluetooth {
         // Written for display, shown verbatim.
         std::string reason;
 
-        // What handoff yields to: a peer on a call, which always takes the buds, or a peer that owns
-        // them and is playing through them. Ownership alone is not enough, because the phone keeps
-        // it until another host claims.
-        bool peer_busy() const { return peer_call || (peer_active && peer_audio); }
+        // What handoff yields to. A peer that is playing, call or media, and has the buds' audio.
+        bool peer_busy() const { return peer_holds_audio && peer_audio; }
 
         bool operator==(const AirPodsState&) const = default;
     };
@@ -170,6 +169,11 @@ namespace tether::bluetooth {
 
     // Whether a session that has claimed the buds to validate itself should hand ownership straight back.
     bool releases_when_idle(bool local_audio, bool peer_present, bool yielded);
+
+    // Whether the buds are carrying audio for a host other than `local`, folded from one audio-source
+    // notification into the previous answer. A source of `None`, and the all-zero address the buds send
+    // with it, leave it alone: iOS sends `NONE` every twenty seconds or so during a live call.
+    bool peer_holds_the_audio(bool current, const AudioSourceEvent& event, const std::string& local);
 
     // `otherDeviceAudioCategory` in a host's media report, as an iPhone sends them.
     inline constexpr int AUDIO_CATEGORY_NONE = 100;
