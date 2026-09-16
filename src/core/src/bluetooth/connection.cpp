@@ -666,6 +666,7 @@ namespace tether::bluetooth {
         // When the LE link was first seen up while the phone offered no ANCS
         // service. -1 whenever that is not the case.
         int64_t ancs_absent_since = -1;
+        uint64_t le_drops_seen = 0;
         int map_failures = 0;
         int64_t next_message_poll = 0;
         std::string open_map_path;
@@ -1111,6 +1112,11 @@ namespace tether::bluetooth {
         }
 
         client->set_device(device_path);
+        const uint64_t drops = device_path.empty() ? le_drops_seen : monitor->le_drop_count(device_path);
+        if (drops != le_drops_seen) {
+            le_drops_seen = drops;
+            client->drop_session("LE link dropped");
+        }
         client->tick(now);
     }
 

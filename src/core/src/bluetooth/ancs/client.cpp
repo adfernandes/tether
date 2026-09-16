@@ -82,6 +82,7 @@ namespace tether::bluetooth::ancs {
         void unsubscribe();
         void drop_gatt_paths();
         void verify_subscription();
+        void rebuild(const std::string& reason);
         bool link_alive() const;
         void handle_source_event(const SourceEvent& event, int64_t now);
         void handle_response(const Request& request, const Response& response, int64_t now);
@@ -320,6 +321,27 @@ namespace tether::bluetooth::ancs {
         if (!monitor || !monitor->connection())
             return;
         GDBusConnection* conn = monitor->connection();
+        if (subscribed) {
+            for (const std::string& path : {data_source_path, notification_source_path}) {
+                if (path.empty())
+                    continue;
+                GError* error = nullptr;
+                GVariant* reply = g_dbus_connection_call_sync(conn,
+                                                              BLUEZ_NAME,
+                                                              path.c_str(),
+                                                              IFACE_CHARACTERISTIC,
+                                                              "StopNotify",
+                                                              nullptr,
+                                                              nullptr,
+                                                              G_DBUS_CALL_FLAGS_NONE,
+                                                              2000,
+                                                              nullptr,
+                                                              &error);
+                if (reply)
+                    g_variant_unref(reply);
+                g_clear_error(&error);
+            }
+        }
         if (source_signal) {
             g_dbus_connection_signal_unsubscribe(conn, source_signal);
             source_signal = 0;
@@ -387,20 +409,24 @@ namespace tether::bluetooth::ancs {
         if (!object_gone && notifying && !link_gone)
             return;
 
-        debug::log(INFO,
-                   "ancs: the notification subscription is no longer live ({}), rebuilding it",
-                   object_gone ? "characteristics gone"
-                   : link_gone ? "LE link gone"
-                               : "BlueZ cleared Notifying");
         if (object_gone) {
+            debug::log(INFO,
+                       "ancs: the notification subscription is no longer live (characteristics gone), rebuilding it");
             drop_gatt_paths();
             set_status(false, "Waiting for the iPhone's notification service.");
+            sequencer->reset();
+            in_progress.clear();
         } else {
-            unsubscribe();
-            subscribed = false;
-            next_subscribe = 0;
-            set_status(false, "Subscribing to the iPhone's notifications...");
+            rebuild(link_gone ? "LE link gone" : "BlueZ cleared Notifying");
         }
+    }
+
+    void AncsClientState::rebuild(const std::string& reason) {
+        debug::log(INFO, "ancs: the notification subscription is no longer live ({}), rebuilding it", reason);
+        unsubscribe();
+        subscribed = false;
+        next_subscribe = 0;
+        set_status(false, "Subscribing to the iPhone's notifications...");
         sequencer->reset();
         in_progress.clear();
     }
@@ -598,6 +624,11 @@ namespace tether::bluetooth::ancs {
     }
 
     void AncsClient::set_content_enabled(bool enabled) { state_->content_enabled = enabled; }
+
+    void AncsClient::drop_session(const std::string& reason) {
+        if (state_->subscribed)
+            state_->rebuild(reason);
+    }
 
     bool AncsClient::ready() const { return state_->ready; }
 

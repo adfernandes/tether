@@ -3559,3 +3559,36 @@ Also from orychalk (#85): a B-field threshold does not port (Pro 1 keeps an acti
 pod movements on Pro 3; and both buds out moves the volume target, hence the ear-return claim.
 
 Not yet verified on hardware: the whole of the above.
+
+### 2026-09-15 - An LE-only drop left notifications dead until a restart (#190)
+
+Reported in #190, and four times in our own `tetherd.log` on 0.2.31, which carries the 2026-09-12
+fix above:
+
+```
+09-13 15:02:24  ancs: Notification mirroring is active.
+09-13 15:10:16  Bearer.LE1 disconnected (Timeout)        BR/EDR stays up
+09-13 15:10:17  soliciting ANCS for 180s                 the supervisor saw LE go down
+                no ancs line for 2.5 hours
+```
+
+Same at 09-14 10:24, 19:52 and 21:55. Each ended only with a daemon restart, whose fresh client
+started a session within seconds, so LE was back and only the old subscription was dead. The
+cases that recovered (09-12 walk, 09-14 18:43 suspend) dropped both bearers.
+
+- The supervisor saw LE down: `ServicesResolved` goes false on an LE-only drop, so `le_link_up()`
+  short-circuits before the read.
+- `verify_subscription()` did not: it reads only the stale `Notifying` and the GAP read, and with
+  BR/EDR up that read does not answer `Not connected`. `ready` stayed latched, `hold` kept the
+  path, and nothing was ever rebuilt.
+- Tether never sent `StopNotify`. BlueZ keeps its notify client for our sender across the drop,
+  so a resubscribe would be a no-op on that registration; a restarted daemon is a new sender and
+  gets a real CCCD write.
+
+The ANCS client now drops the session on the `Disconnected` signal for `Bearer.LE1` or `Device1`
+(`BluezMonitor::le_drop_count()`), and `unsubscribe()` sends `StopNotify` on both sources before
+every rebuild.
+
+Not settled: the exact `ReadValue` error on the GAP characteristic with only BR/EDR up, and the
+fix itself on hardware (walk out until only `LE1` times out, come back, expect `LE link dropped`
+then a new session and a popup).
