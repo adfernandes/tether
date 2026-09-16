@@ -419,19 +419,42 @@ TEST(AirPods, BuildsTheTakeOverMessages) {
     EXPECT_TRUE(decoded->set_ownership_to_false);
 }
 
-// Handoff yields to a phone that owns the buds and is playing through them, or to a call, which
-// always takes them. Ownership alone is a phone that finished and kept the bit; media alone is a
-// phone playing on its own speaker.
-TEST(AirPods, YieldsToAnOwnerWithAudioOrACall) {
+// Handoff yields to a phone that is playing and has the buds' audio. The audio alone is a phone
+// that stopped; the report alone is a phone playing on its own speaker. Neither the owner bit nor
+// an announced call decides it: a phone that says it has a call has not taken the buds yet.
+TEST(AirPods, YieldsToAPhoneHoldingTheAudioAndPlaying) {
     AirPodsState state;
-    state.peer_active = true;
+    state.peer_holds_audio = true;
     EXPECT_FALSE(state.peer_busy());
     state.peer_audio = true;
     EXPECT_TRUE(state.peer_busy());
-    state.peer_active = false;
+    state.peer_holds_audio = false;
     EXPECT_FALSE(state.peer_busy());
+    // An owner that is not carrying the audio is still not using them.
+    state.peer_active = true;
+    EXPECT_FALSE(state.peer_busy());
+    // Nor is a call the phone has only announced: releasing ahead of its claim is what broke it.
     state.peer_call = true;
+    EXPECT_FALSE(state.peer_busy());
+    // The call once the buds are actually carrying it.
+    state.peer_holds_audio = true;
     EXPECT_TRUE(state.peer_busy());
+}
+
+// Who the buds are carrying audio for, folded one notification at a time.
+TEST(AirPods, TracksWhichHostHasTheBudsAudio) {
+    const std::string local = "02:00:00:00:00:02";
+    const AudioSourceEvent phone{"02:00:00:00:00:04", AudioSource::Media};
+    const AudioSourceEvent here{local, AudioSource::Media};
+    const AudioSourceEvent nobody{"00:00:00:00:00:00", AudioSource::None};
+
+    EXPECT_TRUE(peer_holds_the_audio(false, phone, local));
+    EXPECT_TRUE(peer_holds_the_audio(false, {"02:00:00:00:00:04", AudioSource::Call}, local));
+    EXPECT_FALSE(peer_holds_the_audio(true, here, local));
+    // iOS sends NONE every twenty seconds or so during a live call: it settles nothing.
+    EXPECT_TRUE(peer_holds_the_audio(true, nobody, local));
+    EXPECT_FALSE(peer_holds_the_audio(false, nobody, local));
+    EXPECT_TRUE(peer_holds_the_audio(true, {local, AudioSource::None}, local));
 }
 
 // This machine's own entry rises with its own ownership and is never a peer.

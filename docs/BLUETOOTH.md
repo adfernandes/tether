@@ -547,6 +547,14 @@ that has finished its call is exactly what a reclaim takes the buds from, and an
 `0x17` stays there until another host claims. The iPhone keeps the owner bit until another host
 claims, so ownership alone never means "still using them" either; that needs the audio source.
 
+**The owner bit is corroboration, not the decision.** It is dependable on some setups and not on
+others, and the difference is not visible from here. Measured 2026-09-15: on one machine the phone
+moves `0x05` idle to `0x07` owning on every handoff, exactly as the table says; in the log attached
+to #193 the same iOS version reports `0x05` while the audio-source notification names that phone as
+the host the buds are carrying media for -- either it never took ownership, or its host list was
+never refreshed, and the two are indistinguishable in a log that only records changes. What the buds
+carry, and for whom, is the audio-source notification, and that is what `peer_busy()` reads.
+
 The AC reference reads the low values as validation state instead (`0x00` validated,
 `0x01` pending, `0x02` unvalidated, `0x03` both, `0x05` a stuck session) and says ownership is not
 in this field. That does not match this hardware: our own entry alternates `0x00` and `0x02` in
@@ -701,10 +709,20 @@ the stem sets is the volume of whoever owns them.
 **It runs on what the other hosts report through the buds**, the smart-routing media reports
 above. No timer decides anything, and it does not need call control.
 
-- **A call on the phone gives the buds up** the moment the phone reports category `501`, before it
-  takes them. **Media on the phone gives them up** once the phone both reports it playing and owns
-  the buds (`AirPodsState::peer_busy()`): an iPhone playing on its own speaker does not take them
-  from a Mac, and does not take them from here.
+- **The phone gives the buds up once it is actually using them**, call or media alike: it reports
+  itself playing *and* the buds report their audio going to it (`AirPodsState::peer_busy()`,
+  `peer_holds_the_audio()`). Neither half decides alone -- an iPhone playing on its own speaker
+  reports the same media, and the owner bit answers nothing, having been seen idle on a phone the
+  buds were carrying media for.
+- **A call report is not a yield.** Announcing a call is not taking the buds. Tether held a version
+  that released on category `501` before the phone claimed; measured 2026-09-15 over four calls on
+  one iPhone, the two where Tether released first were the two where the buds never carried the
+  call -- no audio-source notification for the phone at all -- while the two where the phone claimed
+  first (`audioRoutingSetOwnershipToFalse`, owner bit to `0x07`) routed within a second. Releasing
+  early hands the phone a device whose owner has just vanished and whose transport is down. The
+  call report still holds *this* machine's claims back (`takes_over_for_play()`), and losing the
+  owner bit still pauses local playback on the spot, so nothing reaches the speakers while the
+  phone takes over.
 - **The phone reporting `NO` takes them back**, and resumes what the release paused.
 - **A player starting here takes them**, wherever they are, unless the phone is on a call. MPRIS
   `PropertiesChanged` drives it (`MediaControl::watch()`). With the card down the player is paused

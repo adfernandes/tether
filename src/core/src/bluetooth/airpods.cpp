@@ -251,6 +251,7 @@ namespace tether::bluetooth {
             {"peer_active", s.peer_active},
             {"peer_audio", s.peer_audio},
             {"peer_call", s.peer_call},
+            {"peer_holds_audio", s.peer_holds_audio},
             {"status", to_string(s.status)},
             {"reason", s.reason},
         };
@@ -460,6 +461,14 @@ namespace tether::bluetooth {
 
     bool releases_when_idle(bool local_audio, bool peer_present, bool yielded) {
         return peer_present && !local_audio && !yielded;
+    }
+
+    bool peer_holds_the_audio(bool current, const AudioSourceEvent& event, const std::string& local) {
+        // The address the buds send with a source of `None`.
+        constexpr const char* NO_HOST = "00:00:00:00:00:00";
+        if (event.source == AudioSource::None || event.address.empty() || event.address == NO_HOST)
+            return current;
+        return event.address != local;
     }
 
     namespace {
@@ -1052,6 +1061,8 @@ namespace tether::bluetooth {
             // Another host is attached to the buds, this machine is playing through them.
             bool peer_present = false;
             bool local_audio = false;
+            // The buds' audio is going to another host.
+            bool peer_holds_audio = false;
             // The buds' host list, and each host's latest media report.
             std::vector<AapPeer> hosts;
             std::map<std::string, SmartRoutingMessage> reports;
@@ -1126,6 +1137,10 @@ namespace tether::bluetooth {
                             if (!send_ownership(fd, false))
                                 break;
                             owns = false;
+                            {
+                                std::lock_guard<std::mutex> lock(mutex);
+                                state.owns = false;
+                            }
                         }
                         continue;
                     }
@@ -1168,6 +1183,11 @@ namespace tether::bluetooth {
                     delivered = true;
                     owns = buffer[sizeof(OWNS_CONNECTION_PREFIX)] == 0x01;
                     debug::log(DEBUG, "airpods: ownership verdict {:#04x}", buffer[sizeof(OWNS_CONNECTION_PREFIX)]);
+                    {
+                        std::lock_guard<std::mutex> lock(mutex);
+                        state.owns = owns;
+                    }
+                    publish(AirPodsStatus::Live, "");
                     continue;
                 }
 
@@ -1201,12 +1221,20 @@ namespace tether::bluetooth {
                         std::lock_guard<std::mutex> lock(mutex);
                         local = local_address;
                     }
+
+                    const bool held = peer_holds_the_audio(peer_holds_audio, *source, local);
+                    bool changed = held != peer_holds_audio;
+                    peer_holds_audio = held;
                     if (!local.empty() && source->address == local &&
                         local_audio != (source->source != AudioSource::None)) {
                         local_audio = source->source != AudioSource::None;
+                        changed = true;
+                    }
+                    if (changed) {
                         {
                             std::lock_guard<std::mutex> lock(mutex);
                             state.local_audio = local_audio;
+                            state.peer_holds_audio = peer_holds_audio;
                         }
                         publish(delivered ? AirPodsStatus::Live : AirPodsStatus::Connecting, "");
                     }
@@ -1324,6 +1352,7 @@ namespace tether::bluetooth {
                 pending_take_over = false;
                 state.peer_audio = false;
                 state.peer_call = false;
+                state.peer_holds_audio = false;
             }
             ::close(fd);
         }
@@ -1355,6 +1384,7 @@ namespace tether::bluetooth {
                         state.peer_active = false;
                         state.peer_audio = false;
                         state.peer_call = false;
+                        state.peer_holds_audio = false;
                         state.local_audio = false;
                         state.owns.reset();
                     }
@@ -1377,6 +1407,7 @@ namespace tether::bluetooth {
                         state.peer_active = false;
                         state.peer_audio = false;
                         state.peer_call = false;
+                        state.peer_holds_audio = false;
                         state.local_audio = false;
                         state.owns.reset();
                     }
