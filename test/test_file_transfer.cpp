@@ -1,3 +1,4 @@
+#include "scoped_env.hpp"
 #include <gtest/gtest.h>
 #include <tether/file_transfer.hpp>
 #include <tether/base64.hpp>
@@ -21,6 +22,27 @@ protected:
     const std::filesystem::path home_ =
         std::filesystem::temp_directory_path() / ("tether-tests-" + std::to_string(getpid()));
 };
+
+TEST_F(FileTransferTest, AbsoluteDownloadOverrideWins) {
+    tether::testing::ScopedEnv downloads("XDG_DOWNLOAD_DIR", home_ / "inbox");
+    tether::FileReceiveManager mgr;
+    ASSERT_TRUE(mgr.handle_start("override", "hello.txt", 3));
+    ASSERT_TRUE(mgr.handle_chunk("override", 0, tether::base64_encode((const unsigned char*)"abc", 3)));
+    ASSERT_TRUE(mgr.handle_end("override"));
+    EXPECT_TRUE(std::filesystem::exists(home_ / "inbox/hello.txt"));
+    EXPECT_FALSE(std::filesystem::exists(home_ / "Downloads/hello.txt"));
+}
+
+TEST_F(FileTransferTest, InvalidDownloadOverrideFallsBack) {
+    for (const std::string value : {"", "relative/inbox"}) {
+        tether::testing::ScopedEnv downloads("XDG_DOWNLOAD_DIR", value);
+        tether::FileReceiveManager mgr;
+        ASSERT_TRUE(mgr.handle_start("fallback", "fallback.txt", 0));
+        ASSERT_TRUE(mgr.handle_end("fallback"));
+        EXPECT_TRUE(std::filesystem::exists(home_ / "Downloads/fallback.txt"));
+        std::filesystem::remove(home_ / "Downloads/fallback.txt");
+    }
+}
 
 TEST_F(FileTransferTest, SingleChunkTransfer) {
     tether::FileReceiveManager mgr;

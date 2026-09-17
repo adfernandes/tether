@@ -2227,6 +2227,14 @@ namespace tether {
                                       SSL* ssl,
                                       const std::string& fingerprint,
                                       const std::string& device_name) {
+        // A headless client approves through the command socket. No GUI is not a rejection.
+        // WAYLAND_DISPLAY alone would also skip a working X11 session: tether-dialog
+        // falls back to an ordinary window when gtk-layer-shell isn't available.
+        const char* wayland_display = std::getenv("WAYLAND_DISPLAY");
+        const char* x11_display = std::getenv("DISPLAY");
+        if ((!wayland_display || !*wayland_display) && (!x11_display || !*x11_display))
+            return;
+
         // Translated before the fork: gettext takes a lock, and calling it in the
         // child of a threaded process can deadlock if another thread held it.
         std::string short_fp = fingerprint;
@@ -2334,15 +2342,13 @@ namespace tether {
                 accept_device(info.fingerprint, info.device_name);
             } else if (info.superseded) {
                 debug::log(INFO, "Pairing dialog dismissed after {} was accepted elsewhere", info.device_name);
+            } else if (!bluetooth::dialog_answered(status)) {
+                debug::log(WARN,
+                           "[Pairing Pending] {}: dialog unavailable (exit code {}); explicit approval still required",
+                           info.device_name,
+                           exit_code);
             } else {
-
-                if (!bluetooth::dialog_answered(status))
-                    debug::log(ERR,
-                               "[Pairing Denied] {}: the confirmation dialog could not run (exit code {})",
-                               info.device_name,
-                               exit_code);
-                else
-                    debug::log(INFO, "[Pairing Rejected] {} (exit code {})", info.device_name, exit_code);
+                debug::log(INFO, "[Pairing Rejected] {} (exit code {})", info.device_name, exit_code);
 
                 auto remote_it = connected_remote_clients.find(info.client_fd);
                 auto ssl_it = active_ssl_.find(info.client_fd);

@@ -1109,7 +1109,28 @@ static nlohmann::json parse_first_line(const std::string& response) {
 }
 
 static nlohmann::json state_snapshot(tether::Client& client) {
-    return parse_first_line(client.send_and_wait("{\"command\":\"state_snapshot\"}\n"));
+    if (!client.send("{\"command\":\"state_snapshot\"}\n"))
+        throw std::runtime_error("Could not request state_snapshot");
+    // Unix sockets are streams: a healthy daemon's reply can span several reads.
+    // Keep the existing first-line handling, but bound an unframed/malformed reply
+    // in both size and time, so a daemon that stalls mid-reply fails fast instead
+    // of hanging the CLI forever.
+    constexpr size_t max_reply_bytes = 1024 * 1024;
+    constexpr int read_timeout_ms = 5000;
+    std::string response;
+    char buffer[4096];
+    while (response.find('\n') == std::string::npos) {
+        if (!client.wait_readable(read_timeout_ms))
+            throw std::runtime_error("Timed out waiting for state_snapshot");
+        const ssize_t n = client.read(buffer, sizeof(buffer));
+        if (n <= 0 || response.size() + static_cast<size_t>(n) > max_reply_bytes)
+            throw std::runtime_error("Incomplete or oversized state_snapshot");
+        response.append(buffer, static_cast<size_t>(n));
+    }
+    auto snapshot = parse_first_line(response);
+    if (!snapshot.is_object() || snapshot.value("command", "") != "state_snapshot")
+        throw std::runtime_error("Expected a state_snapshot reply");
+    return snapshot;
 }
 
 static int print_status(tether::Client& client) {

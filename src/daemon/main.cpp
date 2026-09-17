@@ -1,6 +1,8 @@
 #include "notification.hpp"
 #include <csignal>
 #include <cstdio>
+#include <cstdlib>
+#include <string_view>
 #include <ctime>
 #include <mutex>
 #include <nlohmann/json.hpp>
@@ -38,6 +40,8 @@ void signal_handler(int) {
 
 // Append stderr/stdout to the state-dir log unless attached to a terminal.
 static void redirect_output_to_log() {
+    if (const char* value = std::getenv("TETHER_LOG_STDERR"); value && std::string_view(value) == "1")
+        return;
     if (isatty(STDERR_FILENO))
         return;
     try {
@@ -165,12 +169,12 @@ int main(int argc, char** argv) {
     const bool notifier_ready = notifier.init();
     if (!notifier_ready) {
         debug::log(ERR, "Warning: desktop notifications unavailable");
-    } else {
-        file_mgr.set_on_complete([&notifier](const std::filesystem::path& path, size_t bytes_written) {
-            notifier.notify_file_arrived(path);
-            tether::record_received_file(path, bytes_written);
-        });
     }
+    file_mgr.set_on_complete([&notifier, notifier_ready](const std::filesystem::path& path, size_t bytes_written) {
+        tether::record_received_file(path, bytes_written);
+        if (notifier_ready)
+            notifier.notify_file_arrived(path);
+    });
     tether::g_file_manager = &file_mgr;
 
     notifier.set_copy_handler([&loop](const std::string& code) {

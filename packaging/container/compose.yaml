@@ -1,0 +1,43 @@
+services:
+  tether:
+    image: tether:local
+    build:
+      context: ../..
+      dockerfile: packaging/container/Dockerfile
+      target: runtime
+      args:
+        TETHER_VERSION: ${TETHER_VERSION:-0.2.32-container-dev}
+    hostname: ${TETHER_HOSTNAME:-tether}
+    user: "${TETHER_UID:?Set your non-root host UID}:${TETHER_GID:?Set your host GID}"
+    network_mode: host
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    restart: unless-stopped
+    stop_grace_period: 15s
+    volumes:
+      - type: bind
+        source: ${TETHER_DATA_DIR:?Set an absolute private host data directory}
+        target: /data
+        bind:
+          create_host_path: false
+      - type: bind
+        source: ${TETHER_DOWNLOADS_DIR:?Set an absolute host downloads directory}
+        target: /downloads
+        bind:
+          create_host_path: false
+      # Read-only filesystem access does NOT make system D-Bus calls read-only.
+      - type: bind
+        source: /run/dbus
+        target: /host/run/dbus
+        read_only: true
+        bind:
+          create_host_path: false
+    tmpfs:
+      - /run/tether-runtime:uid=${TETHER_UID},gid=${TETHER_GID},mode=0700
+      - /tmp:mode=1777
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"

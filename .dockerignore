@@ -1,0 +1,13 @@
+.git
+.direnv
+.scratch
+build
+build-*
+result
+result-*
+**/node_modules
+**/.DS_Store
+**/*.swp
+**/*.swo
+.env
+packaging/container/.env

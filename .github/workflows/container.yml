@@ -1,0 +1,54 @@
+name: container
+
+on:
+  pull_request:
+  push:
+    branches: [main, develop]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  container:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: ubuntu-24.04
+            platform: linux/amd64
+            arch: amd64
+          - runner: ubuntu-24.04-arm
+            platform: linux/arm64
+            arch: arm64
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build and test (non-root, native architecture)
+        shell: bash
+        run: |
+          docker build --progress=plain --platform '${{ matrix.platform }}' \
+            --build-arg TETHER_VERSION="$(git describe --tags --always)" \
+            --target test -f packaging/container/Dockerfile -t tether-tests:ci . \
+            2>&1 | tee "$RUNNER_TEMP/tether-tests.log"
+      - name: Build runtime
+        shell: bash
+        run: |
+          docker build --progress=plain --platform '${{ matrix.platform }}' \
+            --build-arg TETHER_VERSION="$(git describe --tags --always)" \
+            --target runtime -f packaging/container/Dockerfile -t tether-runtime:ci . \
+            2>&1 | tee "$RUNNER_TEMP/tether-runtime.log"
+      - name: Smoke test without host hardware or services
+        shell: bash
+        run: |
+          bash -n packaging/container/entrypoint.sh packaging/container/healthcheck.sh scripts/test-container.sh
+          scripts/test-container.sh tether-runtime:ci tether-tests:ci \
+            2>&1 | tee "$RUNNER_TEMP/tether-smoke.log"
+      - name: Failure evidence (synthetic test data only)
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: container-${{ matrix.arch }}-logs
+          path: ${{ runner.temp }}/tether-*.log
+          retention-days: 7

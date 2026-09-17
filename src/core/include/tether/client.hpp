@@ -5,7 +5,7 @@
 
 namespace tether {
 
-    // Starts tetherd detached, and returns once it has been launched
+    // Starts tetherd detached unless supervised (TETHER_NO_AUTOSTART=1 or enabled systemd unit).
     void spawn_daemon();
 
     class Client {
@@ -13,7 +13,7 @@ namespace tether {
         Client();
         ~Client();
 
-        // host="" uses the local UNIX socket, auto-launching the daemon if needed.
+        // host="" uses the local UNIX socket, auto-launching if needed unless supervised.
         // host!="" opens a TCP+TLS connection to a remote daemon.
         bool connect(const std::string& host = "", int port = 5134);
         void disconnect();
@@ -26,6 +26,8 @@ namespace tether {
 
         std::string get_peer_fingerprint() const;
         ssize_t read(char* buf, size_t count);
+        // Blocks up to timeout_ms for read() to return data without blocking; false means timed out.
+        bool wait_readable(int timeout_ms) const;
 
         // High Level Features
         std::string get_clipboard(std::string& err_out);
