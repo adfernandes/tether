@@ -1059,6 +1059,7 @@ namespace tether::ui {
         g_messages.banner_label = gtk_label_new(nullptr);
         gtk_label_set_xalign(GTK_LABEL(g_messages.banner_label), 0.0);
         gtk_label_set_line_wrap(GTK_LABEL(g_messages.banner_label), TRUE);
+        gtk_label_set_line_wrap_mode(GTK_LABEL(g_messages.banner_label), PANGO_WRAP_WORD_CHAR);
         gtk_box_pack_start(GTK_BOX(g_messages.banner), g_messages.banner_label, TRUE, TRUE, 0);
 
         g_messages.banner_action = gtk_button_new_with_label(_("Show iPhone Permissions"));
@@ -1245,6 +1246,7 @@ namespace tether::ui {
         g_messages.send_error_label = gtk_label_new(nullptr);
         gtk_label_set_xalign(GTK_LABEL(g_messages.send_error_label), 0.0);
         gtk_label_set_line_wrap(GTK_LABEL(g_messages.send_error_label), TRUE);
+        gtk_label_set_line_wrap_mode(GTK_LABEL(g_messages.send_error_label), PANGO_WRAP_WORD_CHAR);
         gtk_box_pack_start(GTK_BOX(g_messages.send_error), g_messages.send_error_label, TRUE, TRUE, 0);
         GtkWidget* retry = gtk_button_new_with_label(_("Retry"));
         gtk_widget_set_valign(retry, GTK_ALIGN_CENTER);

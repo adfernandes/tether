@@ -1567,6 +1567,7 @@ namespace tether::ui {
         g_devices.lbl_airpods_reason = gtk_label_new(nullptr);
         gtk_label_set_xalign(GTK_LABEL(g_devices.lbl_airpods_reason), 0.0);
         gtk_label_set_line_wrap(GTK_LABEL(g_devices.lbl_airpods_reason), TRUE);
+        gtk_label_set_line_wrap_mode(GTK_LABEL(g_devices.lbl_airpods_reason), PANGO_WRAP_WORD_CHAR);
         gtk_style_context_add_class(gtk_widget_get_style_context(g_devices.lbl_airpods_reason), "muted");
         gtk_box_pack_start(GTK_BOX(airpods_box), g_devices.lbl_airpods_reason, FALSE, FALSE, 0);
 
@@ -1613,6 +1614,7 @@ namespace tether::ui {
         g_devices.lbl_airpods_apple_id = gtk_label_new(nullptr);
         gtk_label_set_xalign(GTK_LABEL(g_devices.lbl_airpods_apple_id), 0.0);
         gtk_label_set_line_wrap(GTK_LABEL(g_devices.lbl_airpods_apple_id), TRUE);
+        gtk_label_set_line_wrap_mode(GTK_LABEL(g_devices.lbl_airpods_apple_id), PANGO_WRAP_WORD_CHAR);
         gtk_label_set_selectable(GTK_LABEL(g_devices.lbl_airpods_apple_id), TRUE);
         gtk_style_context_add_class(gtk_widget_get_style_context(g_devices.lbl_airpods_apple_id), "muted");
         gtk_box_pack_start(GTK_BOX(airpods_box), g_devices.lbl_airpods_apple_id, FALSE, FALSE, 0);
@@ -1648,6 +1650,7 @@ namespace tether::ui {
         gtk_label_set_xalign(GTK_LABEL(g_devices.lbl_bt_setup_command), 0.0);
         gtk_label_set_selectable(GTK_LABEL(g_devices.lbl_bt_setup_command), TRUE);
         gtk_label_set_line_wrap(GTK_LABEL(g_devices.lbl_bt_setup_command), TRUE);
+        gtk_label_set_line_wrap_mode(GTK_LABEL(g_devices.lbl_bt_setup_command), PANGO_WRAP_WORD_CHAR);
         gtk_style_context_add_class(gtk_widget_get_style_context(g_devices.lbl_bt_setup_command),
                                     "tether-setup-command");
         gtk_box_pack_start(GTK_BOX(g_devices.bt_setup_box), g_devices.lbl_bt_setup_command, FALSE, FALSE, 0);
@@ -1690,6 +1693,7 @@ namespace tether::ui {
         g_devices.lbl_bt_reason = gtk_label_new(nullptr);
         gtk_label_set_xalign(GTK_LABEL(g_devices.lbl_bt_reason), 0.0);
         gtk_label_set_line_wrap(GTK_LABEL(g_devices.lbl_bt_reason), TRUE);
+        gtk_label_set_line_wrap_mode(GTK_LABEL(g_devices.lbl_bt_reason), PANGO_WRAP_WORD_CHAR);
         gtk_style_context_add_class(gtk_widget_get_style_context(g_devices.lbl_bt_reason), "muted");
         gtk_box_pack_start(GTK_BOX(bt_box), g_devices.lbl_bt_reason, FALSE, FALSE, 0);
 
@@ -1714,6 +1718,7 @@ namespace tether::ui {
         g_devices.lbl_bt_progress = gtk_label_new(nullptr);
         gtk_label_set_xalign(GTK_LABEL(g_devices.lbl_bt_progress), 0.0);
         gtk_label_set_line_wrap(GTK_LABEL(g_devices.lbl_bt_progress), TRUE);
+        gtk_label_set_line_wrap_mode(GTK_LABEL(g_devices.lbl_bt_progress), PANGO_WRAP_WORD_CHAR);
         gtk_style_context_add_class(gtk_widget_get_style_context(g_devices.lbl_bt_progress), "muted");
         gtk_box_pack_start(GTK_BOX(bt_box), g_devices.lbl_bt_progress, FALSE, FALSE, 0);
 
@@ -1823,7 +1828,11 @@ namespace tether::ui {
 
         gtk_stack_add_named(GTK_STACK(g_devices.right_pane_stack), action_page, "action");
 
-        gtk_paned_pack2(GTK_PANED(paned), g_devices.right_pane_stack, TRUE, FALSE);
+        GtkWidget* right_scroll = gtk_scrolled_window_new(nullptr, nullptr);
+        gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(right_scroll), GTK_POLICY_AUTOMATIC, GTK_POLICY_NEVER);
+        gtk_scrolled_window_set_propagate_natural_width(GTK_SCROLLED_WINDOW(right_scroll), TRUE);
+        gtk_container_add(GTK_CONTAINER(right_scroll), g_devices.right_pane_stack);
+        gtk_paned_pack2(GTK_PANED(paned), right_scroll, TRUE, FALSE);
         gtk_stack_set_visible_child_name(GTK_STACK(g_devices.right_pane_stack), "placeholder");
 
         return paned;

@@ -72,6 +72,7 @@ namespace tether::ui {
             GtkWidget* app_label = gtk_label_new(nullptr);
             gtk_label_set_markup(GTK_LABEL(app_label), ("<b>" + escape_markup(app) + "</b>").c_str());
             gtk_label_set_xalign(GTK_LABEL(app_label), 0.0);
+            gtk_label_set_ellipsize(GTK_LABEL(app_label), PANGO_ELLIPSIZE_END);
             gtk_box_pack_start(GTK_BOX(header), app_label, TRUE, TRUE, 0);
 
             if (!stamp.empty()) {
@@ -99,6 +100,7 @@ namespace tether::ui {
             GtkWidget* detail_label = gtk_label_new(detail.c_str());
             gtk_label_set_xalign(GTK_LABEL(detail_label), 0.0);
             gtk_label_set_line_wrap(GTK_LABEL(detail_label), TRUE);
+            gtk_label_set_line_wrap_mode(GTK_LABEL(detail_label), PANGO_WRAP_WORD_CHAR);
             gtk_label_set_selectable(GTK_LABEL(detail_label), TRUE);
             gtk_box_pack_start(GTK_BOX(box), detail_label, FALSE, FALSE, 0);
 
@@ -113,6 +115,7 @@ namespace tether::ui {
                 GtkWidget* body_label = gtk_label_new(secondary.c_str());
                 gtk_label_set_xalign(GTK_LABEL(body_label), 0.0);
                 gtk_label_set_line_wrap(GTK_LABEL(body_label), TRUE);
+                gtk_label_set_line_wrap_mode(GTK_LABEL(body_label), PANGO_WRAP_WORD_CHAR);
                 gtk_label_set_selectable(GTK_LABEL(body_label), TRUE);
                 gtk_style_context_add_class(gtk_widget_get_style_context(body_label), "muted");
                 gtk_box_pack_start(GTK_BOX(box), body_label, FALSE, FALSE, 0);
@@ -182,6 +185,7 @@ namespace tether::ui {
         gtk_box_pack_start(GTK_BOX(status_box), icon, FALSE, FALSE, 0);
         g_notifications.status_label = gtk_label_new(_("Waiting for the iPhone."));
         gtk_label_set_line_wrap(GTK_LABEL(g_notifications.status_label), TRUE);
+        gtk_label_set_line_wrap_mode(GTK_LABEL(g_notifications.status_label), PANGO_WRAP_WORD_CHAR);
         gtk_label_set_justify(GTK_LABEL(g_notifications.status_label), GTK_JUSTIFY_CENTER);
         gtk_style_context_add_class(gtk_widget_get_style_context(g_notifications.status_label), "muted");
         gtk_box_pack_start(GTK_BOX(status_box), g_notifications.status_label, FALSE, FALSE, 0);
