@@ -25,12 +25,16 @@ namespace tether {
 
         bool clipboard_available() const { return clipboard_ != nullptr; }
         void set_clipboard_callback(std::function<void(const std::string&)> cb);
+        void set_clipboard_image_callback(std::function<void(const std::string&)> cb);
         void copy_to_clipboard(const std::string& text);
+        void copy_image_to_clipboard(const std::string& png);
         std::string get_clipboard();
+        std::string get_clipboard_image();
 
     private:
         std::mutex clip_mutex_;
         std::string cached_clipboard_;
+        std::string cached_clipboard_image_;
         EpollEventLoop& loop_;
         wl_display* raw_display_ = nullptr;
         std::unique_ptr<CCWlDisplay> display_;
@@ -42,6 +46,7 @@ namespace tether {
         std::unique_ptr<ClipboardManager> clipboard_;
 
         std::function<void(const std::string&)> clipboard_cb_;
+        std::function<void(const std::string&)> clipboard_image_cb_;
     };
 
     extern WaylandContext* g_wayland;

@@ -24,10 +24,7 @@ namespace tether {
             seat_.reset();
             registry_.reset();
 
-            // High-level wrapper for the display itself. We must NOT let it call
-            // wl_proxy_destroy on the raw_display_, as wl_display_disconnect
-            // handles that. We simply release the unique_ptr here to prevent its
-            // destructor from running.
+            // High-level wrapper for the display itself.
             if (display_) {
                 display_.release();
             }
@@ -94,27 +91,32 @@ namespace tether {
             return false;
         }
 
-        clipboard_->set_update_callback([this](const std::string& text) {
+        clipboard_->set_update_callback([this](const std::string& data, const std::string& mime) {
+            const bool is_image = mime == CLIPBOARD_IMAGE_MIME;
             bool changed = false;
             {
                 std::lock_guard<std::mutex> lock(clip_mutex_);
-                if (cached_clipboard_ != text) {
-                    cached_clipboard_ = text;
-                    changed = true;
+                if (is_image) {
+                    changed = cached_clipboard_image_ != data;
+                    cached_clipboard_image_ = data;
+                } else {
+                    changed = cached_clipboard_ != data || !cached_clipboard_image_.empty();
+                    cached_clipboard_ = data;
+                    cached_clipboard_image_.clear();
                 }
             }
-            if (changed && clipboard_cb_) {
-                clipboard_cb_(text);
+            if (!changed)
+                return;
+            if (is_image && clipboard_image_cb_) {
+                clipboard_image_cb_(data);
+            } else if (!is_image && clipboard_cb_) {
+                clipboard_cb_(data);
             }
         });
 
         // Attach to event loop!
         int fd = wl_display_get_fd(raw_display_);
         loop_.addFd(fd, [this](int wfd) {
-            // Compositor gone: the wl socket peer closes and epoll is level-triggered,
-            // so this callback fires nonstop. wl_display_dispatch keeps returning >=0
-            // (never surfaces the hangup), so the old dispatch<0 guard never triggers
-            // and we peg a core. POLLHUP/POLLERR is the kernel's ground-truth signal.
             struct pollfd pfd{wfd, 0, 0};
             if (poll(&pfd, 1, 0) == 1 && (pfd.revents & (POLLHUP | POLLERR))) {
                 debug::log(ERR, "WaylandContext: compositor hung up; exiting for on-demand restart.");
@@ -122,8 +124,7 @@ namespace tether {
                 return;
             }
             if (wl_display_dispatch(raw_display_) < 0) {
-                // Display connection is dead (compositor stopped).
-                // We choose to exit here rather than attempt to reconnect.
+                // Display connection is dead
                 debug::log(ERR, "WaylandContext: Display connection lost; shutting down for on-demand restart.");
                 loop_.stop();
                 return;
@@ -142,6 +143,10 @@ namespace tether {
         clipboard_cb_ = std::move(cb);
     }
 
+    void WaylandContext::set_clipboard_image_callback(std::function<void(const std::string&)> cb) {
+        clipboard_image_cb_ = std::move(cb);
+    }
+
     void WaylandContext::copy_to_clipboard(const std::string& text) {
         std::string trimmed = text;
         while (!trimmed.empty() && (trimmed.back() == '\0' || isspace((unsigned char)trimmed.back()))) {
@@ -151,6 +156,7 @@ namespace tether {
         {
             std::lock_guard<std::mutex> lock(clip_mutex_);
             cached_clipboard_ = trimmed;
+            cached_clipboard_image_.clear();
         }
         if (clipboard_) {
             clipboard_->copy(text);
@@ -158,9 +164,26 @@ namespace tether {
         }
     }
 
+    void WaylandContext::copy_image_to_clipboard(const std::string& png) {
+        {
+            // cached first, so the compositor echoing our own selection is not rebroadcast
+            std::lock_guard<std::mutex> lock(clip_mutex_);
+            cached_clipboard_image_ = png;
+        }
+        if (clipboard_) {
+            clipboard_->copy_image(png);
+            wl_display_flush(raw_display_);
+        }
+    }
+
     std::string WaylandContext::get_clipboard() {
         std::lock_guard<std::mutex> lock(clip_mutex_);
         return cached_clipboard_;
+    }
+
+    std::string WaylandContext::get_clipboard_image() {
+        std::lock_guard<std::mutex> lock(clip_mutex_);
+        return cached_clipboard_image_;
     }
 
 } // namespace tether

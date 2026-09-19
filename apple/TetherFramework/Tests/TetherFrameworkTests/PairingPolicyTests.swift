@@ -33,6 +33,7 @@ struct PairingPolicyTests {
         #expect(!TetherCommand.allowedWhileUnpaired(.clipboardUpdated, inbound: false))
         #expect(!TetherCommand.allowedWhileUnpaired(.clipboardContent, inbound: false))
         #expect(!TetherCommand.allowedWhileUnpaired(.fileStart, inbound: false))
+        #expect(!TetherCommand.allowedWhileUnpaired(.hello, inbound: false))
         #expect(!TetherCommand.allowedWhileUnpaired(nil, inbound: false))
     }
 }
