@@ -20,6 +20,8 @@ public enum TetherCommand: String, Codable, Sendable {
     case fileEnd = "file_end"
     case pairRequest = "pair_request"
     case newOtp = "new_otp"
+    // Both directions: announces optional protocol features.
+    case hello = "hello"
 
     // Daemon → Client
     case clipboardUpdated = "clipboard_updated"
@@ -60,6 +62,11 @@ public struct TetherMessage: Codable, Sendable {
     public var transferId: String?
     public var chunkIndex: Int?
     public var data: String? // Base64 encoded chunk
+    // Set on file_start when the file is a clipboard image: "set", "updated" or "content".
+    public var clipboard: String?
+
+    // hello
+    public var features: [String]?
 
     // Pairing
     public var deviceName: String?
@@ -76,7 +83,7 @@ public struct TetherMessage: Codable, Sendable {
         case command, content, filename, size
         case transferId = "transfer_id"
         case chunkIndex = "chunk_index"
-        case data
+        case data, clipboard, features
         case deviceName = "device_name"
         case otp, source
         case status, message
@@ -94,7 +101,9 @@ public struct TetherMessage: Codable, Sendable {
         otp: String? = nil,
         source: String? = nil,
         status: String? = nil,
-        message: String? = nil
+        message: String? = nil,
+        clipboard: String? = nil,
+        features: [String]? = nil
     ) {
         self.command = command
         self.content = content
@@ -108,6 +117,8 @@ public struct TetherMessage: Codable, Sendable {
         self.source = source
         self.status = status
         self.message = message
+        self.clipboard = clipboard
+        self.features = features
     }
 }
 
@@ -122,6 +133,11 @@ extension TetherMessage {
     // Create an `open_url` message; tetherd opens only http(s) links.
     public static func openUrl(_ url: String) -> TetherMessage {
         TetherMessage(command: TetherCommand.openUrl.rawValue, content: url)
+    }
+
+    // Create a `hello` announcing the optional features this client supports.
+    public static func hello(features: [String]) -> TetherMessage {
+        TetherMessage(command: TetherCommand.hello.rawValue, features: features)
     }
 
     // Create a `clipboard_get` request.
@@ -146,12 +162,13 @@ extension TetherMessage {
     }
 
     // Create a `file_start` message.
-    public static func fileStart(filename: String, size: Int64, transferId: String) -> TetherMessage {
+    public static func fileStart(filename: String, size: Int64, transferId: String, clipboard: String? = nil) -> TetherMessage {
         TetherMessage(
             command: TetherCommand.fileStart.rawValue,
             filename: filename,
             size: size,
-            transferId: transferId
+            transferId: transferId,
+            clipboard: clipboard
         )
     }
 

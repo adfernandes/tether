@@ -162,6 +162,7 @@ int main(int argc, char** argv) {
             // app can still mislabel binary as text/plain. Don't abort the daemon.
             tether::broadcast_message(j.dump(-1, ' ', false, nlohmann::json::error_handler_t::replace));
         });
+        wayland_srv.set_clipboard_image_callback([](const std::string& png) { tether::broadcast_clipboard_image(png); });
     }
 
     tether::FileReceiveManager file_mgr;

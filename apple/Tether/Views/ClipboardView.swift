@@ -141,7 +141,11 @@ struct ClipboardView: View {
 
     private func clipboardEntryRow(_ entry: ClipboardEntry) -> some View {
         Button {
-            viewModel.copyToLocalClipboard(entry.content)
+            if let image = entry.image {
+                viewModel.copyImageToLocalClipboard(image)
+            } else {
+                viewModel.copyToLocalClipboard(entry.content)
+            }
         } label: {
             HStack(alignment: .top, spacing: 12) {
                 Image(systemName: entry.source.isRemote ? "desktopcomputer" : "iphone")
@@ -152,10 +156,19 @@ struct ClipboardView: View {
                     .accessibilityHidden(true)
 
                 VStack(alignment: .leading, spacing: 4) {
-                    Text(entry.content)
-                        .font(.subheadline)
-                        .foregroundStyle(.primary)
-                        .lineLimit(3)
+                    if let data = entry.image, let image = UIImage(data: data) {
+                        Image(uiImage: image)
+                            .resizable()
+                            .scaledToFit()
+                            .frame(maxHeight: 120)
+                            .clipShape(RoundedRectangle(cornerRadius: 8))
+                            .accessibilityLabel(entry.content)
+                    } else {
+                        Text(entry.content)
+                            .font(.subheadline)
+                            .foregroundStyle(.primary)
+                            .lineLimit(3)
+                    }
 
                     HStack(spacing: 6) {
                         Text(entry.source.displayName)

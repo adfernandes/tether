@@ -15,6 +15,7 @@
 #include <sys/wait.h>
 #include <unistd.h>
 
+#include "tether/base64.hpp"
 #include "tether/bluetooth/airpods.hpp"
 #include "tether/bluetooth/config.hpp"
 #include "tether/bluetooth/connection.hpp"
@@ -54,7 +55,8 @@ namespace tether {
 
     struct ClientSession {
         int fd;
-        SSL* ssl; // nullptr for plain unix clients
+        SSL* ssl;                      // nullptr for plain unix clients
+        bool clipboard_images = false; // announced in hello
     };
 
     // Global list of active connected sessions
@@ -827,6 +829,98 @@ namespace tether {
         return recipients;
     }
 
+    std::vector<std::string> clipboard_image_messages(const std::string& png, const std::string& kind) {
+        constexpr size_t CHUNK_BYTES = 512 * 1024;
+        if (png.size() > CLIPBOARD_IMAGE_MAX_BYTES) {
+            debug::log(WARN, "clipboard image of {} bytes exceeds the transfer cap; not sent", png.size());
+            return {};
+        }
+        if (png.empty())
+            return {};
+
+        static std::atomic<unsigned> seq{0};
+        const std::string id = "clip_" + std::to_string(time(nullptr)) + "_" + std::to_string(seq++);
+
+        nlohmann::json start{{"command", "file_start"}, {"filename", "clipboard.png"}, {"transfer_id", id}};
+        start["size"] = png.size();
+        start["clipboard"] = kind;
+        std::vector<std::string> out{start.dump()};
+        for (size_t off = 0, idx = 0; off < png.size(); off += CHUNK_BYTES, ++idx) {
+            const size_t len = std::min(CHUNK_BYTES, png.size() - off);
+            nlohmann::json chunk{{"command", "file_chunk"}, {"transfer_id", id}, {"chunk_index", idx}};
+            chunk["data"] = base64_encode(reinterpret_cast<const unsigned char*>(png.data() + off), len);
+            out.push_back(chunk.dump());
+        }
+        out.push_back(nlohmann::json{{"command", "file_end"}, {"transfer_id", id}}.dump());
+        return out;
+    }
+
+    void broadcast_clipboard_image(const std::string& png, int exclude_fd) {
+        const auto msgs = clipboard_image_messages(png, "updated");
+        std::lock_guard<std::mutex> lock(g_sessions_mutex);
+        for (auto const& [fd, session] : active_sessions) {
+            if (fd == exclude_fd || !session.ssl || !session.clipboard_images)
+                continue;
+            for (const auto& m : msgs) {
+                const std::string packet = m + "\n";
+                robust_ssl_write(session.ssl, packet.c_str(), packet.size());
+            }
+        }
+    }
+
+    bool session_accepts_clipboard_images(int fd) {
+        std::lock_guard<std::mutex> lock(g_sessions_mutex);
+        auto it = active_sessions.find(fd);
+        return it != active_sessions.end() && it->second.clipboard_images;
+    }
+
+    static void set_session_clipboard_images(int fd) {
+        std::lock_guard<std::mutex> lock(g_sessions_mutex);
+        if (auto it = active_sessions.find(fd); it != active_sessions.end())
+            it->second.clipboard_images = true;
+    }
+
+    bool ClipboardImageReceiver::start(const std::string& transfer_id, size_t size) {
+        id_.clear();
+        data_.clear();
+        if (transfer_id.empty() || size == 0 || size > CLIPBOARD_IMAGE_MAX_BYTES) {
+            debug::log(WARN, "clipboard image of {} bytes rejected", size);
+            return false;
+        }
+        id_ = transfer_id;
+        expected_ = size;
+        data_.reserve(size);
+        return true;
+    }
+
+    bool ClipboardImageReceiver::chunk(const std::string& transfer_id, const std::string& b64_data) {
+        if (id_.empty() || transfer_id != id_)
+            return false;
+        auto bytes = base64_decode(b64_data);
+        if (data_.size() + bytes.size() > expected_) {
+            debug::log(WARN, "clipboard image overran its declared size; dropped");
+            id_.clear();
+            data_.clear();
+            return true;
+        }
+        data_.append(bytes.begin(), bytes.end());
+        return true;
+    }
+
+    std::string ClipboardImageReceiver::finish(const std::string& transfer_id) {
+        if (id_.empty() || transfer_id != id_)
+            return {};
+        id_.clear();
+        std::string png = std::move(data_);
+        data_.clear();
+        static constexpr std::string_view PNG_SIGNATURE{"\x89PNG\r\n\x1a\n", 8};
+        if (png.size() != expected_ || !png.starts_with(PNG_SIGNATURE)) {
+            debug::log(WARN, "clipboard image incomplete or not a PNG; dropped");
+            return {};
+        }
+        return png;
+    }
+
     std::string get_runtime_dir() {
         std::filesystem::path base;
         if (const char* xdg_runtime = std::getenv("XDG_RUNTIME_DIR")) {
@@ -1366,10 +1460,14 @@ namespace tether {
                             continue;
                         }
                     } else if (j.contains("command") && j["command"] == "clipboard_send") {
+                        const std::string image = g_wayland ? g_wayland->get_clipboard_image() : std::string{};
+                        if (!image.empty())
+                            broadcast_clipboard_image(image);
                         nlohmann::json resp;
                         resp["command"] = "clipboard_content";
                         resp["content"] = g_wayland ? g_wayland->get_clipboard() : std::string{};
-                        if (!resp["content"].get_ref<const std::string&>().empty()) {
+                        // with an image selected the cached text is stale don't push it
+                        if (image.empty() && !resp["content"].get_ref<const std::string&>().empty()) {
                             nlohmann::json bc;
                             bc["command"] = "clipboard_updated";
                             bc["content"] = resp["content"];
@@ -1616,6 +1714,7 @@ namespace tether {
         }
 
         client_buffers_.erase(fd);
+        clipboard_images_.erase(fd);
         ssl_handshake_complete_.erase(fd);
         client_paired_.erase(fd);
         client_info_.erase(fd);
@@ -2034,11 +2133,32 @@ namespace tether {
                         bc["command"] = "clipboard_updated";
                         bc["content"] = content;
                         broadcast_message(bc.dump(), client_fd);
+                    } else if (j.contains("command") && j["command"] == "hello") {
+                        // feature negotiation. old daemons answer "OK"
+                        const auto features = j.value("features", nlohmann::json::array());
+                        if (features.is_array() &&
+                            std::find(features.begin(), features.end(), "clipboard_image") != features.end())
+                            set_session_clipboard_images(client_fd);
+                        nlohmann::json resp{{"command", "hello"}};
+                        resp["features"] = nlohmann::json::array({"clipboard_image"});
+                        std::string payload = resp.dump() + "\n";
+                        robust_ssl_write(ssl, payload.c_str(), payload.size());
+                        continue;
                     } else if (j.contains("command") && j["command"] == "open_url" && j.contains("content") &&
                                j["content"].is_string()) {
                         open_web_url(j["content"].get<std::string>());
                     } else if (j.contains("command") && j["command"] == "clipboard_get") {
                         if (g_wayland) {
+                            std::vector<std::string> image;
+                            if (session_accepts_clipboard_images(client_fd))
+                                image = clipboard_image_messages(g_wayland->get_clipboard_image(), "content");
+                            if (!image.empty()) {
+                                for (auto& m : image) {
+                                    m += "\n";
+                                    robust_ssl_write(ssl, m.c_str(), m.size());
+                                }
+                                continue;
+                            }
                             nlohmann::json resp;
                             resp["command"] = "clipboard_content";
                             resp["content"] = g_wayland->get_clipboard();
@@ -2053,12 +2173,25 @@ namespace tether {
                         robust_ssl_write(ssl, payload.c_str(), payload.size());
                         continue;
                     } else if (j.contains("command") && j["command"] == "file_start") {
-                        if (g_file_manager)
+                        // A clipboard image goes to the clipboard, not Downloads.
+                        if (j.contains("clipboard"))
+                            clipboard_images_[client_fd].start(j["transfer_id"], j["size"]);
+                        else if (g_file_manager)
                             g_file_manager->handle_start(j["transfer_id"], j["filename"], j["size"]);
                     } else if (j.contains("command") && j["command"] == "file_chunk") {
-                        if (g_file_manager)
+                        if (!clipboard_images_[client_fd].chunk(j["transfer_id"], j["data"]) && g_file_manager)
                             g_file_manager->handle_chunk(j["transfer_id"], j["chunk_index"], j["data"]);
                     } else if (j.contains("command") && j["command"] == "file_end") {
+                        if (std::string png = clipboard_images_[client_fd].finish(j["transfer_id"]); !png.empty()) {
+                            if (g_wayland)
+                                g_wayland->copy_image_to_clipboard(png);
+                            broadcast_clipboard_image(png, client_fd);
+                            nlohmann::json resp{{"command", "file_status"}, {"status", "success"}};
+                            resp["transfer_id"] = j["transfer_id"];
+                            std::string payload = resp.dump() + "\n";
+                            robust_ssl_write(ssl, payload.c_str(), payload.size());
+                            continue;
+                        }
                         if (g_file_manager && g_file_manager->handle_end(j["transfer_id"])) {
                             nlohmann::json resp;
                             resp["command"] = "file_status";

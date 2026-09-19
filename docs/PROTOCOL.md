@@ -10,6 +10,22 @@ All communication happens via **newline-delimited JSON**. Every individual comma
 
 If a payload arrives that cannot be parsed as JSON, the daemon will gracefully ignore it. After successfully processing a message, the server currently sends an ad-hoc text response `OK\n`, though standard JSON responses may replace this over time.
 
+### `hello` (both directions, paired only)
+
+**Description**: Feature negotiation. A paired client sends it once connected, and the daemon answers with its own. Each side uses a feature only after the other has announced it. An older daemon answers `OK`, which means no optional features.
+
+**Payload**:
+```json
+{
+  "command": "hello",
+  "features": ["clipboard_image"]
+}
+```
+
+| Feature | Meaning |
+|---|---|
+| `clipboard_image` | [Clipboard images](#clipboard-images-both-directions) |
+
 ---
 
 ## 1. Clipboard Sync
@@ -67,6 +83,18 @@ The clipboard capabilities allow seamless copying and pasting between the Host (
 ### `clipboard_send` (Local client -> Daemon)
 
 **Description**: Local socket only. Broadcasts the current Host clipboard to clients as `clipboard_updated`, and replies with `clipboard_content`. Nothing is broadcast when the clipboard is empty.
+
+---
+
+### Clipboard images (both directions)
+
+Needs `clipboard_image` from both sides' [`hello`](#hello-both-directions-paired-only). A PNG travels as a [file transfer](#2-file-transfers) named `clipboard.png`. Its `file_start` carries a `"clipboard"` field:
+
+- `"set"` (Client -> Daemon): treated like `clipboard_set`. The daemon puts the PNG on the Wayland clipboard as `image/png` and relays it to other clients as `"updated"`. It is dropped unless every declared byte arrives and it starts with the PNG signature.
+- `"updated"` (Daemon -> Clients): the Host selection changed to one that offers `image/png` and no text type. Treated like `clipboard_updated`.
+- `"content"` (Daemon -> Client): the reply to `clipboard_get` when the selection is an image. Treated like `clipboard_content`.
+
+Images over 32 MB are not sent or accepted. A client without `clipboard_image` gets no images. Its `clipboard_get` returns the last copied text.
 
 ---
 
