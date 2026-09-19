@@ -9,6 +9,7 @@
 #include "tether/bluetooth/pairing.hpp"
 #include "tether/bluetooth/pbap_session.hpp"
 #include "tether/log.hpp"
+#include "tether/net.hpp"
 #include "tether/secret_store.hpp"
 #include "tether/session_lock.hpp"
 #include <tether/i18n.hpp>
@@ -238,6 +239,36 @@ namespace tether::bluetooth {
                 g_journal.append(*updated);
         }
         return true;
+    }
+
+    void mark_messages_read_async(std::vector<std::string> handles, bool read) {
+        if (handles.empty())
+            return;
+
+        std::thread([handles = std::move(handles), read]() {
+            int changed = 0;
+            int synced = 0;
+            std::string last_err;
+            for (const auto& handle : handles) {
+                std::string err;
+                bool handle_synced = false;
+                if (mark_message_read(handle, read, err, &handle_synced))
+                    ++changed;
+                if (handle_synced)
+                    ++synced;
+                if (!err.empty())
+                    last_err = err;
+            }
+            nlohmann::json event;
+            event["command"] = "bt_message_read";
+            event["handles"] = handles;
+            event["read"] = read;
+            event["success"] = changed > 0;
+            event["synced"] = synced;
+            if (!last_err.empty())
+                event["message"] = last_err;
+            broadcast_local_event(event.dump());
+        }).detach();
     }
 
     namespace {

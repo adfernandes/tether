@@ -2,10 +2,10 @@
 #include <csignal>
 #include <cstdio>
 #include <cstdlib>
-#include <string_view>
 #include <ctime>
 #include <mutex>
 #include <nlohmann/json.hpp>
+#include <string_view>
 #include <sys/timerfd.h>
 #include <tether/audio.hpp>
 #include <tether/bluetooth/airpods.hpp>
@@ -162,7 +162,8 @@ int main(int argc, char** argv) {
             // app can still mislabel binary as text/plain. Don't abort the daemon.
             tether::broadcast_message(j.dump(-1, ' ', false, nlohmann::json::error_handler_t::replace));
         });
-        wayland_srv.set_clipboard_image_callback([](const std::string& png) { tether::broadcast_clipboard_image(png); });
+        wayland_srv.set_clipboard_image_callback(
+            [](const std::string& png) { tether::broadcast_clipboard_image(png); });
     }
 
     tether::FileReceiveManager file_mgr;
@@ -178,12 +179,16 @@ int main(int argc, char** argv) {
     });
     tether::g_file_manager = &file_mgr;
 
-    notifier.set_copy_handler([&loop](const std::string& code) {
+    notifier.set_copy_handler([&loop](const std::string& code, const std::string& handle) {
         // libnotify dispatches actions on its own thread; the clipboard belongs to the loop.
         loop.post([code] {
             if (tether::g_wayland)
                 tether::g_wayland->copy_to_clipboard(code);
         });
+
+        // copying the code is having read the message
+        if (!handle.empty())
+            tether::bluetooth::mark_messages_read_async({handle}, true);
     });
 
     if (notifier_ready) {
@@ -254,7 +259,9 @@ int main(int argc, char** argv) {
                              tether::bluetooth::ancs::icon_candidates(as_notification),
                              false,
                              repliable ? message.thread_key : std::string{},
-                             otp});
+                             otp,
+                             "",
+                             message.handle});
         });
 
     auto bt_config = tether::bluetooth::load_config();
