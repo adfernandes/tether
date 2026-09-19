@@ -1210,34 +1210,7 @@ namespace tether {
                         } else if (j["handle"].is_string()) {
                             handles.push_back(j["handle"].get<std::string>());
                         }
-                        const bool read = j.value("read", true);
-
-                        if (!handles.empty()) {
-                            std::thread([handles, read]() {
-                                int changed = 0;
-                                int synced = 0;
-                                std::string last_err;
-                                for (const auto& handle : handles) {
-                                    std::string err;
-                                    bool handle_synced = false;
-                                    if (bluetooth::mark_message_read(handle, read, err, &handle_synced))
-                                        ++changed;
-                                    if (handle_synced)
-                                        ++synced;
-                                    if (!err.empty())
-                                        last_err = err;
-                                }
-                                nlohmann::json event;
-                                event["command"] = "bt_message_read";
-                                event["handles"] = handles;
-                                event["read"] = read;
-                                event["success"] = changed > 0;
-                                event["synced"] = synced;
-                                if (!last_err.empty())
-                                    event["message"] = last_err;
-                                broadcast_local_event(event.dump());
-                            }).detach();
-                        }
+                        bluetooth::mark_messages_read_async(std::move(handles), j.value("read", true));
                     } else if (j.contains("command") && j["command"] == "bt_send_message" && j.contains("thread") &&
                                j.contains("body")) {
                         std::string thread = j["thread"];

@@ -22,6 +22,9 @@ namespace tether {
         std::string otp_code;
         // Originating iPhone bundle id.
         std::string app_id;
+        // MAP handle to mark read when the code is copied. Empty for
+        // notifications with no message behind them.
+        std::string read_handle;
     };
 
     class DesktopNotifier {
@@ -34,9 +37,10 @@ namespace tether {
 
         bool init();
 
-        // Where the "Copy Code" action sends the code. Called on the notifier's
-        // own thread, so the handler is responsible for any thread hop it needs.
-        void set_copy_handler(std::function<void(const std::string&)> handler);
+        // Where the "Copy Code" action sends the code, along with the spec's
+        // read_handle. Called on the notifier's own thread, so the handler is
+        // responsible for any thread hop it needs.
+        void set_copy_handler(std::function<void(const std::string& code, const std::string& handle)> handler);
 
         void notify_file_arrived(const std::filesystem::path& path);
 

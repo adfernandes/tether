@@ -101,10 +101,11 @@ namespace tether {
 
         struct NotificationActionData {
             std::string payload;
+            std::string handle;
         };
 
         // Set once during startup, before any notification exists.
-        std::function<void(const std::string&)> g_copy_handler;
+        std::function<void(const std::string&, const std::string&)> g_copy_handler;
 
         void free_request(gpointer data) { delete static_cast<NotificationRequest*>(data); }
 
@@ -149,7 +150,7 @@ namespace tether {
         void on_copy_code_action(NotifyNotification*, char*, gpointer user_data) {
             auto* action = static_cast<NotificationActionData*>(user_data);
             if (action && g_copy_handler)
-                g_copy_handler(action->payload);
+                g_copy_handler(action->payload, action->handle);
         }
 
         void on_reply_action(NotifyNotification*, char*, gpointer user_data) {
@@ -323,7 +324,7 @@ namespace tether {
                                                "copy-code",
                                                _("Copy Code"),
                                                on_copy_code_action,
-                                               new NotificationActionData{spec->otp_code},
+                                               new NotificationActionData{spec->otp_code, spec->read_handle},
                                                free_action_data);
             }
 
@@ -408,7 +409,8 @@ namespace tether {
         return true;
     }
 
-    void DesktopNotifier::set_copy_handler(std::function<void(const std::string&)> handler) {
+    void DesktopNotifier::set_copy_handler(
+        std::function<void(const std::string& code, const std::string& handle)> handler) {
         g_copy_handler = std::move(handler);
     }
 
