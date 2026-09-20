@@ -214,6 +214,7 @@ final class TetherViewModel {
         case .active:
             manualDisconnect = false
             reconnectAttempts = 0
+            startServer()
             refreshDiscovery()
         case .background:
             pendingReconnectTask?.cancel()
@@ -521,10 +522,16 @@ final class TetherViewModel {
         server.onNewConnection = { [weak self] incomingConn, incomingFingerprint in
             guard let self = self else { return }
 
-            // A live or in-flight session is not displaced by a stranger dialling in.
-            guard self.appState == .disconnected || self.appState == .discovering else {
+            guard self.appState != .connected else {
                 incomingConn.cancel()
                 return
+            }
+            if self.appState == .connecting || self.appState == .pairing {
+                self.cancelConnectTimeout()
+                self.pendingReconnectTask?.cancel()
+                self.pendingReconnectTask = nil
+                self.autoConnectingFingerprint = nil
+                self.showPairingSheet = false
             }
 
             // We just received an incoming connection from a peer!

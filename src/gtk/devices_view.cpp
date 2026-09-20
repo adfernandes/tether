@@ -613,6 +613,7 @@ namespace tether::ui {
             nlohmann::json j;
             j["command"] = "accept_device";
             j["fingerprint"] = g_devices.selected_device_fp;
+            j["device_name"] = g_devices.selected_device_name;
             daemon_send(j);
         }
 
