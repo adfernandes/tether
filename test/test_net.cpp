@@ -598,3 +598,38 @@ TEST(ShouldDialPeer, SkipsUnknownIncompleteAndSelf) {
     EXPECT_FALSE(tether::should_dial_peer("aaa", "", true)); // peer published no fp= TXT record
     EXPECT_FALSE(tether::should_dial_peer("aaa", "aaa", true));
 }
+
+// A pairing request whose peer never came back used to sit in the device list
+// forever, and every run of a test suite added another.
+TEST(PendingPairs, DropsRequestsPastTheTtl) {
+    const int64_t now = 1'700'000'000;
+    nlohmann::json raw;
+    raw["fresh"] = {{"name", "iPhone"}, {"ts", now - 60}};
+    raw["stale"] = {{"name", "test phone"}, {"ts", now - 7200}};
+
+    const auto live = tether::prune_pending_pairs(raw, now);
+    EXPECT_TRUE(live.contains("fresh"));
+    EXPECT_FALSE(live.contains("stale"));
+    EXPECT_EQ(live["fresh"]["name"], "iPhone");
+}
+
+TEST(PendingPairs, AgesTheLegacyBareNameFormatFromNow) {
+    const int64_t now = 1'700'000'000;
+    nlohmann::json raw;
+    raw["old"] = "iPhone";
+
+    const auto live = tether::prune_pending_pairs(raw, now);
+    ASSERT_TRUE(live.contains("old"));
+    EXPECT_EQ(live["old"]["name"], "iPhone");
+    EXPECT_EQ(live["old"]["ts"], now);
+    // Migrated, not immortal.
+    EXPECT_TRUE(tether::prune_pending_pairs(live, now + 7200).empty());
+}
+
+TEST(PendingPairs, IgnoresJunkEntries) {
+    nlohmann::json raw;
+    raw["no_name"] = {{"ts", 1}};
+    raw["wrong_type"] = 42;
+    EXPECT_TRUE(tether::prune_pending_pairs(raw, 1'700'000'000).empty());
+    EXPECT_TRUE(tether::prune_pending_pairs(nlohmann::json::array(), 1).empty());
+}

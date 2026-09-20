@@ -20,6 +20,7 @@ namespace tether::ui {
 
         struct DevicesState {
             std::vector<tether::DiscoveredDevice> discovered_devices;
+            std::vector<tether::DiscoveredDevice> unpaired_clients;
             std::vector<tether::DiscoveredDevice> pending_pairing_requests;
             std::vector<std::pair<std::string, std::string>> paired_devices; // fp, name
             std::vector<std::string> connected_fps;                          // active connections
@@ -837,6 +838,7 @@ namespace tether::ui {
             g_devices.clipboard_ok = j.value("clipboard_available", true);
             g_devices.firewall_active = j.value("firewall_active", false);
             g_devices.connected_fps.clear();
+            g_devices.unpaired_clients.clear();
             if (j.contains("connected_clients") && j["connected_clients"].is_array()) {
                 for (auto& c : j["connected_clients"]) {
                     if (c.value("paired", false)) {
@@ -846,7 +848,7 @@ namespace tether::ui {
                         dev.fingerprint = c.value("fingerprint", "");
                         dev.name = c.value("device_name", _("Unknown Device"));
                         dev.addresses.push_back({c.value("address", ""), 5134});
-                        g_devices.discovered_devices.push_back(dev);
+                        g_devices.unpaired_clients.push_back(dev);
                     }
                 }
             }
@@ -1034,22 +1036,28 @@ namespace tether::ui {
             }
         }
 
-        for (const auto& disc : g_devices.discovered_devices) {
-            if (disc.fingerprint == my_fp)
-                continue;
-            bool is_paired = false;
-            for (const auto& p : g_devices.paired_devices) {
-                if (p.first == disc.fingerprint) {
-                    is_paired = true;
-                    break;
+        std::vector<std::string> shown_fps;
+        for (const auto* source : {&g_devices.discovered_devices, &g_devices.unpaired_clients}) {
+            for (const auto& disc : *source) {
+                if (disc.fingerprint == my_fp)
+                    continue;
+                if (std::find(shown_fps.begin(), shown_fps.end(), disc.fingerprint) != shown_fps.end())
+                    continue;
+                bool is_paired = false;
+                for (const auto& p : g_devices.paired_devices) {
+                    if (p.first == disc.fingerprint) {
+                        is_paired = true;
+                        break;
+                    }
                 }
+                if (is_paired)
+                    continue; // already added above
+                shown_fps.push_back(disc.fingerprint);
+                std::string ip = disc.addresses.empty() ? "" : disc.addresses[0].address;
+                uint16_t port = disc.addresses.empty() ? 5134 : disc.addresses[0].port;
+                GtkWidget* r = create_row(disc.name, disc.fingerprint, ip, port, false, false);
+                discovered_rows.push_back(r);
             }
-            if (is_paired)
-                continue; // already added above
-            std::string ip = disc.addresses.empty() ? "" : disc.addresses[0].address;
-            uint16_t port = disc.addresses.empty() ? 5134 : disc.addresses[0].port;
-            GtkWidget* r = create_row(disc.name, disc.fingerprint, ip, port, false, false);
-            discovered_rows.push_back(r);
         }
 
         // Render Pending Pair Requests
@@ -1064,15 +1072,8 @@ namespace tether::ui {
             if (is_paired)
                 continue; // ignore if they successfully paired
 
-            bool already_shown = false;
-            for (const auto& disc : g_devices.discovered_devices) {
-                if (disc.fingerprint == req.fingerprint) {
-                    already_shown = true;
-                    break;
-                }
-            }
-            if (already_shown)
-                continue; // ignore if mDNS already populated it
+            if (std::find(shown_fps.begin(), shown_fps.end(), req.fingerprint) != shown_fps.end())
+                continue; // ignore if mDNS or a live connection already populated it
 
             std::string ip = req.addresses.empty() ? "" : req.addresses[0].address;
             uint16_t port = req.addresses.empty() ? 5134 : req.addresses[0].port;

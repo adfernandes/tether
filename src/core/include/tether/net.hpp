@@ -32,6 +32,10 @@ namespace tether {
     void unregister_local_subscriber(int fd);
     void broadcast_local_event(const std::string& msg, int exclude_fd = -1);
 
+    // Normalizes stored pairing requests to {fingerprint: {name, ts}} and drops
+    // the ones older than the TTL.
+    nlohmann::json prune_pending_pairs(const nlohmann::json& raw, int64_t now);
+
     // Store an OTP and push it to local subscribers (browser extension, GTK).
     // sender_domain is the registrable domain of the email sender, "" when the
     // code did not come from email.

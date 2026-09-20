@@ -264,6 +264,10 @@ Trusts a pending pair request by moving the target fingerprint into the daemon's
 then replies with `{"command":"accept_device_result","accepted":true,"connected":true}`. `connected` is false
 when the trust record was saved for a device that is no longer connected.
 
+A pending request expires an hour after it arrives, and an explicit rejection drops it at once. A peer
+that still wants to pair re-sends `pair_request` on its next connection, so the only thing a longer
+window buys is dead requests in the device list.
+
 ### `forget_device` (Local Client -> Daemon)
 Removes a fingerprint from `known_hosts.json` and closes any live session holding it.
 **Payload**: `{"command": "forget_device", "fingerprint": "12:aa:bb:cc..."}`
