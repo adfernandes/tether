@@ -66,6 +66,10 @@ namespace tether {
     static std::set<int> local_subscribers;
     static std::mutex g_subscribers_mutex;
 
+    // last known mdns peers.
+    static std::mutex g_discovered_mutex;
+    static nlohmann::json g_discovered_devices = nlohmann::json::array();
+
     struct ReceivedFileInfo {
         std::string path;
         std::string filename;
@@ -162,6 +166,11 @@ namespace tether {
             return;
         uint64_t id = otp_store(code, sender_domain);
         broadcast_local_event(make_otp_event({code, sender_domain, id}).dump(), exclude_fd);
+    }
+
+    void set_discovered_devices(const nlohmann::json& devices) {
+        std::lock_guard<std::mutex> lock(g_discovered_mutex);
+        g_discovered_devices = devices.is_array() ? devices : nlohmann::json::array();
     }
 
     void register_local_subscriber(int fd) {
@@ -824,6 +833,11 @@ namespace tether {
             item["filename"] = file.filename;
             item["bytes_written"] = file.bytes_written;
             snapshot["recent_received_files"].push_back(item);
+        }
+
+        {
+            std::lock_guard<std::mutex> lock(g_discovered_mutex);
+            snapshot["discovered_devices"] = g_discovered_devices;
         }
 
         snapshot["mdns_available"] = g_mdns_available.load();
@@ -1589,6 +1603,7 @@ namespace tether {
                                 }
                                 payload["devices"].push_back(d);
                             }
+                            set_discovered_devices(payload["devices"]);
                             broadcast_local_event(payload.dump());
                         }).detach();
                     } else if (j.contains("command") && j["command"] == "send_file" && j.contains("path")) {

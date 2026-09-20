@@ -32,6 +32,9 @@ namespace tether {
     void unregister_local_subscriber(int fd);
     void broadcast_local_event(const std::string& msg, int exclude_fd = -1);
 
+    // The mDNS peers the daemon currently knows of.
+    void set_discovered_devices(const nlohmann::json& devices);
+
     // Normalizes stored pairing requests to {fingerprint: {name, ts}} and drops
     // the ones older than the TTL.
     nlohmann::json prune_pending_pairs(const nlohmann::json& raw, int64_t now);
