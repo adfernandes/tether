@@ -41,6 +41,8 @@ namespace tether::bluetooth {
         uint8_t advertising_instances = 0;
         // Instances BlueZ currently holds registered.
         uint8_t advertising_active_instances = 0;
+        // org.bluez.AdvertisementMonitorManager1
+        bool has_adv_monitor_manager = false;
 
         bool has_role(const std::string& role) const;
         bool class_is_handsfree() const { return (device_class & COD_MASK) == COD_TARGET; }
@@ -150,7 +152,7 @@ namespace tether::bluetooth {
         std::vector<Telephony> telephony;
         std::vector<Call> calls;
 
-        // Whether bluetoothd was started with --experimental. Bearer.LE1 exists only under that flag
+        // bluetoothd has experimental API on
         bool experimental_api = false;
 
         const Adapter* find_adapter(const std::string& path) const;

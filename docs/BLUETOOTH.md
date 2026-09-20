@@ -930,6 +930,7 @@ checks the daemon does not make.
 | `systemctl enable --now tether-btclass@hci0` hangs in `activating (start)` forever | `btmgmt` epolls its stdin before running the command, and epoll rejects the `/dev/null` systemd hands it, so it waits having done nothing | Update the unit -- it pipes into `btmgmt` now. On an older build, `sudo btmgmt class 4 8` by hand sets the class until `bluetoothd` restarts, see 2026-09-01 below |
 | `systemctl enable --now tether-btclass@hci0` says `Unit tether-btclass@hci0.service does not exist` | A portable build (AppImage, Flatpak) installed no unit -- only the distro packages do | `tether --bt-setup` and run the command it prints, which writes the unit first, see 2026-09-05 below |
 | `tether-btclass@hci0` fails with `Invalid Index`, having worked for months | The controller re-enumerated -- a failed firmware handshake resets it over USB and it comes back as `hci1` -- so the instance name points at an adapter that no longer exists | Update the unit -- it resolves the adapter itself now and the instance name is only a hint, see 2026-09-11 below. By hand, `ls /sys/class/bluetooth` names the live adapter |
+| `tether --bt-setup` keeps printing the experimental step after the drop-in was applied and `bluetooth` restarted | Before 0.2.35 the check read `/proc`, which a Flatpak sandbox cannot see, and which `main.conf` `Experimental = true` never touches | Update. Confirm the flag itself with `busctl --system introspect org.bluez /org/bluez/hci0 \| grep AdvertisementMonitor` -- a hit means the experimental API is on, see 2026-09-20 below |
 | Messages and contacts worked, then stopped, and the error mentions a service record | `bluetoothd` restarted and reset the Class of Device | `sudo systemctl enable --now tether-btclass@hci0`, then re-pair if the phone dropped the bond |
 | The phone never offers notifications / Sync Contacts | The class is wrong, or the ANCS advertisement is not running | Check for `class=ok` in `tether --bt-status`, can take minutes |
 | MAP or PBAP reports `forbidden` | The matching toggle on the phone is off | Turn it on. This is not a pairing failure |
@@ -3209,7 +3210,9 @@ the bearer step is a `sed` plus a restart through the machine's own service mana
 
 Not yet verified on hardware: that `class=ok` survives a `bluetoothd` restart on a machine
 without hostnamed. The `sed` leaves a `main.conf` with no `Class` or `Experimental` line,
-commented or not, unchanged, and `--bt-setup` keeps listing the step.
+commented or not, unchanged, and `--bt-setup` keeps listing the step. The experimental half of
+that last point is fixed in 2026-09-20 below: the flag is read off BlueZ now, whichever way it
+was set.
 
 ### 2026-09-11 - The AirPods sink jammed after a call
 
@@ -3610,3 +3613,41 @@ every rebuild.
 Not settled: the exact `ReadValue` error on the GAP characteristic with only BR/EDR up, and the
 fix itself on hardware (walk out until only `LE1` times out, come back, expect `LE link dropped`
 then a new session and a popup).
+
+### 2026-09-20 - `--bt-setup` kept printing the experimental step inside Flatpak (#206)
+
+Reported in #206: the drop-in `--bt-setup` printed was applied, `bluetooth` restarted, and the
+rerun under `flatpak run --command=tether com.tether.desktop --bt-setup` listed the same step.
+
+`bluetoothd` has no property for its own flags, so the check walked `/proc` for a process named
+`bluetoothd` and looked for `-E` / `--experimental`. Flatpak gives the app its own PID namespace:
+
+```
+$ flatpak run --command=sh <app> -c 'ls /proc | grep -c "^[0-9]*$"'
+4                       bwrap, sh, and the pipeline -- no bluetoothd, ever
+```
+
+So `experimental_api` was always false in the sandbox, and with nothing bonded yet to populate
+`Bearer.LE1` the resolver had no second source and pinned `BearerApi::Absent`. The same false
+negative hit every install method whenever the flag came from `main.conf` `Experimental = true`,
+which is what the non-systemd branch of the step itself tells users to do -- the open item left
+in the 2026-09-10 entry above.
+
+`bluetoothd` answers the question on its own bus. `btd_adv_monitor_manager_create()` runs only
+inside `if (g_dbus_get_flags() & G_DBUS_FLAG_ENABLE_EXPERIMENTAL)` (`src/adapter.c`, 5.87 and
+master), so `org.bluez.AdvertisementMonitorManager1` on an adapter object exists only with the
+experimental API on. It arrives in the `GetManagedObjects` reply already parsed, so detection
+costs no extra call, no cache, and no `/proc`, and `scan_bluetoothd_cmdline()` is gone.
+
+```
+$ busctl --system introspect org.bluez /org/bluez/hci0 | grep AdvertisementMonitor
+org.bluez.AdvertisementMonitorManager1  interface
+```
+
+Verified on this machine against the live bus: `experimental_api=1`, `bearer_api=Confirmed`,
+only the class step left. The marker is a BlueZ implementation detail, not API: if a later
+release creates the monitor manager unconditionally, this reads experimental where there is
+none, and the check moves to `Adapter1.ConnectDevice`, which is `GDBUS_EXPERIMENTAL_ASYNC_METHOD`
+and therefore absent from introspection without the flag.
+
+Not verified here: the negative case, which needs `bluetoothd` restarted without the flag.

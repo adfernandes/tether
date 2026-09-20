@@ -223,10 +223,11 @@ Troubleshooting:
   reason to enable privileged mode silently.
 - **Phone not discoverable:** confirm Avahi, host firewall and local multicast
   connectivity. This container cannot make mDNS cross an isolated network/VPN.
-- **Misleading `tether bt setup` advice:** some diagnostics inspect `/proc` for
-  `bluetoothd` or use `btmgmt`. The host process is hidden by the container's PID
-  namespace, and raw probes may lack permission. Apply the documented setup on
-  the host; don't share host PID space just to improve a diagnostic.
+- **Misleading `tether bt setup` advice:** the experimental-API check reads
+  BlueZ's own objects now, so the container's PID namespace no longer hides the
+  answer, but `btmgmt` probes (Secure Connections) may still lack permission.
+  Apply the documented setup on the host; don't share host PID space just to
+  improve a diagnostic.
 - **Host service repaired/restarted:** Tether may need a container restart if
   BlueZ was unavailable during startup. This packaging does not promise new
   D-Bus reconnection behavior.

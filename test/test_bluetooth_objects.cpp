@@ -61,6 +61,26 @@ namespace {
       }
     })";
 
+    // The same adapter as reported by a bluetoothd running with the experimental API on:
+    // AdvertisementMonitorManager1 is created only under that flag.
+    constexpr const char* ADAPTER_EXPERIMENTAL = R"({
+      '/org/bluez/hci0': {
+        'org.bluez.Adapter1': {
+          'Address': <'02:00:00:00:00:02'>,
+          'Alias': <'btw'>,
+          'Class': <uint32 8127496>,
+          'Powered': <true>,
+          'Roles': <['central', 'peripheral']>
+        },
+        'org.bluez.LEAdvertisingManager1': {
+          'SupportedInstances': <byte 15>
+        },
+        'org.bluez.AdvertisementMonitorManager1': {
+          'SupportedFeatures': <['controller-patterns']>
+        }
+      }
+    })";
+
     // An iPhone bonded on both transports, exposing MAP, PBAP and ANCS.
     constexpr const char* IPHONE_BONDED = R"({
       '/org/bluez/hci0/dev_02_00_00_00_00_01': {
@@ -235,6 +255,34 @@ TEST(Capability, SecureConnectionsStateIsInjectedRatherThanReadDuringResolution)
     const auto disabled = resolve_capability(objects, false);
     EXPECT_TRUE(disabled.secure_connections_known);
     EXPECT_FALSE(disabled.secure_connections);
+}
+
+// Reading the flag off bluetoothd's own objects is what makes it answerable from a
+// Flatpak sandbox, where /proc holds no bluetoothd, and from a main.conf
+// 'Experimental = true' that leaves no argv trace.
+TEST(BluetoothObjects, ExperimentalComesFromTheAdvertisementMonitorManager) {
+    Payload on(ADAPTER_EXPERIMENTAL);
+    auto with = parse_managed_objects(on.v);
+    ASSERT_EQ(with.adapters.size(), 1u);
+    EXPECT_TRUE(with.adapters[0].has_adv_monitor_manager);
+    EXPECT_TRUE(with.experimental_api);
+
+    Payload off(ADAPTER_FULL);
+    auto without = parse_managed_objects(off.v);
+    ASSERT_EQ(without.adapters.size(), 1u);
+    EXPECT_FALSE(without.adapters[0].has_adv_monitor_manager);
+    EXPECT_FALSE(without.experimental_api);
+}
+
+// The experimental step must clear on its own once bluetoothd restarts with the flag,
+// with nothing bonded yet to populate Bearer.LE1.
+TEST(Capability, ExperimentalAdapterAloneClearsTheSetupStep) {
+    Payload p(ADAPTER_EXPERIMENTAL);
+    auto cap = resolve_capability(parse_managed_objects(p.v));
+
+    EXPECT_EQ(cap.bearer_api, BearerApi::Unknown);
+    for (const auto& step : cap.setup)
+        EXPECT_EQ(step.command.find("--experimental"), std::string::npos) << step.command;
 }
 
 // Without --experimental the bearer interface can never appear, so its absence

@@ -18,6 +18,7 @@ namespace tether::bluetooth {
         constexpr const char* IFACE_TELEPHONY = "org.bluez.Telephony1";
         constexpr const char* IFACE_CALL = "org.bluez.Call1";
         constexpr const char* IFACE_LE_ADV_MGR = "org.bluez.LEAdvertisingManager1";
+        constexpr const char* IFACE_ADV_MONITOR_MGR = "org.bluez.AdvertisementMonitorManager1";
         constexpr const char* IFACE_BEARER_LE = "org.bluez.Bearer.LE1";
         constexpr const char* IFACE_BEARER_BREDR = "org.bluez.Bearer.BREDR1";
         constexpr const char* IFACE_CHARACTERISTIC = "org.bluez.GattCharacteristic1";
@@ -147,6 +148,11 @@ namespace tether::bluetooth {
                 a.advertising_instances = get_byte(adv, "SupportedInstances");
                 a.advertising_active_instances = get_byte(adv, "ActiveInstances");
                 g_variant_unref(adv);
+            }
+
+            if (GVariant* mon = g_variant_lookup_value(ifaces, IFACE_ADV_MONITOR_MGR, G_VARIANT_TYPE("a{sv}"))) {
+                a.has_adv_monitor_manager = true;
+                g_variant_unref(mon);
             }
 
             out.adapters.push_back(std::move(a));
@@ -378,6 +384,10 @@ namespace tether::bluetooth {
                     device.gap_name_path = char_path;
             }
         }
+
+        // bluetoothd builds the advertisement monitor manager only when the experimental API is on
+        out.experimental_api = std::any_of(
+            out.adapters.begin(), out.adapters.end(), [](const Adapter& a) { return a.has_adv_monitor_manager; });
 
         // BlueZ enumerates in a stable but unspecified order; sorting keeps
         // snapshot comparison and UI listing deterministic.

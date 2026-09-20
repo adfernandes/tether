@@ -9,8 +9,6 @@
 #include <condition_variable>
 #include <csignal>
 #include <fcntl.h>
-#include <filesystem>
-#include <fstream>
 #include <gio/gio.h>
 #include <map>
 #include <mutex>
@@ -168,47 +166,6 @@ namespace tether::bluetooth {
         g_source_set_callback(source, on_refresh_timeout, this, nullptr);
         pending_refresh = g_source_attach(source, context);
         g_source_unref(source);
-    }
-
-    // bluetoothd exposes no property for its own flags, so the argument vector is
-    // the only place to read it. Accepts both spellings; Arch's unit uses -E.
-    static bool scan_bluetoothd_cmdline() {
-        std::error_code ec;
-        for (const auto& entry : std::filesystem::directory_iterator("/proc", ec)) {
-            std::ifstream comm(entry.path() / "comm");
-            std::string name;
-            if (!comm || !std::getline(comm, name) || name != "bluetoothd")
-                continue;
-
-            std::ifstream cmdline(entry.path() / "cmdline", std::ios::binary);
-            if (!cmdline)
-                continue;
-            // Arguments are NUL-separated, so each one compares exactly.
-            std::string arg;
-            while (std::getline(cmdline, arg, '\0')) {
-                if (arg == "-E" || arg == "--experimental")
-                    return true;
-            }
-            return false;
-        }
-        return false;
-    }
-
-    // Walking /proc costs about 2ms and refresh() runs on every debounced BlueZ
-    // signal, so the answer is cached. It cannot change without bluetoothd
-    // restarting, but that is exactly what applying the drop-in does, and
-    // bluetoothd routinely restarts after tetherd is already up.
-    bool bluetoothd_has_experimental() {
-        static constexpr auto kRecheckAfter = std::chrono::seconds(3);
-        static std::chrono::steady_clock::time_point checked_at{};
-        static bool value = false;
-
-        const auto now = std::chrono::steady_clock::now();
-        if (checked_at == std::chrono::steady_clock::time_point{} || now - checked_at >= kRecheckAfter) {
-            value = scan_bluetoothd_cmdline();
-            checked_at = now;
-        }
-        return value;
     }
 
     std::optional<bool> probe_secure_connections(const std::string& adapter_id, std::chrono::milliseconds timeout) {
@@ -374,7 +331,6 @@ namespace tether::bluetooth {
 
         BluezObjects parsed = parse_managed_objects(reply);
         g_variant_unref(reply);
-        parsed.experimental_api = bluetoothd_has_experimental();
         std::string preferred;
         {
             std::lock_guard<std::mutex> lock(mutex);
@@ -482,7 +438,6 @@ namespace tether::bluetooth {
             return false;
         }
         impl_->objects = parse_managed_objects(probe);
-        impl_->objects.experimental_api = bluetoothd_has_experimental();
         // Secure Connections stays unknown until the watcher thread's first
         // refresh: probing it here would fork btmgmt on the startup path.
         impl_->cap = resolve_capability(impl_->objects);

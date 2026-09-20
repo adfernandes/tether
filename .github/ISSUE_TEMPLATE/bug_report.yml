@@ -1,0 +1,69 @@
+name: Bug report
+description: Something in Tether does not work
+labels: ["bug"]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What you did, what you expected, what you got instead.
+    validations:
+      required: true
+
+  - type: dropdown
+    id: install
+    attributes:
+      label: How did you install Tether?
+      options:
+        - Flatpak
+        - AppImage
+        - Arch / AUR
+        - Debian or Ubuntu package
+        - Fedora package
+        - Container
+        - Built from source
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: Output of `tether --version`
+      placeholder: "0.2.34"
+    validations:
+      required: true
+
+  - type: input
+    id: system
+    attributes:
+      label: Distribution, init system, desktop
+      placeholder: "Fedora 42, systemd, GNOME 49 Wayland"
+    validations:
+      required: true
+
+  - type: textarea
+    id: bt-status
+    attributes:
+      label: Output of `tether --bt-status` and `tether --bt-setup`
+      description: Skip if the problem has nothing to do with Bluetooth. Run both, paste both.
+      render: shell
+
+  - type: input
+    id: bluez
+    attributes:
+      label: BlueZ version
+      description: "`bluetoothctl --version`. Skip for non-Bluetooth problems."
+      placeholder: "5.87"
+
+  - type: input
+    id: iphone
+    attributes:
+      label: iPhone model and iOS version
+      placeholder: "iPhone 15 Pro, iOS 27.1"
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs
+      description: Relevant lines from `tetherd.log`, or the terminal output. Trim to what matters.
+      render: shell
