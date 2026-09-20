@@ -837,6 +837,21 @@ namespace tether::ui {
             g_devices.mdns_ok = j.value("mdns_available", true);
             g_devices.clipboard_ok = j.value("clipboard_available", true);
             g_devices.firewall_active = j.value("firewall_active", false);
+
+            if (j.contains("discovered_devices") && j["discovered_devices"].is_array()) {
+                g_devices.discovered_devices.clear();
+                for (const auto& d : j["discovered_devices"]) {
+                    tether::DiscoveredDevice dev;
+                    dev.name = d.value("name", "");
+                    dev.fingerprint = d.value("fingerprint", "");
+                    if (d.contains("addresses") && d["addresses"].is_array()) {
+                        for (const auto& a : d["addresses"])
+                            dev.addresses.push_back({a.value("address", ""), a.value<uint16_t>("port", 5134)});
+                    }
+                    g_devices.discovered_devices.push_back(dev);
+                }
+            }
+
             g_devices.connected_fps.clear();
             g_devices.unpaired_clients.clear();
             if (j.contains("connected_clients") && j["connected_clients"].is_array()) {

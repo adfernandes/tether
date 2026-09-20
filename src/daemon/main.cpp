@@ -145,6 +145,7 @@ int main(int argc, char** argv) {
                 }
                 payload["devices"].push_back(d);
             }
+            tether::set_discovered_devices(payload["devices"]);
             tether::broadcast_local_event(payload.dump());
         });
 
