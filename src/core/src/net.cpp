@@ -36,6 +36,7 @@
 #include <chrono>
 #include <condition_variable>
 #include <cstring>
+#include <ctime>
 #include <filesystem>
 #include <fstream>
 #include <mutex>
@@ -284,27 +285,66 @@ namespace tether {
         }
     }
 
-    static nlohmann::json load_pending_pairs() {
-        std::string pending_path = get_runtime_dir() + "/pending_pairs.json";
-        nlohmann::json pending = nlohmann::json::object();
-
-        std::ifstream ifs(pending_path);
-        if (!ifs.is_open()) {
-            return pending;
-        }
-
-        try {
-            pending = nlohmann::json::parse(ifs);
-        } catch (...) {
-            pending = nlohmann::json::object();
-        }
-
-        return pending;
-    }
+    // How long an unanswered pairing request stays offerable.
+    static constexpr int64_t PENDING_PAIR_TTL_SECONDS = 3600;
 
     static void save_pending_pairs(const nlohmann::json& pending) {
         std::ofstream ofs(get_runtime_dir() + "/pending_pairs.json");
         ofs << pending.dump(4);
+    }
+
+    nlohmann::json prune_pending_pairs(const nlohmann::json& raw, int64_t now) {
+        nlohmann::json live = nlohmann::json::object();
+        if (!raw.is_object())
+            return live;
+
+        for (const auto& [fingerprint, value] : raw.items()) {
+            if (value.is_string()) {
+                live[fingerprint] = {{"name", value.get<std::string>()}, {"ts", now}};
+                continue;
+            }
+            if (!value.is_object() || !value.contains("name"))
+                continue;
+            if (now - value.value("ts", static_cast<int64_t>(0)) > PENDING_PAIR_TTL_SECONDS)
+                continue;
+            live[fingerprint] = value;
+        }
+        return live;
+    }
+
+    // Expired entries are dropped on read rather than on a timer.
+    static nlohmann::json load_pending_pairs() {
+        std::ifstream ifs(get_runtime_dir() + "/pending_pairs.json");
+        if (!ifs.is_open())
+            return nlohmann::json::object();
+
+        nlohmann::json raw;
+        try {
+            raw = nlohmann::json::parse(ifs);
+        } catch (...) {
+            return nlohmann::json::object();
+        }
+        ifs.close();
+
+        nlohmann::json live = prune_pending_pairs(raw, static_cast<int64_t>(std::time(nullptr)));
+        if (live.size() != raw.size() || live != raw)
+            save_pending_pairs(live);
+        return live;
+    }
+
+    static std::string pending_pair_name(const nlohmann::json& pending, const std::string& fingerprint) {
+        if (!pending.contains(fingerprint))
+            return "";
+        return pending[fingerprint].value("name", "");
+    }
+
+    // A request that was answered, or whose peer has gone, is not pending.
+    static void erase_pending_pair(const std::string& fingerprint) {
+        auto pending = load_pending_pairs();
+        if (!pending.contains(fingerprint))
+            return;
+        pending.erase(fingerprint);
+        save_pending_pairs(pending);
     }
 
     static std::string lookup_known_host_name(const std::string& fingerprint) {
@@ -757,10 +797,11 @@ namespace tether {
 
         nlohmann::json pending_pairs = nlohmann::json::array();
         auto pending = load_pending_pairs();
-        for (auto& [fingerprint, name_value] : pending.items()) {
+        for (auto& [fingerprint, entry] : pending.items()) {
             nlohmann::json item;
             item["fingerprint"] = fingerprint;
-            item["device_name"] = name_value.is_string() ? name_value.get<std::string>() : "Unknown Device";
+            const std::string name = entry.value("name", "");
+            item["device_name"] = name.empty() ? "Unknown Device" : name;
             pending_pairs.push_back(item);
         }
         snapshot["pending_pairs"] = pending_pairs;
@@ -978,7 +1019,7 @@ namespace tether {
     UnixServer::~UnixServer() { stop(); }
 
     bool UnixServer::start() {
-        server_fd_ = socket(AF_UNIX, SOCK_STREAM, 0);
+        server_fd_ = socket(AF_UNIX, SOCK_STREAM | SOCK_CLOEXEC, 0);
         if (server_fd_ < 0) {
             debug::log(ERR, "Failed to create unix socket");
             return false;
@@ -1041,7 +1082,7 @@ namespace tether {
     }
 
     void UnixServer::handle_accept(int fd) {
-        int client_fd = accept(fd, nullptr, nullptr);
+        int client_fd = accept4(fd, nullptr, nullptr, SOCK_CLOEXEC);
         if (client_fd < 0) {
             if (errno != EAGAIN && errno != EWOULDBLOCK) {
                 debug::log(ERR, "UnixServer accept error: {}", std::strerror(errno));
@@ -1597,7 +1638,10 @@ namespace tether {
 
     // Binds and listens on the wildcard address of `family`. AF_INET6 socket dual-stack.
     static int bind_listen_socket(int family, int port) {
-        int fd = socket(family, SOCK_STREAM, 0);
+        // CLOEXEC: the pairing dialog is fork+exec'd from this process and must
+        // not inherit the listening socket, or it keeps the port bound and
+        // SO_REUSEPORT hands it connections it will never accept.
+        int fd = socket(family, SOCK_STREAM | SOCK_CLOEXEC, 0);
         if (fd < 0)
             return -1;
 
@@ -1721,7 +1765,7 @@ namespace tether {
     void TcpServer::handle_accept(int fd) {
         sockaddr_storage client_addr{};
         socklen_t addrlen = sizeof(client_addr);
-        int client_fd = accept(fd, reinterpret_cast<sockaddr*>(&client_addr), &addrlen);
+        int client_fd = accept4(fd, reinterpret_cast<sockaddr*>(&client_addr), &addrlen, SOCK_CLOEXEC);
         if (client_fd < 0)
             return;
 
@@ -2057,19 +2101,9 @@ namespace tether {
 
                             // Persist the pending request so accept_device can retrieve the name
                             {
-                                std::string pending_path = get_runtime_dir() + "/pending_pairs.json";
-                                nlohmann::json pending;
-                                std::ifstream ifs(pending_path);
-                                if (ifs.is_open()) {
-                                    try {
-                                        pending = nlohmann::json::parse(ifs);
-                                    } catch (...) {
-                                    }
-                                    ifs.close();
-                                }
-                                pending[print] = dev_name;
-                                std::ofstream ofs(pending_path);
-                                ofs << pending.dump(4);
+                                auto pending = load_pending_pairs();
+                                pending[print] = {{"name", dev_name}, {"ts", static_cast<int64_t>(std::time(nullptr))}};
+                                save_pending_pairs(pending);
                             }
 
                             char hostname[256] = {};
@@ -2269,8 +2303,8 @@ namespace tether {
         std::string device_name = lookup_known_host_name(fingerprint);
         if (device_name.empty())
             device_name = fallback_name.empty() ? "Paired Device" : fallback_name;
-        if (pending.contains(fingerprint) && pending[fingerprint].is_string()) {
-            device_name = pending[fingerprint].get<std::string>();
+        if (const std::string pending_name = pending_pair_name(pending, fingerprint); !pending_name.empty()) {
+            device_name = pending_name;
             pending.erase(fingerprint);
             save_pending_pairs(pending);
         }
@@ -2455,6 +2489,7 @@ namespace tether {
                            exit_code);
             } else {
                 debug::log(INFO, "[Pairing Rejected] {} (exit code {})", info.device_name, exit_code);
+                erase_pending_pair(info.fingerprint);
 
                 auto remote_it = connected_remote_clients.find(info.client_fd);
                 auto ssl_it = active_ssl_.find(info.client_fd);

@@ -178,7 +178,26 @@ namespace {
             }
             throw std::runtime_error("child timed out");
         }
+        // The fake phone dials a fixed 127.0.0.1:5134. A daemon already holding
+        // that port takes the pair requests instead, pops its dialogs at the
+        // user, and records the requests in the real runtime dir.
+        static bool port_5134_taken() {
+            int fd = socket(AF_INET, SOCK_STREAM | SOCK_CLOEXEC, 0);
+            if (fd < 0)
+                return false;
+            sockaddr_in address{};
+            address.sin_family = AF_INET;
+            address.sin_port = htons(5134);
+            address.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+            const bool taken = connect(fd, reinterpret_cast<sockaddr*>(&address), sizeof(address)) == 0;
+            close(fd);
+            return taken;
+        }
+
         void start(Peer& local) {
+            if (port_5134_taken())
+                throw std::runtime_error(
+                    "another tetherd is listening on 127.0.0.1:5134; stop it before running this suite");
             spawn({"/usr/bin/dbus-daemon",
                    "--session",
                    "--nofork",
