@@ -100,6 +100,10 @@ namespace tether::bluetooth {
 
     namespace {
 
+        bool accepts_device(const AgentState& state, const std::string& device_path) {
+            return device_path == state.device_path;
+        }
+
         void reject(GDBusMethodInvocation* invocation, const char* why) {
             g_dbus_method_invocation_return_dbus_error(invocation, ERROR_REJECTED, why);
         }
@@ -131,7 +135,7 @@ namespace tether::bluetooth {
             const gchar* device = nullptr;
             g_variant_get_child(params, 0, "&o", &device);
             const std::string device_path = device ? device : "";
-            if (device_path != state->device_path) {
+            if (!accepts_device(*state, device_path)) {
                 debug::log(WARN, "bluetooth: agent refused {} for unexpected device {}", name, device_path);
                 reject(invocation, "Not the device being paired");
                 return;
@@ -196,6 +200,12 @@ namespace tether::bluetooth {
     PairingAgent::~PairingAgent() {
         unregister_with_bluez();
         unexport_object();
+    }
+
+    void PairingAgent::set_device_path(std::string device_path) { state_->device_path = std::move(device_path); }
+
+    bool PairingAgent::accepts_device_path(const std::string& device_path) const {
+        return accepts_device(*state_, device_path);
     }
 
     const std::string& PairingAgent::path() const { return state_->path; }

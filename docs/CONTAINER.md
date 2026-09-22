@@ -216,9 +216,9 @@ These environment switches are also usable outside Docker:
 | `TETHER_NO_AUTOSTART` | `1` | Prevent CLI/client helpers from spawning `tetherd` |
 | `TETHER_BLUEZ_SECURE_CONNECTIONS` | Boolean (`1`/`0`, `true`/`false`, `yes`/`no`, `on`/`off`) | Declare whether the host controller has Secure Connections enabled |
 
-Unset runtime switches preserve normal behavior. An unset capability declaration
-falls back to the local `btmgmt` probe, which may not be able to inspect the host
-controller from inside a container.
+Unset runtime switches preserve normal behavior. The local `btmgmt` result takes
+precedence when available; the capability declaration is used only when that probe
+cannot inspect the host controller from inside a container.
 
 `XDG_DOWNLOAD_DIR` now takes precedence when nonempty and absolute; invalid or
 empty overrides fall back to the existing GLib/HOME lookup.

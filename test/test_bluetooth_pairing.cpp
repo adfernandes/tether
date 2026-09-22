@@ -59,6 +59,16 @@ TEST(AgentPolicy, CallsEnabledStillRefusesEverythingElse) {
     EXPECT_FALSE(is_authorized_service("0000111e-0000-1000-8000-00805f9b34fbb", true));
 }
 
+TEST(AgentPolicy, FollowsARecreatedDeviceObject) {
+    PairingAgent agent(nullptr, "/org/bluez/hci0/dev_old", {});
+    EXPECT_TRUE(agent.accepts_device_path("/org/bluez/hci0/dev_old"));
+    EXPECT_FALSE(agent.accepts_device_path("/org/bluez/hci0/dev_new"));
+
+    agent.set_device_path("/org/bluez/hci0/dev_new");
+    EXPECT_FALSE(agent.accepts_device_path("/org/bluez/hci0/dev_old"));
+    EXPECT_TRUE(agent.accepts_device_path("/org/bluez/hci0/dev_new"));
+}
+
 // iOS renders the comparison with leading zeros. Dropping them shows the user a
 // code that does not match their phone, which reads as a failed pairing.
 TEST(Passkey, FormatsSixDigitsWithLeadingZeros) {
@@ -145,11 +155,6 @@ TEST(BluetoothConfig, SurvivesCorruptFile) {
 // Connect-first induces authentication only as a side effect of a profile
 // connect. A phone that refuses that profile never starts pairing at all, so the
 // transaction is retried as an explicit Device1.Pair() -- see issue #49.
-TEST(PairingBearer, ConnectFirstPinsTheClassicTransport) {
-    EXPECT_STREQ(preferred_bearer_for(AuthStrategy::ConnectFirst), "bredr");
-    EXPECT_EQ(preferred_bearer_for(AuthStrategy::ExplicitPair), nullptr);
-}
-
 TEST(FallbackPolicy, RetriesARefusedConnectFirst) {
     EXPECT_TRUE(should_fall_back(AuthStrategy::ConnectFirst, /*paired=*/false, /*user_rejected=*/false));
 }

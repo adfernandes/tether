@@ -77,14 +77,29 @@ namespace {
 
 } // namespace
 
-TEST(ContainerCapabilityHints, ReportsHostSecureConnectionsWithoutManagementTools) {
+TEST(ContainerCapabilityHints, ReportsHostSecureConnectionsWhenManagementProbeIsUnavailable) {
     {
         ScopedEnvironment secure("TETHER_BLUEZ_SECURE_CONNECTIONS", "true");
-        EXPECT_EQ(probe_secure_connections("hci0", 1ms), true);
+        FakeBtmgmt fake("exit 1\n");
+        EXPECT_EQ(probe_secure_connections("hci0", 250ms), true);
     }
     {
         ScopedEnvironment secure("TETHER_BLUEZ_SECURE_CONNECTIONS", "false");
-        EXPECT_EQ(probe_secure_connections("hci0", 1ms), false);
+        FakeBtmgmt fake("exit 1\n");
+        EXPECT_EQ(probe_secure_connections("hci0", 250ms), false);
+    }
+}
+
+TEST(ContainerCapabilityHints, LocalManagementProbeTakesPrecedence) {
+    {
+        ScopedEnvironment secure("TETHER_BLUEZ_SECURE_CONNECTIONS", "true");
+        FakeBtmgmt fake("printf 'current settings: powered bondable\\n'\n");
+        EXPECT_EQ(probe_secure_connections("hci0", 250ms), false);
+    }
+    {
+        ScopedEnvironment secure("TETHER_BLUEZ_SECURE_CONNECTIONS", "false");
+        FakeBtmgmt fake("printf 'current settings: powered secure-conn bondable\\n'\n");
+        EXPECT_EQ(probe_secure_connections("hci0", 250ms), true);
     }
 }
 

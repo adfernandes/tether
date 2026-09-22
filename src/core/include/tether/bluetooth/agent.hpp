@@ -51,6 +51,11 @@ namespace tether::bluetooth {
         void unregister_with_bluez();
         void unexport_object();
 
+        // BlueZ may recreate an unpaired Device1 between attempts. Call this on
+        // the callback's GLib thread before retrying against the replacement.
+        void set_device_path(std::string device_path);
+        bool accepts_device_path(const std::string& device_path) const;
+
         const std::string& path() const;
 
     private:

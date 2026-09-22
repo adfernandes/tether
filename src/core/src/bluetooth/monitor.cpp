@@ -190,9 +190,8 @@ namespace tether::bluetooth {
     std::optional<bool> probe_secure_connections(const std::string& adapter_id, std::chrono::milliseconds timeout) {
         if (adapter_id.empty())
             return std::nullopt;
-        if (const auto configured = environment_flag("TETHER_BLUEZ_SECURE_CONNECTIONS"))
-            return configured;
 
+        const auto configured = [] { return environment_flag("TETHER_BLUEZ_SECURE_CONNECTIONS"); };
         std::array<gchar*, 5> argv = {
             const_cast<gchar*>("btmgmt"),
             const_cast<gchar*>("--index"),
@@ -224,7 +223,7 @@ namespace tether::bluetooth {
                        adapter_id,
                        error ? error->message : "unknown error");
             g_clear_error(&error);
-            return std::nullopt;
+            return configured();
         }
         if (input_fd >= 0)
             close(input_fd);
@@ -295,18 +294,18 @@ namespace tether::bluetooth {
             debug::log(WARN, "bluetooth: btmgmt info for {} timed out after {}ms", adapter_id, elapsed.count());
             close(output_fd);
             g_spawn_close_pid(child);
-            return std::nullopt;
+            return configured();
         }
 
         drain_output();
         close(output_fd);
         g_spawn_close_pid(child);
         if (!WIFEXITED(status) || WEXITSTATUS(status) != 0)
-            return std::nullopt;
+            return configured();
 
         const size_t settings = output.find("current settings:");
         if (settings == std::string::npos)
-            return std::nullopt;
+            return configured();
         const size_t line_end = output.find('\n', settings);
         const std::string line = output.substr(settings, line_end - settings);
         return line.find("secure-conn") != std::string::npos;

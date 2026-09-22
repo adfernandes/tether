@@ -229,7 +229,7 @@ namespace tether::bluetooth {
             const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(DISCOVERY_TIMEOUT_SECONDS);
             bool found = false;
             while (std::chrono::steady_clock::now() < deadline) {
-                if (lookup_live(conn, address, out)) {
+                if (lookup(monitor, address, out)) {
                     found = true;
                     break;
                 }
@@ -579,10 +579,6 @@ namespace tether::bluetooth {
         return tried == AuthStrategy::ConnectFirst && !paired && !confirmation_failed;
     }
 
-    const char* preferred_bearer_for(AuthStrategy strategy) {
-        return strategy == AuthStrategy::ConnectFirst ? "bredr" : nullptr;
-    }
-
     PairResult pair_device(BluezMonitor& monitor,
                            const std::string& address,
                            AuthStrategy strategy,
@@ -692,16 +688,18 @@ namespace tether::bluetooth {
             };
 
             auto refresh_device = [&] {
-                if (lookup_live(conn, result.device_address, device)) {
+                auto accept_device = [&] {
                     result.device_path = device.path;
+                    monitor.invoke_sync([&] { agent.set_device_path(device.path); });
                     return true;
-                }
+                };
+
+                if (lookup_live(conn, result.device_address, device))
+                    return accept_device();
 
                 notify(progress, "rediscovering", result.device_address);
-                if (discover(monitor, conn, result.device_address, device)) {
-                    result.device_path = device.path;
-                    return true;
-                }
+                if (discover(monitor, conn, result.device_address, device))
+                    return accept_device();
 
                 err = "Device1 disappeared and could not be rediscovered";
                 return false;
@@ -715,17 +713,6 @@ namespace tether::bluetooth {
                     initiated = false;
                     notify(progress, "error", err);
                     return false;
-                }
-
-                if (const char* bearer = preferred_bearer_for(how)) {
-                    std::string bearer_err;
-                    if (!set_property(conn,
-                                      device.path,
-                                      IFACE_DEVICE,
-                                      "PreferredBearer",
-                                      g_variant_new_string(bearer),
-                                      &bearer_err))
-                        debug::log(WARN, "bluetooth: could not select {} before pairing: {}", bearer, bearer_err);
                 }
 
                 if (how == AuthStrategy::ConnectFirst) {
