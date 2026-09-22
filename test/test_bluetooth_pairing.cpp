@@ -59,6 +59,16 @@ TEST(AgentPolicy, CallsEnabledStillRefusesEverythingElse) {
     EXPECT_FALSE(is_authorized_service("0000111e-0000-1000-8000-00805f9b34fbb", true));
 }
 
+TEST(AgentPolicy, FollowsARecreatedDeviceObject) {
+    PairingAgent agent(nullptr, "/org/bluez/hci0/dev_old", {});
+    EXPECT_TRUE(agent.accepts_device_path("/org/bluez/hci0/dev_old"));
+    EXPECT_FALSE(agent.accepts_device_path("/org/bluez/hci0/dev_new"));
+
+    agent.set_device_path("/org/bluez/hci0/dev_new");
+    EXPECT_FALSE(agent.accepts_device_path("/org/bluez/hci0/dev_old"));
+    EXPECT_TRUE(agent.accepts_device_path("/org/bluez/hci0/dev_new"));
+}
+
 // iOS renders the comparison with leading zeros. Dropping them shows the user a
 // code that does not match their phone, which reads as a failed pairing.
 TEST(Passkey, FormatsSixDigitsWithLeadingZeros) {

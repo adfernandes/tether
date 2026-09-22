@@ -18,6 +18,7 @@ namespace tether::bluetooth {
     namespace {
 
         constexpr const char* BLUEZ_NAME = "org.bluez";
+        constexpr const char* OBJECT_MANAGER = "org.freedesktop.DBus.ObjectManager";
         constexpr const char* IFACE_DEVICE = "org.bluez.Device1";
         constexpr const char* IFACE_ADAPTER = "org.bluez.Adapter1";
         constexpr const char* IFACE_PROPS = "org.freedesktop.DBus.Properties";
@@ -113,6 +114,40 @@ namespace tether::bluetooth {
             auto objects = monitor.snapshot();
             if (const Device* d = find_by_address(objects, address)) {
                 out = *d;
+                return true;
+            }
+            return false;
+        }
+
+        // Pairing retries must not use the debounced monitor snapshot: a failed
+        // Connect() can make BlueZ remove and recreate Device1 between attempts.
+        // Resolve the object tree synchronously so Pair() never targets the path
+        // of an object that has already disappeared.
+        bool lookup_live(GDBusConnection* conn, const std::string& address, Device& out) {
+            GError* error = nullptr;
+            GVariant* reply = g_dbus_connection_call_sync(conn,
+                                                          BLUEZ_NAME,
+                                                          "/",
+                                                          OBJECT_MANAGER,
+                                                          "GetManagedObjects",
+                                                          nullptr,
+                                                          G_VARIANT_TYPE("(a{oa{sa{sv}}})"),
+                                                          G_DBUS_CALL_FLAGS_NONE,
+                                                          5000,
+                                                          nullptr,
+                                                          &error);
+            if (!reply) {
+                debug::log(WARN,
+                           "bluetooth: could not refresh devices before pairing: {}",
+                           error ? error->message : "unknown error");
+                g_clear_error(&error);
+                return false;
+            }
+
+            BluezObjects objects = parse_managed_objects(reply);
+            g_variant_unref(reply);
+            if (const Device* device = find_by_address(objects, address)) {
+                out = *device;
                 return true;
             }
             return false;
@@ -652,10 +687,34 @@ namespace tether::bluetooth {
                 std::this_thread::sleep_for(std::chrono::seconds(2));
             };
 
+            auto refresh_device = [&] {
+                auto accept_device = [&] {
+                    result.device_path = device.path;
+                    monitor.invoke_sync([&] { agent.set_device_path(device.path); });
+                    return true;
+                };
+
+                if (lookup_live(conn, result.device_address, device))
+                    return accept_device();
+
+                notify(progress, "rediscovering", result.device_address);
+                if (discover(monitor, conn, result.device_address, device))
+                    return accept_device();
+
+                err = "Device1 disappeared and could not be rediscovered";
+                return false;
+            };
+
             // The agent stays registered across all attempts; re-registering
             // mid-transaction races BlueZ's own agent bookkeeping.
             auto attempt = [&](AuthStrategy how) {
                 err.clear();
+                if (!refresh_device()) {
+                    initiated = false;
+                    notify(progress, "error", err);
+                    return false;
+                }
+
                 if (how == AuthStrategy::ConnectFirst) {
                     notify(progress, "connecting", display_name);
                     initiated = call_device(conn, device.path, "Connect", PAIR_TIMEOUT_SECONDS * 1000, err);

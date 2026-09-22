@@ -35,7 +35,11 @@ needs a Wayland session and is not available here.
    has its own packaged OBEX client (currently 5.72). Record both versions when testing.
 2. Run Avahi and the system bus on the host. Open inbound 5134/tcp and mDNS
    5353/udp on the trusted local network; see the README's firewall instructions.
-3. Choose a real non-root host UID/GID authorized to use the host system bus and
+3. Verify the host settings, then set `TETHER_BLUEZ_SECURE_CONNECTIONS=1` in
+   the container environment. Tether can detect BlueZ's experimental API over
+   D-Bus, but the container cannot run host management tools to inspect the
+   controller's Secure Connections setting.
+4. Choose a real non-root host UID/GID authorized to use the host system bus and
    Bluetooth services. Do not run another `tetherd` on that host port/adapter.
 
 The example mounts `/run/dbus` read-only at `/host/run/dbus`. **This is privileged
@@ -70,6 +74,8 @@ Edit `packaging/container/.env`:
   paths. Replace the example `/home/your-user` values; do not use literal `$HOME`.
 - Optionally choose `TETHER_HOSTNAME`, a DNS-style host label such as `tether-pi`.
   It is the advertised display name; the persisted certificate is the identity.
+- Leave `TETHER_BLUEZ_SECURE_CONNECTIONS=1` only after checking that the host
+  controller meets that prerequisite. Set it to `0` when the capability is absent.
 
 The entrypoint refuses wrong ownership or a non-private data directory rather
 than recursively changing your files. Existing directories must already be
@@ -202,12 +208,17 @@ requires handling that host's bonds separately.
 - Docker does **not** restart a still-running container just because it is
   unhealthy. Inspect logs and restart deliberately if needed.
 
-The two new opt-in environment switches are also usable outside Docker:
+These environment switches are also usable outside Docker:
 
-| Variable | Exact value `1` does this | Otherwise |
+| Variable | Value | Behavior |
 |---|---|---|
-| `TETHER_LOG_STDERR` | Keep daemon stderr attached to its supervisor | Preserve normal nonterminal log-file behavior |
-| `TETHER_NO_AUTOSTART` | Prevent CLI/client helpers from spawning `tetherd` | Preserve normal spawning/systemd ownership behavior |
+| `TETHER_LOG_STDERR` | `1` | Keep daemon stderr attached to its supervisor |
+| `TETHER_NO_AUTOSTART` | `1` | Prevent CLI/client helpers from spawning `tetherd` |
+| `TETHER_BLUEZ_SECURE_CONNECTIONS` | Boolean (`1`/`0`, `true`/`false`, `yes`/`no`, `on`/`off`) | Declare whether the host controller has Secure Connections enabled |
+
+Unset runtime switches preserve normal behavior. The local `btmgmt` result takes
+precedence when available; the capability declaration is used only when that probe
+cannot inspect the host controller from inside a container.
 
 `XDG_DOWNLOAD_DIR` now takes precedence when nonempty and absolute; invalid or
 empty overrides fall back to the existing GLib/HOME lookup.
@@ -225,8 +236,8 @@ Troubleshooting:
   connectivity. This container cannot make mDNS cross an isolated network/VPN.
 - **Misleading `tether bt setup` advice:** the experimental-API check reads
   BlueZ's own objects now, so the container's PID namespace no longer hides the
-  answer, but `btmgmt` probes (Secure Connections) may still lack permission.
-  Apply the documented setup on the host; don't share host PID space just to
+  answer. Set `TETHER_BLUEZ_SECURE_CONNECTIONS` if the `btmgmt` probe lacks
+  permission; don't share host PID space or add management capabilities just to
   improve a diagnostic.
 - **Host service repaired/restarted:** Tether may need a container restart if
   BlueZ was unavailable during startup. This packaging does not promise new
