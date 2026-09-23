@@ -73,6 +73,10 @@ namespace tether {
         std::string data_;
     };
 
+    // Versioned control-protocol features. Clients use this to hide unsupported
+    // controls instead of guessing from the daemon version.
+    nlohmann::json build_protocol_info();
+
     // Bluetooth state, read from the BluezMonitor snapshot.
     nlohmann::json build_bt_status();
     nlohmann::json build_bt_devices();

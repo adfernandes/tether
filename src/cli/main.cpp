@@ -702,8 +702,12 @@ static int run_bt_transaction(tether::Client& client,
     const std::string result_command = command + "_result";
 
     client.send("{\"command\":\"subscribe\"}\n");
+    static std::atomic<uint64_t> operation_sequence{0};
+    const std::string operation_id =
+        command + "-" + std::to_string(getpid()) + "-" + std::to_string(operation_sequence.fetch_add(1));
     nlohmann::json request;
     request["command"] = command;
+    request["operation_id"] = operation_id;
     if (!address.empty())
         request["address"] = address;
     request.update(extra);
@@ -737,6 +741,8 @@ static int run_bt_transaction(tether::Client& client,
             }
 
             const std::string cmd = event.value("command", "");
+            if (event.contains("operation_id") && event.value("operation_id", "") != operation_id)
+                continue;
             if (cmd == "bt_pair_progress") {
                 fprintf(stdout, "  %-12s %s\n", event.value("step", "").c_str(), event.value("detail", "").c_str());
                 fflush(stdout);
@@ -755,7 +761,10 @@ static int run_bt_transaction(tether::Client& client,
                     fprintf(stdout, _("\n  Cannot confirm the pairing code: input is not a terminal.\n"));
                     fflush(stdout);
                 }
-                client.send(nlohmann::json({{"command", "bt_pair_confirm"}, {"accept", accept}}).dump() + "\n");
+                client.send(
+                    nlohmann::json({{"command", "bt_pair_confirm"}, {"operation_id", operation_id}, {"accept", accept}})
+                        .dump() +
+                    "\n");
             } else if (cmd == result_command) {
                 fprintf(stdout, "\n%s\n", event.value("message", "").c_str());
                 return event.value("success", false) ? 0 : 1;

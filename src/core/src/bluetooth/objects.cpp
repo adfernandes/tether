@@ -103,6 +103,41 @@ namespace tether::bluetooth {
             return out;
         }
 
+        bool has_apple_nearby_advertisement(GVariant* props) {
+            GVariant* entries = lookup(props, "ManufacturerData");
+            if (!entries || !g_variant_is_of_type(entries, G_VARIANT_TYPE("a{qv}"))) {
+                if (entries)
+                    g_variant_unref(entries);
+                return false;
+            }
+
+            bool found = false;
+            GVariantIter iter;
+            guint16 company = 0;
+            GVariant* value = nullptr;
+            g_variant_iter_init(&iter, entries);
+            while (g_variant_iter_next(&iter, "{qv}", &company, &value)) {
+                GVariant* payload = value;
+                if (g_variant_is_of_type(value, G_VARIANT_TYPE_VARIANT)) {
+                    payload = g_variant_get_variant(value);
+                    g_variant_unref(value);
+                }
+                if (company == 0x004c && g_variant_is_of_type(payload, G_VARIANT_TYPE_BYTESTRING)) {
+                    gsize size = 0;
+                    const auto* bytes = static_cast<const guint8*>(g_variant_get_fixed_array(payload, &size, 1));
+                    // 0x10 is Apple's Nearby Info advertisement. Unlike the
+                    // service UUIDs it is visible while an unpaired iPhone is
+                    // still using a private rotating address.
+                    found = bytes && size > 0 && bytes[0] == 0x10;
+                }
+                g_variant_unref(payload);
+                if (found)
+                    break;
+            }
+            g_variant_unref(entries);
+            return found;
+        }
+
         // BlueZ nests the object path under the adapter, e.g.
         // /org/bluez/hci0/dev_AA_BB_.. the parent path is the owning adapter.
         std::string parent_path(const std::string& path) {
@@ -220,6 +255,7 @@ namespace tether::bluetooth {
             d.connected = get_bool(props, "Connected");
             d.uuids = get_strv(props, "UUIDs");
             d.modalias = get_string(props, "Modalias");
+            d.apple_nearby = has_apple_nearby_advertisement(props);
             d.preferred_bearer = get_string(props, "PreferredBearer");
             d.services_resolved = get_bool(props, "ServicesResolved");
             g_variant_unref(props);
@@ -643,6 +679,7 @@ namespace tether::bluetooth {
             {"ancs_notifying", d.ancs_notifying},
             {"services_resolved", d.services_resolved},
             {"iphone", d.looks_like_iphone()},
+            {"apple_nearby", d.apple_nearby},
             {"airpods", d.looks_like_airpods()},
         };
     }

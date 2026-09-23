@@ -377,6 +377,25 @@ namespace tether {
                               {"profile_reason", ""}};
     }
 
+    nlohmann::json build_protocol_info() {
+        return {{"command", "protocol_info"},
+                {"version", 1},
+                {"capabilities",
+                 {"airpods",
+                  "bluetooth.connection",
+                  "bluetooth.diagnostics",
+                  "bluetooth.pairing",
+                  "calls",
+                  "clipboard",
+                  "contacts",
+                  "files",
+                  "messages",
+                  "notifications",
+                  "otp",
+                  "peers",
+                  "settings"}}};
+    }
+
     nlohmann::json build_bt_status() {
         nlohmann::json status;
         status["command"] = "bt_status";
@@ -531,6 +550,7 @@ namespace tether {
     static std::mutex g_bt_confirm_mutex;
     static std::condition_variable g_bt_confirm_cv;
     static int g_bt_confirm_answer = -1; // -1 pending, 0 declined, 1 accepted
+    static std::string g_bt_confirm_operation_id;
 
     // A second StartDiscovery while one is running just gets stopped early by the
     // first one's StopDiscovery.
@@ -564,31 +584,43 @@ namespace tether {
         broadcast_local_event(event.dump());
     }
 
+    static void set_operation_id(nlohmann::json& event, const std::string& operation_id) {
+        if (!operation_id.empty())
+            event["operation_id"] = operation_id;
+    }
+
     // Runs on the BlueZ monitor's GLib thread, same as the local dialog it replaces.
-    static bool ask_client_to_confirm(const std::string& code) {
+    static bool ask_client_to_confirm(const std::string& code, const std::string& operation_id) {
         {
             std::lock_guard<std::mutex> lock(g_bt_confirm_mutex);
             g_bt_confirm_answer = -1;
+            g_bt_confirm_operation_id = operation_id;
         }
 
         nlohmann::json event;
         event["command"] = "bt_pair_confirm_request";
         event["code"] = code;
+        set_operation_id(event, operation_id);
         broadcast_local_event(event.dump());
 
         std::unique_lock<std::mutex> lock(g_bt_confirm_mutex);
         g_bt_confirm_cv.wait_for(
             lock, std::chrono::seconds(BT_CONFIRM_TIMEOUT_SECONDS), [] { return g_bt_confirm_answer >= 0; });
-        return g_bt_confirm_answer == 1;
+        const bool accepted = g_bt_confirm_answer == 1;
+        g_bt_confirm_operation_id.clear();
+        return accepted;
     }
 
-    static void run_bt_pair(const std::string& address, std::optional<bluetooth::AuthStrategy> strategy) {
+    static void run_bt_pair(const std::string& address,
+                            std::optional<bluetooth::AuthStrategy> strategy,
+                            const std::string& operation_id) {
         if (!bluetooth::g_bluez) {
             nlohmann::json event;
             event["command"] = "bt_pair_result";
             event["success"] = false;
             event["status"] = "error";
             event["message"] = _("Bluetooth is unavailable.");
+            set_operation_id(event, operation_id);
             broadcast_local_event(event.dump());
             return;
         }
@@ -599,6 +631,7 @@ namespace tether {
             event["success"] = false;
             event["status"] = "busy";
             event["message"] = _("Another pairing attempt is already in progress.");
+            set_operation_id(event, operation_id);
             broadcast_local_event(event.dump());
             return;
         }
@@ -608,14 +641,15 @@ namespace tether {
             *bluetooth::g_bluez,
             address,
             strategy.value_or(config.auth_strategy),
-            [](const std::string& step, const std::string& detail) {
+            [operation_id](const std::string& step, const std::string& detail) {
                 nlohmann::json event;
                 event["command"] = "bt_pair_progress";
                 event["step"] = step;
                 event["detail"] = detail;
+                set_operation_id(event, operation_id);
                 broadcast_local_event(event.dump());
             },
-            ask_client_to_confirm,
+            [operation_id](const std::string& code) { return ask_client_to_confirm(code, operation_id); },
             config.calls_enabled);
 
         if (result.success) {
@@ -635,7 +669,9 @@ namespace tether {
         }
 
         g_bt_pair_busy = false;
-        broadcast_local_event(bluetooth::to_json(result).dump());
+        nlohmann::json event = bluetooth::to_json(result);
+        set_operation_id(event, operation_id);
+        broadcast_local_event(event.dump());
         broadcast_local_event(build_bt_status().dump());
     }
 
@@ -645,12 +681,19 @@ namespace tether {
         broadcast_local_event(build_bt_status().dump());
     }
 
-    static void run_bt_unpair(const std::string& address) {
-        if (!bluetooth::g_bluez)
+    static void run_bt_unpair(const std::string& address, const std::string& operation_id) {
+        if (!bluetooth::g_bluez) {
+            nlohmann::json event{{"command", "bt_unpair_result"},
+                                 {"success", false},
+                                 {"message", _("Bluetooth is unavailable.")}};
+            set_operation_id(event, operation_id);
+            broadcast_local_event(event.dump());
             return;
+        }
         auto result = bluetooth::unpair_device(*bluetooth::g_bluez, address);
         nlohmann::json event = bluetooth::to_json(result);
         event["command"] = "bt_unpair_result";
+        set_operation_id(event, operation_id);
         broadcast_local_event(event.dump());
         broadcast_local_event(build_bt_status().dump());
     }
@@ -1145,6 +1188,7 @@ namespace tether {
 
                     if (j.contains("command") && j["command"] == "subscribe") {
                         register_local_subscriber(client_fd);
+                        write_plain_packet(client_fd, build_protocol_info().dump() + "\n");
                         std::string payload = build_local_state_snapshot().dump() + "\n";
                         write_plain_packet(client_fd, payload);
 
@@ -1159,6 +1203,9 @@ namespace tether {
                         unregister_local_subscriber(client_fd);
                         std::string payload = "{\"command\":\"unsubscribed\"}\n";
                         write_plain_packet(client_fd, payload);
+                        continue;
+                    } else if (j.contains("command") && j["command"] == "protocol_info") {
+                        write_plain_packet(client_fd, build_protocol_info().dump() + "\n");
                         continue;
                     } else if (j.contains("command") && j["command"] == "state_snapshot") {
                         std::string payload = build_local_state_snapshot().dump() + "\n";
@@ -1221,16 +1268,25 @@ namespace tether {
                         std::optional<bluetooth::AuthStrategy> strategy;
                         if (j.contains("strategy"))
                             strategy = bluetooth::auth_strategy_from_string(j["strategy"]);
-                        std::thread([address, strategy]() { run_bt_pair(address, strategy); }).detach();
+                        const std::string operation_id = j.value("operation_id", std::string{});
+                        std::thread([address, strategy, operation_id]() {
+                            run_bt_pair(address, strategy, operation_id);
+                        }).detach();
                     } else if (j.contains("command") && j["command"] == "bt_pair_confirm") {
+                        bool matched = false;
                         {
                             std::lock_guard<std::mutex> lock(g_bt_confirm_mutex);
-                            g_bt_confirm_answer = j.value("accept", false) ? 1 : 0;
+                            const std::string operation_id = j.value("operation_id", std::string{});
+                            matched = g_bt_confirm_operation_id.empty() || operation_id == g_bt_confirm_operation_id;
+                            if (matched)
+                                g_bt_confirm_answer = j.value("accept", false) ? 1 : 0;
                         }
-                        g_bt_confirm_cv.notify_all();
+                        if (matched)
+                            g_bt_confirm_cv.notify_all();
                     } else if (j.contains("command") && j["command"] == "bt_unpair" && j.contains("address")) {
                         std::string address = j["address"];
-                        std::thread([address]() { run_bt_unpair(address); }).detach();
+                        const std::string operation_id = j.value("operation_id", std::string{});
+                        std::thread([address, operation_id]() { run_bt_unpair(address, operation_id); }).detach();
                     } else if (j.contains("command") && j["command"] == "bt_airpods_connect" && j.contains("address")) {
                         std::string address = j["address"];
                         const bool connect = j.value("connect", true);
