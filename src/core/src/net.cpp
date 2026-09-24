@@ -378,22 +378,23 @@ namespace tether {
     }
 
     nlohmann::json build_protocol_info() {
-        return {{"command", "protocol_info"},
-                {"version", 1},
-                {"capabilities",
-                 {"airpods",
-                  "bluetooth.connection",
-                  "bluetooth.diagnostics",
-                  "bluetooth.pairing",
-                  "calls",
-                  "clipboard",
-                  "contacts",
-                  "files",
-                  "messages",
-                  "notifications",
-                  "otp",
-                  "peers",
-                  "settings"}}};
+        nlohmann::json capabilities = {"airpods",
+                                       "bluetooth.connection",
+                                       "bluetooth.diagnostics",
+                                       "bluetooth.pairing",
+                                       "contacts",
+                                       "files",
+                                       "messages",
+                                       "notifications",
+                                       "otp",
+                                       "peers",
+                                       "settings"};
+        const auto config = bluetooth::load_config();
+        if (config.calls_enabled && bluetooth::g_bluez && bluetooth::g_bluez->running())
+            capabilities.push_back("calls");
+        if (g_wayland && g_wayland->clipboard_available())
+            capabilities.push_back("clipboard");
+        return {{"command", "protocol_info"}, {"version", 1}, {"capabilities", std::move(capabilities)}};
     }
 
     nlohmann::json build_bt_status() {

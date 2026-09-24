@@ -10,6 +10,21 @@ All communication happens via **newline-delimited JSON**. Every individual comma
 
 If a payload arrives that cannot be parsed as JSON, the daemon will gracefully ignore it. After successfully processing a message, the server currently sends an ad-hoc text response `OK\n`, though standard JSON responses may replace this over time.
 
+### `protocol_info` (Local client -> Daemon)
+
+**Payload**: `{"command":"protocol_info"}`. The daemon answers the requesting
+Unix socket with `{"command":"protocol_info","version":1,"capabilities":[...]}`
+and sends the same event to local subscribers. Version 1 supports optional
+`operation_id` correlation on Bluetooth pairing commands and exposes the
+`apple_nearby` device hint. Capability names describe usable feature groups;
+`calls` is advertised only while calls are enabled and BlueZ is running, and
+`clipboard` only when the host compositor offers clipboard access. Other
+features have separate status and permission events, so a capability is not a
+promise that a phone is connected or has granted permissions. Older clients may
+ignore this message.
+
+---
+
 ### `hello` (both directions, paired only)
 
 **Description**: Feature negotiation. A paired client sends it once connected, and the daemon answers with its own. Each side uses a feature only after the other has announced it. An older daemon answers `OK`, which means no optional features.
@@ -343,13 +358,23 @@ Reports adapter capability and the resolved delivery mode.
 **Payload**: `{"command": "bt_list_devices"}`
 **Response**: `{"command": "bt_devices", "devices": [...]}`, each entry carrying address,
 name, `paired`, `bonded`, `connected`, `le_bearer`, and whether the device advertises
-`map`, `pbap`, and `ancs`.
+`map`, `pbap`, and `ancs`. `apple_nearby` is true when the current BlueZ
+advertisement contains Apple's Nearby payload, allowing external UIs to identify
+an unpaired iPhone candidate without guessing from its name. It is only a
+presentation hint, never proof of pairing or authorization.
 
 #### `bt_pair` / `bt_unpair` (Client -> Daemon, broadcast)
-**Payload**: `{"command": "bt_pair", "address": "AA:BB:CC:DD:EE:FF"}`
-Runs asynchronously and reports through `bt_pair_progress` events, then one
-`bt_pair_result` (or `bt_unpair_result`). Only one pairing transaction runs at a time; a
-second returns `{"status": "busy"}`. A successful pair selects the device and starts
+**Payload**: `{"command": "bt_pair", "address": "AA:BB:CC:DD:EE:FF", "operation_id": "pair-1"}`
+`bt_unpair` accepts the same optional `operation_id`. The daemon echoes it in
+pairing progress, confirmation, and result events for client-local correlation.
+When prompted for numeric comparison, reply with
+`{"command":"bt_pair_confirm","operation_id":"pair-1","accept":true}`
+only after the user explicitly verifies the matching code. A mismatched ID
+cannot settle the active confirmation; IDs are not authorization. Legacy local
+clients may omit the ID. Pairing runs asynchronously and reports through
+`bt_pair_progress` events, then one `bt_pair_result` (or `bt_unpair_result`).
+Only one pairing transaction runs at a time; a second returns
+`{"status": "busy"}`. A successful pair selects the device and starts
 supervision.
 
 #### `bt_set_device` (Client -> Daemon)

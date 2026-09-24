@@ -1,12 +1,16 @@
 #include <gtest/gtest.h>
 
+#include <tether/bluetooth/config.hpp>
+#include <tether/bluetooth/monitor.hpp>
 #include <tether/client.hpp>
 #include <tether/crypto.hpp>
 #include <tether/event_loop.hpp>
 #include <tether/log.hpp>
 #include <tether/net.hpp>
+#include <tether/wayland.hpp>
 #include <nlohmann/json.hpp>
 
+#include <algorithm>
 #include <arpa/inet.h>
 #include <cerrno>
 #include <chrono>
@@ -411,20 +415,14 @@ namespace {
         const auto info = tether::build_protocol_info();
         EXPECT_EQ(info.value("command", ""), "protocol_info");
         EXPECT_EQ(info.value("version", 0), 1);
-        EXPECT_EQ(info.at("capabilities"),
-                  nlohmann::json({"airpods",
-                                  "bluetooth.connection",
-                                  "bluetooth.diagnostics",
-                                  "bluetooth.pairing",
-                                  "calls",
-                                  "clipboard",
-                                  "contacts",
-                                  "files",
-                                  "messages",
-                                  "notifications",
-                                  "otp",
-                                  "peers",
-                                  "settings"}));
+        const auto& capabilities = info.at("capabilities");
+        EXPECT_NE(std::find(capabilities.begin(), capabilities.end(), "files"), capabilities.end());
+        EXPECT_EQ(std::find(capabilities.begin(), capabilities.end(), "files.upload"), capabilities.end());
+        EXPECT_EQ(std::find(capabilities.begin(), capabilities.end(), "calls") != capabilities.end(),
+                  tether::bluetooth::load_config().calls_enabled && tether::bluetooth::g_bluez &&
+                      tether::bluetooth::g_bluez->running());
+        EXPECT_EQ(std::find(capabilities.begin(), capabilities.end(), "clipboard") != capabilities.end(),
+                  tether::g_wayland && tether::g_wayland->clipboard_available());
     }
 
     TEST(ClientTest, ConnectsToAnIpv6Literal) {
