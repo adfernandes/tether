@@ -165,6 +165,46 @@ TEST(BluetoothObjects, ParsesDeviceAndBearer) {
     EXPECT_TRUE(d.looks_like_iphone());
 }
 
+TEST(BluetoothObjects, RecognizesAnUnpairedAppleNearbyAdvertisement) {
+    Payload p(R"({
+      '/org/bluez/hci0/dev_40_F6_64_3D_7A_F1': {
+        'org.bluez.Device1': {
+          'Address': <'40:F6:64:3D:7A:F1'>,
+          'AddressType': <'random'>,
+          'Alias': <'40-F6-64-3D-7A-F1'>,
+          'ManufacturerData': <{uint16 76: <[byte 0x10, 0x06, 0x71, 0x1e]>}>,
+          'UUIDs': <@as []>
+        }
+      }
+    })");
+    auto objects = parse_managed_objects(p.v);
+
+    ASSERT_EQ(objects.devices.size(), 1u);
+    const auto encoded = to_json(objects.devices[0]);
+    EXPECT_TRUE(encoded.value("apple_nearby", false));
+    EXPECT_FALSE(objects.devices[0].looks_like_iphone());
+}
+
+TEST(BluetoothObjects, DoesNotTreatEveryManufacturerAdvertisementAsAPhoneCandidate) {
+    Payload p(R"({
+      '/org/bluez/hci0/dev_AA': {
+        'org.bluez.Device1': {
+          'ManufacturerData': <{uint16 76: <[byte 0x07, 0x19]>}>
+        }
+      },
+      '/org/bluez/hci0/dev_BB': {
+        'org.bluez.Device1': {
+          'ManufacturerData': <{uint16 64: <[byte 0x10, 0x06]>}>
+        }
+      }
+    })");
+    auto objects = parse_managed_objects(p.v);
+
+    ASSERT_EQ(objects.devices.size(), 2u);
+    EXPECT_FALSE(to_json(objects.devices[0]).value("apple_nearby", false));
+    EXPECT_FALSE(to_json(objects.devices[1]).value("apple_nearby", false));
+}
+
 TEST(BluetoothObjects, UuidMatchIsCaseInsensitive) {
     Payload p(R"({
       '/org/bluez/hci0/dev_AA': {

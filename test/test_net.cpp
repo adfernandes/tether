@@ -1,12 +1,16 @@
 #include <gtest/gtest.h>
 
+#include <tether/bluetooth/config.hpp>
+#include <tether/bluetooth/monitor.hpp>
 #include <tether/client.hpp>
 #include <tether/crypto.hpp>
 #include <tether/event_loop.hpp>
 #include <tether/log.hpp>
 #include <tether/net.hpp>
+#include <tether/wayland.hpp>
 #include <nlohmann/json.hpp>
 
+#include <algorithm>
 #include <arpa/inet.h>
 #include <cerrno>
 #include <chrono>
@@ -20,6 +24,7 @@
 #include <sys/file.h>
 #include <sys/socket.h>
 #include <sys/stat.h>
+#include <sys/un.h>
 #include <sys/wait.h>
 #include <thread>
 #include <unistd.h>
@@ -75,6 +80,19 @@ namespace {
     };
 
     // Helper RAII class to manage process lifecycle
+    class EventLoopGuard {
+    public:
+        explicit EventLoopGuard(tether::EpollEventLoop& loop) : loop_(loop), thread_([&loop] { loop.run(); }) {}
+        ~EventLoopGuard() {
+            loop_.post([this] { loop_.stop(); });
+            thread_.join();
+        }
+
+    private:
+        tether::EpollEventLoop& loop_;
+        std::thread thread_;
+    };
+
     class ProcessGuard {
     public:
         ProcessGuard(pid_t pid) : pid_(pid) {}
@@ -308,6 +326,103 @@ namespace {
 
         EXPECT_NE(log.find("TLS handshake failed"), std::string::npos) << "captured log:\n" << log;
         EXPECT_NE(log.find("::1"), std::string::npos) << "captured log:\n" << log;
+    }
+
+    std::string read_socket_line(int fd) {
+        std::string line;
+        for (char byte = 0; byte != '\n';) {
+            const ssize_t count = recv(fd, &byte, 1, 0);
+            if (count <= 0)
+                return {};
+            line.push_back(byte);
+        }
+        return line;
+    }
+
+    TEST(UnixServerTest, BluetoothResultsPreserveOperationId) {
+        const std::string runtime_dir = unique_test_dir("tether_unix_operation_test");
+        CleanupGuard cleanup_guard(runtime_dir);
+        std::filesystem::remove_all(runtime_dir);
+        std::filesystem::create_directories(runtime_dir);
+        ScopedEnvVar xdg_runtime_dir("XDG_RUNTIME_DIR", runtime_dir);
+
+        tether::EpollEventLoop loop;
+        tether::TcpServer tcp_server(loop, 0);
+        tether::UnixServer unix_server(loop, tcp_server);
+        ASSERT_TRUE(unix_server.start());
+        EventLoopGuard loop_guard(loop);
+
+        const int client = socket(AF_UNIX, SOCK_STREAM, 0);
+        ASSERT_GE(client, 0);
+        timeval timeout{2, 0};
+        ASSERT_EQ(setsockopt(client, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout)), 0);
+        sockaddr_un address{};
+        address.sun_family = AF_UNIX;
+        std::snprintf(
+            address.sun_path, sizeof(address.sun_path), "%s", (tether::get_runtime_dir() + "/tetherd.sock").c_str());
+        ASSERT_EQ(connect(client, reinterpret_cast<sockaddr*>(&address), sizeof(address)), 0);
+
+        const std::string subscribe = "{\"command\":\"subscribe\"}\n";
+        ASSERT_EQ(write(client, subscribe.data(), subscribe.size()), static_cast<ssize_t>(subscribe.size()));
+        ASSERT_FALSE(read_socket_line(client).empty());
+
+        const std::string pair =
+            "{\"command\":\"bt_pair\",\"address\":\"38:9C:B2:42:3F:E7\",\"operation_id\":\"web-pair-1\"}\n";
+        ASSERT_EQ(write(client, pair.data(), pair.size()), static_cast<ssize_t>(pair.size()));
+
+        nlohmann::json result;
+        for (int event = 0; event < 8; ++event) {
+            const std::string line = read_socket_line(client);
+            if (line.empty())
+                break;
+            try {
+                auto candidate = nlohmann::json::parse(line);
+                if (candidate.value("command", "") == "bt_pair_result") {
+                    result = std::move(candidate);
+                    break;
+                }
+            } catch (...) {
+            }
+        }
+        ASSERT_FALSE(result.is_null());
+        EXPECT_EQ(result.value("operation_id", ""), "web-pair-1");
+
+        const std::string unpair =
+            "{\"command\":\"bt_unpair\",\"address\":\"38:9C:B2:42:3F:E7\",\"operation_id\":\"web-unpair-1\"}\n";
+        ASSERT_EQ(write(client, unpair.data(), unpair.size()), static_cast<ssize_t>(unpair.size()));
+
+        result = nullptr;
+        for (int event = 0; event < 8; ++event) {
+            const std::string line = read_socket_line(client);
+            if (line.empty())
+                break;
+            try {
+                auto candidate = nlohmann::json::parse(line);
+                if (candidate.value("command", "") == "bt_unpair_result") {
+                    result = std::move(candidate);
+                    break;
+                }
+            } catch (...) {
+            }
+        }
+        close(client);
+
+        ASSERT_FALSE(result.is_null());
+        EXPECT_EQ(result.value("operation_id", ""), "web-unpair-1");
+    }
+
+    TEST(ControlProtocolTest, AdvertisesVersionedCapabilities) {
+        const auto info = tether::build_protocol_info();
+        EXPECT_EQ(info.value("command", ""), "protocol_info");
+        EXPECT_EQ(info.value("version", 0), 1);
+        const auto& capabilities = info.at("capabilities");
+        EXPECT_NE(std::find(capabilities.begin(), capabilities.end(), "files"), capabilities.end());
+        EXPECT_EQ(std::find(capabilities.begin(), capabilities.end(), "files.upload"), capabilities.end());
+        EXPECT_EQ(std::find(capabilities.begin(), capabilities.end(), "calls") != capabilities.end(),
+                  tether::bluetooth::load_config().calls_enabled && tether::bluetooth::g_bluez &&
+                      tether::bluetooth::g_bluez->running());
+        EXPECT_EQ(std::find(capabilities.begin(), capabilities.end(), "clipboard") != capabilities.end(),
+                  tether::g_wayland && tether::g_wayland->clipboard_available());
     }
 
     TEST(ClientTest, ConnectsToAnIpv6Literal) {

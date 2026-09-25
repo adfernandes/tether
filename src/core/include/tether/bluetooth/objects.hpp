@@ -63,6 +63,9 @@ namespace tether::bluetooth {
         std::vector<std::string> uuids;
         // Device1.Modalias, e.g. "bluetooth:v004Cp200Ed0100". Names the remote's vendor.
         std::string modalias;
+        // Apple Nearby Info (company 0x004c, advertisement type 0x10) is
+        // available before an unpaired iPhone exposes its service UUIDs.
+        bool apple_nearby = false;
 
         bool ancs_notifying = false;
 

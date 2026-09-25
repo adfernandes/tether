@@ -92,6 +92,7 @@ namespace tether::ui {
             GtkWidget* btn_bt_solicit = nullptr;
             GtkWidget* chk_bt_enabled = nullptr;
             GtkWidget* btn_bt_unpair = nullptr;
+            std::string bt_operation_id;
 
             GtkWidget* lbl_welcome_wifi = nullptr;
             GtkWidget* lbl_welcome_bt = nullptr;
@@ -617,10 +618,21 @@ namespace tether::ui {
             daemon_send(j);
         }
 
+        std::string new_bt_operation_id() {
+            gchar* uuid = g_uuid_string_random();
+            std::string operation_id = uuid;
+            g_free(uuid);
+            return operation_id;
+        }
+
         void on_bt_pair_click(GtkWidget*, gpointer) {
             if (g_devices.selected_bt_address.empty())
                 return;
-            if (!daemon_send({{"command", "bt_pair"}, {"address", g_devices.selected_bt_address}})) {
+            g_devices.bt_operation_id = new_bt_operation_id();
+            if (!daemon_send({{"command", "bt_pair"},
+                              {"address", g_devices.selected_bt_address},
+                              {"operation_id", g_devices.bt_operation_id}})) {
+                g_devices.bt_operation_id.clear();
                 set_bt_progress(_("Could not reach the Tether daemon."));
                 return;
             }
@@ -647,7 +659,10 @@ namespace tether::ui {
             if (!confirmed)
                 return;
 
-            daemon_send({{"command", "bt_unpair"}, {"address", g_devices.selected_bt_address}});
+            g_devices.bt_operation_id = new_bt_operation_id();
+            daemon_send({{"command", "bt_unpair"},
+                         {"address", g_devices.selected_bt_address},
+                         {"operation_id", g_devices.bt_operation_id}});
             set_bt_progress(_("Removing the pairing\u2026"));
         }
 
@@ -1123,6 +1138,11 @@ namespace tether::ui {
 
     bool devices_view_handle_event(const nlohmann::json& event) {
         const std::string command = event.value("command", "");
+        const bool pairing_event = command == "bt_pair_progress" || command == "bt_pair_confirm_request" ||
+                                   command == "bt_pair_result" || command == "bt_unpair_result";
+        if (pairing_event && event.contains("operation_id") &&
+            (g_devices.bt_operation_id.empty() || event.value("operation_id", "") != g_devices.bt_operation_id))
+            return false;
         if (command == "state_snapshot") {
             apply_state_snapshot(event);
             return true;
@@ -1407,7 +1427,9 @@ namespace tether::ui {
                                                                code->c_str());
                     const bool confirmed = gtk_dialog_run(GTK_DIALOG(dialog)) == GTK_RESPONSE_OK;
                     gtk_widget_destroy(dialog);
-                    daemon_send({{"command", "bt_pair_confirm"}, {"accept", confirmed}});
+                    daemon_send({{"command", "bt_pair_confirm"},
+                                 {"operation_id", g_devices.bt_operation_id},
+                                 {"accept", confirmed}});
                     return G_SOURCE_REMOVE;
                 },
                 new std::string(event.value("code", "")));
@@ -1426,6 +1448,7 @@ namespace tether::ui {
         }
         if (command == "bt_pair_result" || command == "bt_unpair_result") {
             gtk_widget_set_sensitive(g_devices.btn_bt_pair, TRUE);
+            g_devices.bt_operation_id.clear();
             set_bt_progress(event.value("message", ""));
             // The bond and the supervised device both just changed.
             daemon_send({{"command", "bt_status"}});
