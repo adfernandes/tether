@@ -2030,6 +2030,18 @@ namespace tether {
             if (ret == 1) {
                 ssl_handshake_complete_[client_fd] = true;
                 std::string print = Crypto::get_peer_fingerprint(ssl);
+                // mDNS TXT records are unauthenticated: a dial made for a fingerprint must
+                // reach that certificate, or the peer's own pair_accepted would pin an impostor.
+                const std::string expected = connected_remote_clients[client_fd].fingerprint;
+                if (initiated && !expected.empty() && print != expected) {
+                    debug::log(ERR,
+                               "TcpServer: {} presented {} but was dialled for {}; dropping",
+                               client_info_[client_fd].address,
+                               print,
+                               expected);
+                    drop_client(client_fd);
+                    return;
+                }
                 client_info_[client_fd].fingerprint = print;
                 connected_remote_clients[client_fd].fingerprint = print;
                 if (Crypto::instance().is_host_known(print)) {

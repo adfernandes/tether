@@ -799,6 +799,144 @@ namespace {
         EXPECT_FALSE(parsed.value("device_name", "").empty());
     }
 
+    // What a bare TLS peer saw after the dialler reached it.
+    struct DialOutcome {
+        bool started = false; // the dialler got its listening port
+        bool handshake = false;
+        std::string received; // first line the dialler sent, empty if it closed instead
+        bool pinned = false;  // whether the dialler ended up trusting the peer's cert
+    };
+
+    // Dials a bare TLS peer on loopback, telling the dialler to expect expected_fingerprint.
+    // The peer presents this process's own certificate. With answer_accepted it sends
+    // pair_accepted unprompted straight after the handshake, as a hostile peer would.
+    DialOutcome dial_bare_peer(int dialler_port, const std::string& expected_fingerprint, bool answer_accepted) {
+        DialOutcome outcome;
+        // The daemon ignores SIGPIPE; the peer may write into a connection the dialler dropped.
+        struct SigpipeIgnored {
+            void (*previous)(int) = std::signal(SIGPIPE, SIG_IGN);
+            ~SigpipeIgnored() { std::signal(SIGPIPE, previous); }
+        } sigpipe_ignored;
+
+        const int peer_fd = socket(AF_INET, SOCK_STREAM, 0);
+        if (peer_fd < 0)
+            return outcome;
+        int reuse = 1;
+        setsockopt(peer_fd, SOL_SOCKET, SO_REUSEADDR, &reuse, sizeof(reuse));
+
+        sockaddr_in peer_addr{};
+        peer_addr.sin_family = AF_INET;
+        peer_addr.sin_port = 0;
+        peer_addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+        socklen_t addrlen = sizeof(peer_addr);
+        if (bind(peer_fd, reinterpret_cast<sockaddr*>(&peer_addr), sizeof(peer_addr)) != 0 ||
+            listen(peer_fd, 1) != 0 ||
+            getsockname(peer_fd, reinterpret_cast<sockaddr*>(&peer_addr), &addrlen) != 0) {
+            close(peer_fd);
+            return outcome;
+        }
+        const int peer_port = ntohs(peer_addr.sin_port);
+
+        std::thread peer_thread([peer_fd, answer_accepted, &outcome] {
+            const int conn = accept(peer_fd, nullptr, nullptr);
+            if (conn < 0)
+                return;
+            timeval timeout{5, 0};
+            setsockopt(conn, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout));
+
+            SSL* ssl = SSL_new(tether::Crypto::instance().get_server_context());
+            SSL_set_fd(ssl, conn);
+            if (SSL_accept(ssl) == 1) {
+                outcome.handshake = true;
+                if (answer_accepted) {
+                    const std::string accepted = "{\"command\":\"pair_accepted\"}\n";
+                    SSL_write(ssl, accepted.data(), static_cast<int>(accepted.size()));
+                }
+                char buf[4096];
+                const int n = SSL_read(ssl, buf, sizeof(buf));
+                if (n > 0)
+                    outcome.received.assign(buf, n);
+            }
+            SSL_free(ssl);
+            close(conn);
+        });
+
+        tether::EpollEventLoop loop;
+        tether::TcpServer dialler(loop, dialler_port);
+        if (!dialler.start()) {
+            shutdown(peer_fd, SHUT_RDWR);
+            close(peer_fd);
+            peer_thread.join();
+            return outcome;
+        }
+
+        outcome.started = true;
+        std::thread loop_thread([&loop] { loop.run(); });
+        dialler.connect_peer("127.0.0.1", peer_port, "peer", expected_fingerprint);
+        peer_thread.join();
+
+        // Give an unprompted pair_accepted time to be acted on before judging.
+        const std::string peer_fingerprint = tether::Crypto::instance().get_my_fingerprint();
+        const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(1);
+        while (!outcome.pinned && std::chrono::steady_clock::now() < deadline) {
+            outcome.pinned = tether::Crypto::instance().is_host_known(peer_fingerprint);
+            std::this_thread::sleep_for(std::chrono::milliseconds(20));
+        }
+
+        loop.post([&loop] { loop.stop(); });
+        loop_thread.join();
+        close(peer_fd);
+        return outcome;
+    }
+
+    // mDNS TXT records are unauthenticated, so a reconnect dial made for a trusted
+    // fingerprint can land on anyone advertising it. A different certificate there must
+    // end the connection, never reach pair_request or get pinned.
+    TEST(TcpServerTest, DialForAFingerprintDropsADifferentCertificate) {
+        const std::string home = unique_test_dir("tether_dial_mismatch_test");
+        CleanupGuard cleanup_guard(home);
+        std::filesystem::remove_all(home);
+        std::filesystem::create_directories(home);
+        ScopedEnvVar home_env("HOME", home);
+        ASSERT_TRUE(tether::Crypto::instance().init());
+
+        const std::string trusted_fingerprint(64, 'a');
+        ASSERT_NE(trusted_fingerprint, tether::Crypto::instance().get_my_fingerprint());
+
+        constexpr int dialler_port = 45142;
+        const DialOutcome outcome = dial_bare_peer(dialler_port, trusted_fingerprint, true);
+        if (!outcome.started)
+            GTEST_SKIP() << "port " << dialler_port << " is unavailable";
+        ASSERT_TRUE(outcome.handshake) << "the dial never completed a TLS handshake";
+
+        EXPECT_TRUE(outcome.received.empty()) << "the dialler sent " << outcome.received;
+        EXPECT_FALSE(outcome.pinned) << "the dialler trusted a certificate it did not dial for";
+    }
+
+    // A dial that reaches the certificate it was made for still pairs.
+    TEST(TcpServerTest, DialForAFingerprintProceedsWhenItMatches) {
+        const std::string home = unique_test_dir("tether_dial_match_test");
+        CleanupGuard cleanup_guard(home);
+        std::filesystem::remove_all(home);
+        std::filesystem::create_directories(home);
+        ScopedEnvVar home_env("HOME", home);
+        ASSERT_TRUE(tether::Crypto::instance().init());
+
+        // The certificate outlives HOME within one run, so a cert wrongly pinned by an
+        // earlier test would turn this into a reconnect rather than a pair.
+        ASSERT_FALSE(tether::Crypto::instance().is_host_known(tether::Crypto::instance().get_my_fingerprint()));
+
+        constexpr int dialler_port = 45143;
+        const DialOutcome outcome =
+            dial_bare_peer(dialler_port, tether::Crypto::instance().get_my_fingerprint(), false);
+        if (!outcome.started)
+            GTEST_SKIP() << "port " << dialler_port << " is unavailable";
+        ASSERT_TRUE(outcome.handshake) << "the dial never completed a TLS handshake";
+
+        ASSERT_FALSE(outcome.received.empty()) << "the dialler sent nothing after the handshake";
+        EXPECT_EQ(nlohmann::json::parse(outcome.received).value("command", ""), "pair_request");
+    }
+
 } // namespace
 
 TEST(FirewallTest, UfwEnabledReadsTheEnabledKey) {
